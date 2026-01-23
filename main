@@ -7,7 +7,7 @@ cd $DIR
 # Open Xhost
 xhost +local: > /dev/null 2>&1
 
-cd ./docker
+cd ./docker=
 
 # Environment variables
 export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:=100}

@@ -1,0 +1,8 @@
+bt_apps:
+  ros_parameters:
+    nav_dist_error_torlence: 0.005
+    nav_angle_error_torlence: 0.4
+    dock_dist_error_torlence: 0.005
+    dock_angle_error_torlence: 0.4
+    rotate_dist_error_torlence: 0.0005
+    safety_dist: 0.3
