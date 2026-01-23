@@ -89,20 +89,21 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libsuitesparse-dev \
     libfreeimage-dev \
     libyaml-cpp-dev \
-    ros2-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-    ros2-${ROS_DISTRO}-navigation2 \
-    ros2-${ROS_DISTRO}-foxglove-bridge \ 
-    ros2-${ROS_DISTRO}-ament-cmake \
-    ros2-${ROS_DISTRO}-rqt-plot \
-    ros2-${ROS_DISTRO}-rqt-tf-tree \
-    ros2-${ROS_DISTRO}-nav2-msgs \
-    ros2-${ROS_DISTRO}-nav2-util \
+    libjsoncpp-dev \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    ros-${ROS_DISTRO}-navigation2 \
+    ros-${ROS_DISTRO}-foxglove-bridge \ 
+    ros-${ROS_DISTRO}-ament-cmake \
+    ros-${ROS_DISTRO}-rqt-plot \
+    ros-${ROS_DISTRO}-rqt-tf-tree \
+    ros-${ROS_DISTRO}-nav2-msgs \
+    ros-${ROS_DISTRO}-nav2-util \
     # Groot
     libfuse2 fuse3 \
-    ros2-${ROS_DISTRO}-behaviortree-cpp \
-    ros2-${ROS_DISTRO}-generate-parameter-library \
-    ros2-${ROS_DISTRO}-teleop-twist-keyboard \
-    ros2-${ROS_DISTRO}-rviz2 \
+    ros-${ROS_DISTRO}-behaviortree-cpp \
+    ros-${ROS_DISTRO}-generate-parameter-library \
+    ros-${ROS_DISTRO}-teleop-twist-keyboard \
+    ros-${ROS_DISTRO}-rviz2 \
     && rm -rf /var/lib/apt/lists/*
 
 ##############################################################################
@@ -128,24 +129,19 @@ RUN TZ=Asia/Taipei && \
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    groupadd --gid ${USERGID} ${USERNAME} \
-    && useradd --uid ${USERID} --gid ${USERGID} -m ${USERNAME} -s /bin/bash \
+    groupadd --gid ${USER_GID} ${USERNAME} \
+    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} -s /bin/bash \
     # passwordless
     && apt-get update \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && rm -rf /var/lib/apt/lists/*
 
 ##############################################################################
-# Set Default User & Working Directory & Default .bashrc
-##############################################################################
-
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
-COPY ./settings/.bashrc /home/${USERNAME}/.bashrc    
-
-##############################################################################
 # VNC Installation
 ##############################################################################
+
+COPY ./scripts/vnc/install_vnc.sh /usr/local/bin/install_vnc.sh
+RUN chmod +x /usr/local/bin/install_vnc.sh
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -156,8 +152,15 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         echo "Skipping VNC installation"; \
     fi
 
-USER root
-RUN echo 'user:user' | chpasswd
+RUN echo "${USERNAME}:${USERNAME}" | chpasswd
+
+##############################################################################
+# Set Default User & Working Directory & Default .bashrc
+##############################################################################
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+COPY ./scripts/settings/.bashrc /home/${USERNAME}/.bashrc    
 
 ##############################################################################
 # Clean apt-cache
@@ -172,7 +175,7 @@ RUN sudo apt autoremove -y && \
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
-EXPOSE 5901
+EXPOSE 5902
 
 # Set up the default command
 SHELL ["/bin/bash", "-c"]

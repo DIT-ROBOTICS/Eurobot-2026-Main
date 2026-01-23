@@ -7,17 +7,19 @@ services:
       dockerfile: Dockerfile
       args:
         ROS_DISTRO: humble
-        USER_ID: ${LOCAL_USER_ID:-1000}
-        GROUP_ID: ${LOCAL_GROUP_ID:-1000}
+        USER_UID: ${USER_UID:-1001}
+        USER_GID: ${USER_GID:-1001}
         ENABLE_VNC: "false"
-    image: eurobot-2026-main:latest
+    image: &IMG_NAME eurobot-2026-main:latest
     container_name: eurobot-2026-main-build
-    stdin_open: true
-    tty: true
-    privileged: true
-    network_mode: "host"
-    ipc: host
+    hostname: eurobot-main
     command: &CMD_BUILD /bin/bash -c "cd /home/main/eurobot-2026-main-ws && colcon build"
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: &STOP_GRACE_PERIOD 1s
+
     volumes: &VOLUMES
       - ../:/home/main/eurobot-2026-main-ws/
       - /dev:/dev
@@ -30,22 +32,67 @@ services:
       /home/main/eurobot-2026-main-ws
 
     environment: &ENV
-      # - DISPLAY=${DISPLAY}  # Set display environment variable
       - RCUTILS_COLORIZED_OUTPUT=1
-      - XAUTHORITY=/home/main/.Xauthority   # Set Xauthority path
+      - XAUTHORITY=/home/main/.Xauthority
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+
+  main-develop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ROS_DISTRO: humble
+        USER_UID: ${USER_UID:-1001}
+        USER_GID: ${USER_GID:-1001}
+        ENABLE_VNC: "false"
+    image: *IMG_NAME
+    container_name: eurobot-2026-main-dev
+    hostname: eurobot-main
+    command: /bin/bash
+    tty: true
+    network_mode: host
+    ipc: host
+    privileged: true
+    stop_grace_period: *STOP_GRACE_PERIOD
+    stdin_open: true
+
+    volumes: *VOLUMES
+    working_dir: *WORKING_DIR
+    environment: *ENV
+    
+  main-vnc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ROS_DISTRO: humble
+        USER_UID: ${USER_UID:-1001}
+        USER_GID: ${USER_GID:-1001}
+        ENABLE_VNC: "true"
+    image: eurobot-2026-main:vnc
+    container_name: eurobot-2026-main-vnc
+    hostname: eurobot-vnc
+    command: /bin/bash -c "cd /home/main/eurobot-2026-main-ws && ./docker/scripts/vnc/start-vnc.sh"
+    tty: true
+    stdin_open: true
+    ports:
+      - "${VNC_PORT:-5902}:5902"
+    privileged: true
+    ipc: host
+    stop_grace_period: *STOP_GRACE_PERIOD
+    
+    environment:
+      - VNC_PASSWORD=${VNC_PASSWORD:-ros}
+      - DISPLAY=:2
+      - QT_X11_NO_MITSHM=1
+      - RCUTILS_COLORIZED_OUTPUT=1
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
     
-  main-vnc:
-    <<: *main-build
-    container_name: eurobot-2026-main-vnc
-    ports:
-      - "${VNC_PORT:-5901}:5901"
-    environment:
-      - RCUTILS_COLORIZED_OUTPUT=1
-      - XAUTHORITY=/home/main/.Xauthority   # Set Xauthority path
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
-      - DISPLAY=${DISPLAY}  # Set display environment variable
-      - ENABLE_VNC="true"
-    command: /bin/bash -c "cd /home/main/eurobot-2026-main-ws && ./start-vnc.sh"
+    volumes:
+      - ../:/home/main/eurobot-2026-main-ws/
+      - /home/share:/home/share
+      - /dev:/dev
+    
+    working_dir: /home/main/eurobot-2026-main-ws
