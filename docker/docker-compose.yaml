@@ -1,0 +1,51 @@
+name: eurobot-2026-main
+
+services:
+  main-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ROS_DISTRO: humble
+        USER_ID: ${LOCAL_USER_ID:-1000}
+        GROUP_ID: ${LOCAL_GROUP_ID:-1000}
+        ENABLE_VNC: "false"
+    image: eurobot-2026-main:latest
+    container_name: eurobot-2026-main-build
+    stdin_open: true
+    tty: true
+    privileged: true
+    network_mode: "host"
+    ipc: host
+    command: &CMD_BUILD /bin/bash -c "cd /home/main/eurobot-2026-main-ws && colcon build"
+    volumes: &VOLUMES
+      - ../:/home/main/eurobot-2026-main-ws/
+      - /dev:/dev
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $HOME/.Xauthority:/home/main/.Xauthority 
+      - /home/share:/home/share
+      - /tmp/.X11-unix:/tmp/.X11-unix
+
+    working_dir: &WORKING_DIR
+      /home/main/eurobot-2026-main-ws
+
+    environment: &ENV
+      # - DISPLAY=${DISPLAY}  # Set display environment variable
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/main/.Xauthority   # Set Xauthority path
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+    
+  main-vnc:
+    <<: *main-build
+    container_name: eurobot-2026-main-vnc
+    ports:
+      - "${VNC_PORT:-5901}:5901"
+    environment:
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - XAUTHORITY=/home/main/.Xauthority   # Set Xauthority path
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - DISPLAY=${DISPLAY}  # Set display environment variable
+      - ENABLE_VNC="true"
+    command: /bin/bash -c "cd /home/main/eurobot-2026-main-ws && ./start-vnc.sh"
