@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# Get the directory of the script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cd $DIR
+
+# Open Xhost
+xhost +local: > /dev/null 2>&1
+
+cd ./docker
+
+# Environment variables
+export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:=100}
+export USER_UID=$(id -u)
+export USER_GID=$(id -g)
+
+# Ensure cleanup on script exit
+cleanup() {
+    xhost -local: > /dev/null 2>&1
+}
+trap cleanup EXIT
+
+# Argument handling
+ACTION=${1:-}
+CUSTOM_COMMAND=${2:-}
+
+print_usage() {
+    echo -e "\033[1;32m----- [ MAIN Usage ] ------------------------\033[0m"
+    echo -e "\033[1;32m|\033[0m   build           - Build the ROS workspace"
+    echo -e "\033[1;32m|\033[0m   groot           - Launch Groot2"
+    echo -e "\033[1;32m|\033[0m   groot-vnc       - Launch Groot2 in VNC"
+    echo -e "\033[1;32m|\033[0m   vnc             - Start VNC server"
+    echo -e "\033[1;32m|\033[0m   enter           - Enter the container"
+    echo -e "\033[1;32m|\033[0m   close           - Stop all containers"
+    echo -e "\033[1;32m---------------------------------------------\033[0m"
+}
+
+case $ACTION in
+    build)
+        echo "Building the workspace..."
+        docker compose up main-build
+        ;;
+    groot)
+        echo "Launching Groot..."
+        if ! docker ps --filter "name=eurobot-2026-main-dev" --filter "status=running" | grep -q "eurobot-2026-main-dev"; then
+            echo "Starting development container..."
+            docker compose up -d main-develop
+        fi
+        docker compose exec main-develop bash -c "cd /home/main/eurobot-2026-main-ws && ./docker/scripts/groot/Groot2.AppImage"
+        ;;
+    groot-vnc)
+        echo "Launching Groot in VNC..."
+        if ! docker ps --filter "name=eurobot-2026-main-vnc" --filter "status=running" | grep -q "eurobot-2026-main-vnc"; then
+            echo "Starting VNC container..."
+            docker compose up -d main-vnc
+            sleep 3
+        fi
+        docker compose exec main-vnc bash -c "export DISPLAY=:2 && cd /home/main/eurobot-2026-main-ws && ./docker/scripts/groot/Groot2.AppImage"
+        ;;
+    vnc)
+        echo "Starting VNC server..."
+        docker compose up -d main-vnc
+        sleep 3
+        echo "VNC server started on port 5902"
+        echo "Connect with: localhost:5902"
+        echo "Password: ros"
+        echo "Entering VNC container..."
+        docker exec -it eurobot-2026-main-vnc bash -c "export DISPLAY=:2 && bash" || echo "Exited container."
+        ;;
+    enter)
+        echo "Entering the container..."
+        if ! docker ps --filter "name=eurobot-2026-main-dev" --filter "status=running" | grep -q "eurobot-2026-main-dev"; then
+            echo "Starting development container..."
+            docker compose up -d main-develop
+        fi
+        docker exec -it eurobot-2026-main-dev bash || echo "Exited container."
+        ;;
+    close)
+        echo "Stopping all containers..."
+        docker compose down
+        ;;
+    *)
+        print_usage
+        exit 1
+        ;;
+esac
