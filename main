@@ -56,6 +56,8 @@ case $ACTION in
             sleep 3
         fi
         docker compose exec main-vnc bash -c "export DISPLAY=:2 && cd /home/main/eurobot-2026-main-ws && ./docker/scripts/groot/Groot2.AppImage"
+        echo "Groot process exited. Stopping the container..."
+        docker compose down
         ;;
     vnc)
         echo "Starting VNC server..."
