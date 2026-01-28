@@ -17,14 +17,14 @@ void CamReceiver::collection_info_callback(const std_msgs::msg::Int32MultiArray:
     // TODO: delete debug info log
     RCLCPP_INFO(node_->get_logger(), "CamReceiver: Received collection info update.");
     collection_info = *msg;
-    if (!collection_info.data.empty()) blackboard_->set("collection_info", collection_info);
+    if (!collection_info.data.empty()) blackboard_->set<std_msgs::msg::Int32MultiArray>("collection_info", collection_info);
 }
 
 void CamReceiver::pantry_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg) {
     // TODO: delete debug info log
     RCLCPP_INFO(node_->get_logger(), "CamReceiver: Received pantry info update.");
     pantry_info = *msg;
-    if (!pantry_info.data.empty()) blackboard_->set("pantry_info", pantry_info);
+    if (!pantry_info.data.empty()) blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info", pantry_info);
 }
 
 BT::NodeStatus CamReceiver::tick() {
