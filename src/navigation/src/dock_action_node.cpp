@@ -3,9 +3,8 @@
 using namespace std;
 
 Docking::Docking(const std::string& name, const NodeConfig& conf, const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
-    : RosActionNode<opennav_docking_msgs::action::DockRobot>(name, conf, params), tf_buffer(params.nh.lock()->get_clock()), listener(tf_buffer) {
+    : RosActionNode<opennav_docking_msgs::action::DockRobot>(name, conf, params), tf_buffer(params.nh.lock()->get_clock()), listener(tf_buffer), blackboard(blackboard) {
         node = params.nh.lock();
-        blackboard = blackboard;
         node->get_parameter("frame_id", frame_id);
         tf_buffer.setUsingDedicatedThread(true);
         dock_finished = false;
