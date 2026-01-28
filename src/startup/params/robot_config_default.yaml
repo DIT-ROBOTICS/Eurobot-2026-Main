@@ -1,0 +1,14 @@
+/**:
+  ros__parameters:
+    robot_name: "White"
+    
+    # Start Pose Configuration
+    # Format: [x, y, yaw_in_radians]
+    
+    # Configuration for Blue Team match
+    blue_team:
+      start_pose: [2.7, 1.775, 0.0]
+      
+    # Configuration for Yellow Team match
+    yellow_team:
+      start_pose: [0.3, 1.775, 0.0]
