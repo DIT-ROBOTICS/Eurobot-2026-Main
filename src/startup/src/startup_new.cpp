@@ -187,9 +187,14 @@ void StartUp::startCallback(const std::shared_ptr<std_msgs::msg::Bool> msg) {
 }
 
 void StartUp::publishStartSignal() {
-    auto msg = std_msgs::msg::Bool();
-    msg.data = true;
-    start_signal_pub->publish(msg);
+    auto request = std::make_shared<std_srvs::srv::SetBool::Request>();
+    request->data = true;
+    start_signal_client->async_send_request(request, 
+        [this](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future) {
+            auto response = future.get();
+            RCLCPP_INFO(this->get_logger(), "[StartUp]: Start signal sent, response: %s", response->success ? "true" : "false");
+        }
+    );  
 }
 
 void StartUp::publishInitialPose() {

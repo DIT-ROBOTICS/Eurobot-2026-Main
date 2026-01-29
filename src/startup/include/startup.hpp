@@ -89,6 +89,7 @@ private:
     rclcpp::Service<btcpp_ros2_interfaces::srv::StartUpSrv>::SharedPtr ready_srv_server;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr plug_sub;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initialpose_pub;
+    rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr start_signal_client;
 
     // Sima
     // 2026 Eurobot game have two types of sima
