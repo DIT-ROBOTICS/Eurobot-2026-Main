@@ -65,7 +65,9 @@ void StartUp::stateTransition() {
         case StartUpState::READY:
             publishSystemCheckSignal();
             if(isAllSystemReady()) {
+                // TODO: add one hot trigger for startSignal and initialPose, if not theorically publish once
                 publishStartSignal();
+                publishInitialPose();
                 startup_state = StartUpState::START;
             }
             break;
@@ -188,7 +190,30 @@ void StartUp::publishStartSignal() {
     auto msg = std_msgs::msg::Bool();
     msg.data = true;
     start_signal_pub->publish(msg);
-    
+}
+
+void StartUp::publishInitialPose() {
+    auto msg = geometry_msgs::msg::PoseWithCovarianceStamped();
+    msg.header.stamp = this->get_clock()->now();
+    msg.header.frame_id = "map";
+    // start position data received
+    if(team == Team::YELLOW) {
+        start_position.header.frame_id = "map";
+        start_position.pose.pose.position.x = yellow_start_pose[0];
+        start_position.pose.pose.position.y = yellow_start_pose[1];
+        start_position.pose.pose.position.z = 0.0;
+        start_position.pose.pose.orientation = yaw2qua(yellow_start_pose[2]);
+    } else {
+        start_position.header.frame_id = "map";
+        start_position.pose.pose.position.x = blue_start_pose[0];
+        start_position.pose.pose.position.y = blue_start_pose[1];
+        start_position.pose.pose.position.z = 0.0;
+        start_position.pose.pose.orientation = yaw2qua(blue_start_pose[2]);
+    }
+    start_position.covariance[0]  = 1e-4;
+    start_position.covariance[7]  = 1e-4;
+    start_position.covariance[35] = 0.068; // (15 deg)^2
+    initialpose_pub->publish(start_position);
 }
 
 void StartUp::tickSima(double game_time) {
@@ -214,4 +239,10 @@ void StartUp::publishTime() {
 bool StartUp::gameOver(double game_time) {
     if(game_time >= GAME_TIME) return true;
     return false;
+}
+
+geometry_msgs::msg::Quaternion StartUp::yaw2qua(double yaw) {
+    tf2::Quaternion qua;
+    qua.setRPY(0.0, 0.0, yaw);
+    return tf2::toMsg(qua);
 }

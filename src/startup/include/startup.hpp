@@ -64,12 +64,18 @@ public:
         std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Response> response);
     bool isAllSystemReady();
     void startCallback();
+    
+    // ready -> start
+    void publishStartSignal();
+    void publishInitialPose();
 
     // start phase
-    void publishStartSignal();
     void tickSima(double game_time);
     void publishTime();
     bool gameOver(double game_time);
+
+    // utils
+    geometry_msgs::msg::Quaternion yaw2qua(double yaw);
 
 private:
     // game timer
