@@ -91,8 +91,12 @@ std::vector<int> DecisionCore::getMissionSequence() {
 
 void DecisionCore::getSensorData(std_msgs::msg::Int32MultiArray& collection_info,
                                   std_msgs::msg::Int32MultiArray& pantry_info) {
-    blackboard_->get<std_msgs::msg::Int32MultiArray>("collection_info", collection_info);
-    blackboard_->get<std_msgs::msg::Int32MultiArray>("pantry_info", pantry_info);
+    if (!blackboard_->get<std_msgs::msg::Int32MultiArray>("collection_info", collection_info)) {
+        RCLCPP_DEBUG(node_->get_logger(), "[DecisionCore] Failed to get collection_info from blackboard");
+    }
+    if (!blackboard_->get<std_msgs::msg::Int32MultiArray>("pantry_info", pantry_info)) {
+        RCLCPP_DEBUG(node_->get_logger(), "[DecisionCore] Failed to get pantry_info from blackboard");
+    }
     
     // Log sensor data for debugging
     if (!collection_info.data.empty()) {
@@ -144,7 +148,7 @@ geometry_msgs::msg::Quaternion DecisionCore::directionToQuaternion(double direct
     return q;
 }
 
-std::string DecisionCore::determineActionType(int point_index) {
+std::string DecisionCore::determineActionType([[maybe_unused]] int point_index) {
     // TODO: Implement smarter action selection based on:
     // - Point type (collection vs pantry vs other)
     // - Current robot state
