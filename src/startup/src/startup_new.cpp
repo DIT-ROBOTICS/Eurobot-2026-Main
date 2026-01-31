@@ -19,6 +19,8 @@ StartUp::StartUp() : Node("startup_node"){
         "/robot/startup/ready_signal", std::bind(&StartUp::systemCheckFeedback, this, std::placeholders::_1, std::placeholders::_2));
     plug_sub = this->create_subscription<std_msgs::msg::Bool>("/robot/startup/plug", 2, std::bind(&StartUp::startCallback, this, std::placeholders::_1));
     plan_file_pub = this->create_publisher<std_msgs::msg::String>("/robot/startup/plan_file", 2);
+    start_signal_client = this->create_client<std_srvs::srv::SetBool>(
+        "/robot/start_signal");
 
     // sima
     start_sima_pub = this->create_publisher<std_msgs::msg::Int16>("/sima/start", 2);

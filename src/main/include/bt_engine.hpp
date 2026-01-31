@@ -22,35 +22,12 @@
 #include "btcpp_ros2_interfaces/srv/start_up_srv.hpp"
 
 // navigation nodes
-#include "dock_node.hpp"
-#include "material_checker_node.hpp"
-#include "mission_checker_node.hpp" 
-#include "nav_node.hpp"
-#include "rotate_node.hpp"
-#include "stopRobot_node.hpp"
 
 // receiver nodes
-#include "CamReceiver.hpp"
-#include "NavReceiver.hpp"
-#include "LocReceiver.hpp"
-#include "TopicSubTest.hpp"
 
 // utils nodes
-#include "bt_start_action.hpp"
-#include "get_black_board_action.hpp"
-#include "get_location_action.hpp"
-#include "set_board_action.hpp" 
-#include "script_gen_action.hpp"
-#include "timer_checker.hpp"
 
 // firmware nodes
-#include "banner_checker_node.hpp"
-#include "firmware_mission_topic_node.hpp"
-#include "integrated_mission_node.hpp"
-#include "mission_fail_node.hpp"
-#include "mission_success_node.hpp"
-#include "nav_client_node.hpp"
-#include "mission_start_node.hpp"
 
 // C++
 #include <memory>
@@ -68,72 +45,65 @@
 using namespace BT;
 using namespace std;
 
-class ReadySignal : virtual public rclcpp::Node{
-
-public:
-    ReadySignal();
-
-protected:
-    virtual void readySignalCallback(const std_msgs::String::SharedPtr msg);
-    void sendReadySignal(int group, int status);
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr ready_sub;
-    rclcpp::Client<btcpp_ros2_interfaces::src::StartUpSrv>::SharedPtr ready_srv_client;
-    bool is_main_ready;
-};
-
-class BTengine : virtual public rclcpp::Node, public ReadySignal {
+class BTengine : virtual public rclcpp::Node {
 
 public:
     BTengine();
-    std::shared_ptr<rclcpp::Node> getNode();
-    void timeCallback(const std_msgs::msg::Float32::SharedPtr msg);
-    void readyCallback(const std_msgs::msg::String::SharedPtr msg); override;
-    void startCallback(const std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Request> request, 
-        std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Response> response);
-    
-    bool shellCmd(const string &cmd, string &result);
     void initParam();
+
+    /**
+     * @brief sent ready signal client request to startup node
+     */
+    void sentReadySignal();
+    
     void createTreeNodes();
-    void getPlanSequence();
+
+    /**
+     * @brief read plan file and create tree
+     */
+    
+    void addJsonPoint();
     void createTree();
     void runTree();
+    void setBlackboard();
+    void publishGameTime();
+    void gameTimeCallback(const std_msgs::msg::Float32::SharedPtr msg);
+    void readyCallback(const std_msgs::msg::Bool::SharedPtr msg);
+    void planFileCallback(const std_msgs::msg::String::SharedPtr msg);
+    void startCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+        std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
 private:
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr time_sub;
-    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_pub;
+    // startup relative
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_srv_server;
-
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr are_you_ready_sub;
+    rclcpp::Client<bt_cpp_ros2_interfaces::srv::StartUpSrv>::SharedPtr ready_srv_client;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr plan_file_sub;   
+    // blackboard variable setting
+    // TODO: add more blackboard variables for another extension
+    Team team;
+    Robot robot;
+    int selected_plan;
+    std::string plan_file_name;
+    double game_time;
     BT::Blackboard::Ptr blackboard;
-    std::shared_ptr<rclcpp::Node> node;
-
-    rclcpp::Rate rate;
-    std::String xml_models;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr game_time_sub;
+    rclcpp::Publisher<std_msgs::msg::Int32MultiArray>::SharedPtr json_point_pub;
+    std::vector<int> json_point;
     
-    //Behavior Tree Factory
+    // Tree creation state
+    bool isReady;           // Flag indicating plan_file received
+    std::string tree_name;  // Name of the main tree to create (e.g., "MainTree")
+    std::string bt_tree_node_model;  // Path to save tree node model XML
+    int group;              // Group ID for ready signal
+
+    // BT utilities
     BT::Tree tree;
     BT::BehaviorTreeFactory factory;
     BT::RosNodeParams params;
 
-    //Ros msg
-    std_msgs::msg::Bool stop_robot;
-    std_msgs::msg:Int32MultiArray collection_info, pantry_info;
-
-    // system variables
-    double game_time;
-    enum Team team;
-    enum Robot robot;
-    bool isReady;
-    bool canStart;
-    std::string groot_filename;
-    std::string config_path;
-    std::vector<int> plan_script;
-
-    // parameters
-    std::string groop_xml_config_directory;
-    std::string bt_node_model;
-    std::string bot_yellow_file;
-    std::string bot_blue_file;
-    std::string tree_name;
-    std::string user_name;
+    // ros variables
+    std::shared_ptr<rclcpp::Node> node;
+    rclcpp::Rate rate;
 };
 
