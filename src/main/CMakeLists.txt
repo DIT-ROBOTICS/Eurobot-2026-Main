@@ -34,7 +34,10 @@ include_directories(
 )
 
 # Main executable - bt_engine
-add_executable(bt_engine src/bt_engine.cpp)
+add_executable(bt_engine 
+  src/bt_engine.cpp
+  src/decision_core.cpp
+)
 ament_target_dependencies(bt_engine
   "rclcpp"
   "rclcpp_components"
@@ -63,12 +66,13 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install config and params directories when they exist
-# install(DIRECTORY
-#   config
-#   params
-#   DESTINATION share/${PROJECT_NAME}/
-# )
+# Install params, bt trees, and launch files
+install(DIRECTORY
+  params
+  bt
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -31,6 +31,9 @@
 // receiver nodes
 #include "CamReceiver.hpp"
 
+// decision core
+#include "decision_core.hpp"
+
 // utils nodes
 
 // firmware nodes

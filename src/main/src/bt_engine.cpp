@@ -1,10 +1,11 @@
 #include "bt_engine.hpp"
 
 const int TIME_RATE = 100;
-const std::string JSON_FILE_PATH = "/home/robot/plan/";
-const std::string BT_XML_DIRECTORY = "/home/robot/plan/bt/";
+// Paths relative to package share directory (set at runtime)
+std::string JSON_FILE_PATH = "";
+std::string BT_XML_DIRECTORY = "";
 const std::string TREE_NAME = "MainTree";
-const std::string BT_TREE_NODE_MODEL = "/home/robot/plan/bt/tree_node_model.xml";
+std::string BT_TREE_NODE_MODEL = "";
 const int TERMINATE_TIME = 101;
 
 BTengine::BTengine() : rclcpp::Node("bt_engine") {
@@ -42,7 +43,19 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
 }
 
 void BTengine::initParam() {
-    // TODO: add param init
+    // Set paths using package share directory
+    // At runtime, these should point to installed locations
+    std::string pkg_share = "/home/robot/Eurobot-2026-Main/install/main/share/main";
+    
+    JSON_FILE_PATH = pkg_share + "/params/mission_sequence.json";
+    BT_XML_DIRECTORY = pkg_share + "/bt/";
+    BT_TREE_NODE_MODEL = pkg_share + "/bt/tree_node_model.xml";
+    
+    // Update member variables
+    bt_tree_node_model = BT_TREE_NODE_MODEL;
+    
+    RCLCPP_INFO(this->get_logger(), "[BTengine] JSON path: %s", JSON_FILE_PATH.c_str());
+    RCLCPP_INFO(this->get_logger(), "[BTengine] BT XML dir: %s", BT_XML_DIRECTORY.c_str());
 }
 
 void BTengine::readyCallback(const std_msgs::msg::Bool::SharedPtr msg) {
@@ -129,10 +142,11 @@ void BTengine::addJsonPoint() {
 void BTengine::createTreeNodes() {
     params.nh = node;
     
-    // TODO: add more nodes
-    // sensors
+    // sensors / receivers
     factory.registerNodeType<CamReceiver>("CamReceiver", params, blackboard);
 
+    // decision core
+    factory.registerNodeType<DecisionCore>("DecisionCore", params, blackboard);
 
     // navigation
     factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);
@@ -216,6 +230,7 @@ void BTengine::setBlackboard() {
     blackboard->set<int>("robot", static_cast<int>(robot));
     blackboard->set<int>("selected_plan", selected_plan);
     blackboard->set<double>("game_time", game_time);
+    blackboard->set<std::vector<int>>("json_point", json_point);
     
     RCLCPP_INFO(this->get_logger(), "[BTengine]: Blackboard initialized");
 }
