@@ -24,6 +24,7 @@ find_package(btcpp_ros2_interfaces REQUIRED)
 # Include directories
 include_directories(
   include
+  ${CMAKE_SOURCE_DIR}/../main/include
 )
 
 add_executable(startup src/startup.cpp)

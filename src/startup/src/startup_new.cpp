@@ -1,8 +1,10 @@
 #include "startup.hpp"
+#include <algorithm>
 
 const int TIME_RATE = 100;
 const int SIMA_TICK_THRESHOLD = 85;
 const int GAME_TIME = 100; 
+const int GROUP_NUM = 5; // total number of groups including index 0
 
 StartUp::StartUp() : Node("startup_node"){
     // game timer
@@ -11,7 +13,7 @@ StartUp::StartUp() : Node("startup_node"){
         std::bind(&StartUp::stateTransition, this));
 
     game_time_pub = this->create_publisher<std_msgs::msg::Float32>("/robot/startup/game_time", 2);
-    rate = rclcpp::Rate(TIME_RATE);
+    rate = std::make_shared<rclcpp::Rate>(TIME_RATE);
 
     // State checker for other groups
     are_you_ready_pub = this->create_publisher<std_msgs::msg::Bool>("/robot/startup/are_you_ready", 2);
@@ -40,8 +42,9 @@ StartUp::StartUp() : Node("startup_node"){
     plan_file_name = "";
     startup_state = StartUpState::INIT;
     start_position = geometry_msgs::msg::PoseWithCovarianceStamped();
-    group_state = {0, 0, 0, 0, 0};
+    std::fill(std::begin(group_state), std::end(group_state), 0);
     is_plugged = false;
+    game_time = 0;
     initParam();
 }
 
@@ -75,7 +78,7 @@ void StartUp::stateTransition() {
             break;
         case StartUpState::START:
             publishTime();
-            if(gameOver()) startup_state = StartUpState::END;
+            if(gameOver(game_time)) startup_state = StartUpState::END;
             break;
         case StartUpState::END:
             RCLCPP_INFO(this->get_logger(), "[StartUp]: End state");
@@ -145,8 +148,8 @@ void StartUp::publishSystemCheckSignal() {
 
 void StartUp::systemCheckFeedback(const std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Request> request,
     std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Response> response) {
-    RCLCPP_INFO(this->get_logger(), "[StartUp]: Received system check feedback from group %d, state: %d", request->group_id, request->state);
-    group_state[request->group_id] = request->state;
+    RCLCPP_INFO(this->get_logger(), "[StartUp]: Received system check feedback from group %d, state: %d", request->group, request->state);
+    group_state[request->group] = request->state;
     response->group = request->group;
     response->success = true;
     switch(request->group){
@@ -168,7 +171,7 @@ void StartUp::systemCheckFeedback(const std::shared_ptr<btcpp_ros2_interfaces::s
 }
 
 bool StartUp::isAllSystemReady() {
-    for(int i = 1; i < group_state.size(); i++) {
+    for(int i = 1; i < GROUP_NUM; i++) {  // Use literal 5 instead of .size()
         if(group_state[i] != 1) {
             group_state[0] = 0;
             return false;
@@ -217,9 +220,9 @@ void StartUp::publishInitialPose() {
         start_position.pose.pose.position.z = 0.0;
         start_position.pose.pose.orientation = yaw2qua(blue_start_pose[2]);
     }
-    start_position.covariance[0]  = 1e-4;
-    start_position.covariance[7]  = 1e-4;
-    start_position.covariance[35] = 0.068; // (15 deg)^2
+    start_position.pose.covariance[0]  = 1e-4;
+    start_position.pose.covariance[7]  = 1e-4;
+    start_position.pose.covariance[35] = 0.068; // (15 deg)^2
     initialpose_pub->publish(start_position);
 }
 
@@ -239,6 +242,7 @@ void StartUp::publishTime() {
     double cur_time = this->get_clock()->now().seconds();
     std_msgs::msg::Float32 cur_time_msg;
     cur_time_msg.data = cur_time - start_time;
+    game_time = cur_time_msg.data;
     game_time_pub->publish(cur_time_msg);
     tickSima(cur_time_msg.data);
 }
@@ -252,4 +256,12 @@ geometry_msgs::msg::Quaternion StartUp::yaw2qua(double yaw) {
     tf2::Quaternion qua;
     qua.setRPY(0.0, 0.0, yaw);
     return tf2::toMsg(qua);
+}
+
+int main(int argc, char** argv) {
+    rclcpp::init(argc, argv);
+    auto startup_node = std::make_shared<StartUp>();
+    rclcpp::spin(startup_node);
+    rclcpp::shutdown();
+    return 0;
 }

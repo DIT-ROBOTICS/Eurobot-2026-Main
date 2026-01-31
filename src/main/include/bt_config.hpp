@@ -3,6 +3,8 @@
 
 #include <string>
 #include <stdexcept>
+#include <vector>
+#include <sstream>
 
 enum class Team {
     YELLOW,
@@ -12,6 +14,14 @@ enum class Team {
 enum class Robot {
     WHITE,
     BLACK
+};
+
+enum class StartUpState {
+    INIT,
+    READY,
+    START,
+    END,
+    ERROR
 };
 
 inline std::string teamToString(Team team) {
@@ -40,6 +50,17 @@ inline Robot stringToRobot(const std::string& str) {
     if (str == "white" || str == "WHITE") return Robot::WHITE;
     if (str == "black" || str == "BLACK") return Robot::BLACK;
     throw std::runtime_error("Invalid robot string: " + str);
+}
+
+// Utility function to split strings
+inline std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::stringstream ss(str);
+    std::string token;
+    while (std::getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
 }
 
 #endif // BT_CONFIG_HPP

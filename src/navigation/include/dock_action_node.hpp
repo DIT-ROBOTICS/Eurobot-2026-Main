@@ -1,5 +1,5 @@
-#ifndef BT_NAV_ACTION_NODE_HPP
-#define BT_NAV_ACTION_NODE_HPP
+#ifndef BT_DOCK_ACTION_NODE_HPP
+#define BT_DOCK_ACTION_NODE_HPP
 
 #include "navigation_util.hpp"
 

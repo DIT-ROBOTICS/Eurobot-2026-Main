@@ -18,12 +18,18 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/int32.hpp"
+#include "std_msgs/msg/int32_multi_array.hpp"
 #include "geometry_msgs/msg/point_stamped.hpp"
 #include "btcpp_ros2_interfaces/srv/start_up_srv.hpp"
 
 // navigation nodes
+#include "nav_action_node.hpp"
+#include "dock_action_node.hpp"
+#include "stop_robot_node.hpp"
+#include "rotate_action_node.hpp"
 
 // receiver nodes
+#include "CamReceiver.hpp"
 
 // utils nodes
 
@@ -77,7 +83,7 @@ private:
     // startup relative
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_srv_server;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr are_you_ready_sub;
-    rclcpp::Client<bt_cpp_ros2_interfaces::srv::StartUpSrv>::SharedPtr ready_srv_client;
+    rclcpp::Client<btcpp_ros2_interfaces::srv::StartUpSrv>::SharedPtr ready_srv_client;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr plan_file_sub;   
     // blackboard variable setting
     // TODO: add more blackboard variables for another extension
@@ -104,6 +110,6 @@ private:
 
     // ros variables
     std::shared_ptr<rclcpp::Node> node;
-    rclcpp::Rate rate;
+    std::shared_ptr<rclcpp::Rate> rate;
 };
 

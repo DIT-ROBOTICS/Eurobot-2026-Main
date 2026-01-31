@@ -32,17 +32,11 @@
 #include "btcpp_ros2_interfaces/msg/circle_obstacle.hpp"
 #include "btcpp_ros2_interfaces/msg/segment_obstacle.hpp"
 
-#include "bt_config.hpp"
+#include "../../main/include/bt_config.hpp"
 
 #define PI 3.1415926
 
-enum class StartUpState {
-    INIT,
-    READY,
-    START,
-    END,
-    ERROR
-};
+// StartUpState enum is now defined in bt_config.hpp
 
 class StartUp : public rclcpp::Node {
 
@@ -63,7 +57,7 @@ public:
     void systemCheckFeedback(const std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Request> request,
         std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Response> response);
     bool isAllSystemReady();
-    void startCallback();
+    void startCallback(const std::shared_ptr<std_msgs::msg::Bool> msg);
     
     // ready -> start
     void publishStartSignal();
@@ -81,7 +75,8 @@ private:
     // game timer
     rclcpp::TimerBase::SharedPtr timer;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr game_time_pub;
-    rclcpp::Rate rate;
+    std::shared_ptr<rclcpp::Rate> rate;
+    int game_time;
 
     // State checker for other groups
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr are_you_ready_pub;   

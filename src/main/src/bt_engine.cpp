@@ -14,7 +14,7 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     are_you_ready_sub = this->create_subscription<std_msgs::msg::Bool>("/robot/startup/are_you_ready", 2, 
         std::bind(&BTengine::readyCallback, this, std::placeholders::_1));
 
-    ready_srv_client = this->create_client<bt_cpp_ros2_interfaces::srv::StartUpSrv>("/robot/startup/ready_signal");
+    ready_srv_client = this->create_client<btcpp_ros2_interfaces::srv::StartUpSrv>("/robot/startup/ready_signal");
     
     plan_file_sub = this->create_subscription<std_msgs::msg::String>("/robot/startup/plan_file", 2, 
         std::bind(&BTengine::planFileCallback, this, std::placeholders::_1));
@@ -28,11 +28,9 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     game_time_sub = this->create_subscription<std_msgs::msg::Float32>("/robot/startup/game_time", 2, 
         std::bind(&BTengine::gameTimeCallback, this, std::placeholders::_1));
 
-    tree = BT::Tree();
-    factory = BT::BehaviorTreeFactory();
-    params = BT::RosNodeParams(this->get_node_options());
     node = this->shared_from_this();
-    rate = rclcpp::Rate(TIME_RATE);
+    params = BT::RosNodeParams(node);
+    rate = std::make_shared<rclcpp::Rate>(TIME_RATE);
     
     // Initialize new variables
     isReady = false;
@@ -49,7 +47,7 @@ void BTengine::initParam() {
 
 void BTengine::readyCallback(const std_msgs::msg::Bool::SharedPtr msg) {
     if(msg->data) {
-        sentReadySingal();   
+        sentReadySignal();   
         RCLCPP_INFO(this->get_logger(), "[BTengine]: Received ready signal");
     }
 }
@@ -57,9 +55,10 @@ void BTengine::readyCallback(const std_msgs::msg::Bool::SharedPtr msg) {
 void BTengine::sentReadySignal() {
     auto request = std::make_shared<btcpp_ros2_interfaces::srv::StartUpSrv::Request>();
     request->group = group;
-    request->state = StartUpState::READY;
+    request->state = static_cast<int>(StartUpState::READY);
+    int captured_group = group;  // Copy member variable for lambda capture
     ready_srv_client->async_send_request(request,
-      [this, group](rclcpp::Client<btcpp_ros2_interfaces::srv::StartUpSrv>::SharedFuture future) {
+      [this, captured_group](rclcpp::Client<btcpp_ros2_interfaces::srv::StartUpSrv>::SharedFuture future) {
         auto response = future.get();
         if (response->success) {
             RCLCPP_INFO(this->get_logger(), "[BTengine]: ReadySignal SUCCESS: group=%d", response->group);
@@ -137,7 +136,7 @@ void BTengine::createTreeNodes() {
 
     // navigation
     factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);
-    factory.registerNodeType<Docking>("Docking", params);
+    factory.registerNodeType<Docking>("Docking", params, blackboard);
     factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
     factory.registerNodeType<RotateActionNode>("RotateActionNode", params);
 
@@ -152,7 +151,7 @@ void BTengine::createTree() {
     // Wait until plan file is received
     while (rclcpp::ok() && !isReady) {
         rclcpp::spin_some(node);
-        rate.sleep();
+        rate->sleep();
     }
     
     // Build the full path to the XML file
@@ -206,7 +205,7 @@ void BTengine::runTree() {
         }
         
         rclcpp::spin_some(node);
-        rate.sleep();
+        rate->sleep();
     }
     
     RCLCPP_INFO(this->get_logger(), "[BTengine]: --Tree execution ended--");
