@@ -162,6 +162,9 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 COPY ./scripts/settings/.bashrc /home/${USERNAME}/.bashrc    
 
+# Tmux configuration - enable mouse support
+RUN echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf
+
 ##############################################################################
 # Clean apt-cache
 ##############################################################################

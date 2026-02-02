@@ -13,7 +13,7 @@ services:
     image: &IMG_NAME eurobot-2026-main:latest
     container_name: eurobot-2026-main-build
     hostname: eurobot-main
-    command: &CMD_BUILD /bin/bash -c "cd /home/main/eurobot-2026-main-ws && colcon build"
+    command: &CMD_BUILD /bin/bash -c "cd /home/main/eurobot-2026-main-ws && colcon build --symlink-install"
     tty: true
     network_mode: host
     ipc: host

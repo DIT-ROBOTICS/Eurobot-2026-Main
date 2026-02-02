@@ -122,7 +122,7 @@ fi
 # ** Hostname & Domain_ID setup in docker_deploy.yaml
 
 source /opt/ros/humble/setup.bash
-source /home/user/Eurobot-2026-main-ws/install/local_setup.bash
+source /home/main/eurobot-2026-main-ws/install/setup.bash
 
 alias build='colcon build --symlink-install --parallel-workers 2'
 # alias run='ros2 launch navigation2_run real_launch.py'
