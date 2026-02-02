@@ -161,7 +161,8 @@ void BTengine::createTreeNodes() {
 
     // decision core
     factory.registerNodeType<DecisionCore>("DecisionCore", params, blackboard);
-
+    
+    params.default_port_value = "dock_robot";
     // navigation
     factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);
     factory.registerNodeType<Docking>("Docking", params, blackboard);
