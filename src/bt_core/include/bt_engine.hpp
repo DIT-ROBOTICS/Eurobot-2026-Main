@@ -95,6 +95,7 @@ private:
     Robot robot;
     int selected_plan;
     std::string plan_file_name;
+    bool file_logged;
     double game_time;
     BT::Blackboard::Ptr blackboard;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr game_time_sub;

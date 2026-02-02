@@ -29,6 +29,8 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     game_time_sub = this->create_subscription<std_msgs::msg::Float32>("/robot/startup/game_time", 2, 
         std::bind(&BTengine::gameTimeCallback, this, std::placeholders::_1));
 
+    json_point_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/robot/startup/json_point", 2);
+
     rate = std::make_shared<rclcpp::Rate>(TIME_RATE);
     
     // Initialize new variables
@@ -38,6 +40,7 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     tree_name = TREE_NAME;
     bt_tree_node_model = BT_TREE_NODE_MODEL;
     group = 1;  // Main BT group
+    file_logged = false;
     
     initParam();
 }
@@ -101,7 +104,10 @@ void BTengine::planFileCallback(const std_msgs::msg::String::SharedPtr msg) {
     team = stringToTeam(plan_file_name_split[1]);
     selected_plan = std::stoi(plan_file_name_split[2]);
 
-    RCLCPP_INFO(this->get_logger(), "[BTengine]: Received plan file for robot %s, team %s, plan %d", robotToString(robot).c_str(), teamToString(team).c_str(), selected_plan);
+    if (!file_logged) {
+        RCLCPP_INFO(this->get_logger(), "[BTengine]: Received plan file for robot %s, team %s, plan %d", robotToString(robot).c_str(), teamToString(team).c_str(), selected_plan);
+        file_logged = true;
+    }
     
     // Mark as ready - createTree() is waiting for this
     isReady = true;
@@ -283,6 +289,7 @@ int main(int argc, char** argv) {
     bt_engine->init();
     
     bt_engine->createTreeNodes();
+    bt_engine->addJsonPoint();
     bt_engine->setBlackboard();
     bt_engine->createTree();
     

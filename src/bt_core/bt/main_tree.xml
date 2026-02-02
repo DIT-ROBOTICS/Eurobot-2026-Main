@@ -19,16 +19,16 @@
                     <NavigationActionNode
                         goal="{target_pose}"
                         dock_type="front"
-                        final_pose="{nav_result_pose}"/>
+                        finish_pose="{nav_result_pose}"/>
                     
                     <!-- Precise docking at target -->
                     <Docking
-                        base="{nav_result_pose}"
+                        goal="{nav_result_pose}"
                         offset="0.1"
                         shift="0.0"
                         dock_type="front"
                         isPureDocking="true"
-                        final_pose="{dock_result_pose}"/>
+                        finish_pose="{dock_result_pose}"/>
                 </Sequence>
             </Repeat>
             
@@ -41,12 +41,12 @@
     <BehaviorTree ID="DockingSubTree">
         <Sequence>
             <Docking
-                base="{dock_target}"
+                goal="{dock_target}"
                 offset="{dock_offset}"
                 shift="{dock_shift}"
                 dock_type="{dock_type}"
                 isPureDocking="true"
-                final_pose="{dock_result}"/>
+                finish_pose="{dock_result}"/>
         </Sequence>
     </BehaviorTree>
 
@@ -56,7 +56,7 @@
             <NavigationActionNode
                 goal="{nav_goal}"
                 dock_type="front"
-                final_pose="{nav_result}"/>
+                finish_pose="{nav_result}"/>
         </Sequence>
     </BehaviorTree>
 </root>

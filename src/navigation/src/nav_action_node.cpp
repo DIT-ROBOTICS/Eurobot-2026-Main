@@ -80,14 +80,14 @@ NodeStatus NavigationActionNode::goalErrorDetect() {
 
     LocReceiver::UpdateRobotPose(robot_pose, tf_buffer, frame_id);
     if(calculateDistance(robot_pose.pose, goal.pose) < nav_dist_error && calculateAngleDifference(robot_pose.pose, goal.pose) < nav_angle_error) {
-        RCLCPP_INFO_STREAM(logger(), "success! final_pose: " << robot_pose.pose.position.x << ", " << robot_pose.pose.position.y << ", " << ConvertPoseFormat(robot_pose).pose.position.z);
+        RCLCPP_INFO_STREAM(logger(), "success! finish_pose: " << robot_pose.pose.position.x << ", " << robot_pose.pose.position.y << ", " << ConvertPoseFormat(robot_pose).pose.position.z);
         RCLCPP_INFO_STREAM(logger(), "-----------------");
         setOutput<geometry_msgs::msg::PoseStamped>("finish_pose", ConvertPoseFormat(robot_pose));
         return NodeStatus::SUCCESS;
     }
     else {
         nav_error = true;
-        RCLCPP_INFO_STREAM(logger(), "fail! final_pose: " << robot_pose.pose.position.x << ", " << robot_pose.pose.position.y << ", " << ConvertPoseFormat(robot_pose).pose.position.z);
+        RCLCPP_INFO_STREAM(logger(), "fail! finish_pose: " << robot_pose.pose.position.x << ", " << robot_pose.pose.position.y << ", " << ConvertPoseFormat(robot_pose).pose.position.z);
         RCLCPP_INFO_STREAM(logger(), "z" << ConvertPoseFormat(goal).pose.position.z);
         RCLCPP_INFO_STREAM(logger(), "-----------------");
         setOutput<geometry_msgs::msg::PoseStamped>("finish_pose", ConvertPoseFormat(goal));

@@ -68,12 +68,17 @@ BT::NodeStatus DecisionCore::tick() {
 // ============ Private Helper Methods ============
 
 void DecisionCore::loadMapPoints() {
-    if (node_->has_parameter("map_points_1")) {
-        node_->get_parameter("map_points_1", map_points_);
+    // Declare parameter if not already declared
+    if (!node_->has_parameter("map_points")) {
+        node_->declare_parameter("map_points", std::vector<double>{});
+    }
+
+    // Get parameter
+    if (node_->get_parameter("map_points", map_points_)) {
         RCLCPP_INFO(node_->get_logger(), "[DecisionCore] Loaded %zu map point values", 
                     map_points_.size());
     } else {
-        RCLCPP_WARN(node_->get_logger(), "[DecisionCore] No map_points_1 param found");
+        RCLCPP_WARN(node_->get_logger(), "[DecisionCore] Failed to load map_points param");
     }
 }
 

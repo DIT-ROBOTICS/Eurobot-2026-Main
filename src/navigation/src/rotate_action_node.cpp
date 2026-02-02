@@ -83,14 +83,14 @@ NodeStatus RotateActionNode::goalErrorDetect() {
         RCLCPP_INFO(logger(), "RotateActionNode: success! final_direction: (%f, %f)", robot_pose.pose.orientation.w, robot_pose.pose.orientation.z);
         // RCLCPP_INFO_STREAM(logger(), "z" << ConvertPoseFormat(robot_pose_).pose.position.z);
         RCLCPP_INFO_STREAM(logger(), "-----------------");
-        setOutput<geometry_msgs::msg::PoseStamped>("final_pose", ConvertPoseFormat(robot_pose));
+        setOutput<geometry_msgs::msg::PoseStamped>("finish_pose", ConvertPoseFormat(robot_pose));
         return NodeStatus::SUCCESS;
     } else {
         rotate_error = true;
         RCLCPP_INFO(logger(), "RotateActionNode: fail! final_direction: (%f, %f)", robot_pose.pose.orientation.w, robot_pose.pose.orientation.z);
         // RCLCPP_INFO_STREAM(logger(), "z" << ConvertPoseFormat(goal_).pose.position.z);
         RCLCPP_INFO_STREAM(logger(), "-----------------");
-        setOutput<geometry_msgs::msg::PoseStamped>("final_pose", ConvertPoseFormat(goal));
+        setOutput<geometry_msgs::msg::PoseStamped>("finish_pose", ConvertPoseFormat(goal));
         return NodeStatus::SUCCESS;
     }
 }

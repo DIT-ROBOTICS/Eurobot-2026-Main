@@ -87,9 +87,18 @@ class MockGroupsTester(Node):
         print('a    = Send ready for ALL groups')
         print('s    = Show current status')
         print('p    = Send plug signal (start game)')
+        print('r    = Reset to initial state')
         print('q    = Quit')
         print('----------------\n')
-        
+
+    def reset_state(self):
+        """Reset internal state to allow re-testing."""
+        self.groups_reported = {g: False for g in self.GROUPS.keys()}
+        self.plug_sent = False
+        self.receiving_are_you_ready = False
+        self.get_logger().info('State has been reset. Waiting for new signals...')
+        self.print_status()
+
     def are_you_ready_callback(self, msg: Bool):
         """Handle are_you_ready signal from startup."""
         if msg.data and not self.receiving_are_you_ready:
@@ -163,7 +172,7 @@ class MockGroupsTester(Node):
             self.plug_pub.publish(msg)
             
         self.get_logger().info('>>> PLUG SIGNAL SENT! Game starting... <<<')
-        
+
     def input_loop(self):
         """Handle user input in a separate thread."""
         while rclpy.ok():
@@ -176,6 +185,8 @@ class MockGroupsTester(Node):
                     break
                 elif cmd == 's':
                     self.print_status()
+                elif cmd == 'r':
+                    self.reset_state()
                 elif cmd == 'p':
                     self.send_plug_signal()
                 elif cmd == 'a':
