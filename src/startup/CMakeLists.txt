@@ -70,6 +70,9 @@ install(TARGETS
 )
 
 install(DIRECTORY
+  params
+  launch
+  scripts
   DESTINATION share/${PROJECT_NAME}/
 )
 

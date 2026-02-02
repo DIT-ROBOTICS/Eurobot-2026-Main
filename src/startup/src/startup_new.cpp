@@ -1,19 +1,18 @@
 #include "startup.hpp"
 #include <algorithm>
 
-const int TIME_RATE = 100;
-const int SIMA_TICK_THRESHOLD = 85;
-const int GAME_TIME = 100; 
-const int GROUP_NUM = 5; // total number of groups including index 0
 
 StartUp::StartUp() : Node("startup_node"){
-    // game timer
+    // Load parameters first
+    initParam();
+    
+    // game timer - now using loaded time_rate
     timer = this->create_wall_timer(
-        std::chrono::microseconds(TIME_RATE),
+        std::chrono::microseconds(time_rate),
         std::bind(&StartUp::stateTransition, this));
 
     game_time_pub = this->create_publisher<std_msgs::msg::Float32>("/robot/startup/game_time", 2);
-    rate = std::make_shared<rclcpp::Rate>(TIME_RATE);
+    rate = std::make_shared<rclcpp::Rate>(time_rate);
 
     // State checker for other groups
     are_you_ready_pub = this->create_publisher<std_msgs::msg::Bool>("/robot/startup/are_you_ready", 2);
@@ -23,11 +22,12 @@ StartUp::StartUp() : Node("startup_node"){
     plan_file_pub = this->create_publisher<std_msgs::msg::String>("/robot/startup/plan_file", 2);
     start_signal_client = this->create_client<std_srvs::srv::SetBool>(
         "/robot/start_signal");
+    initialpose_pub = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
+        "/initialpose", 2);
 
     // sima
     start_sima_pub = this->create_publisher<std_msgs::msg::Int16>("/sima/start", 2);
     start_ninja_pub = this->create_publisher<std_msgs::msg::Int16>("/ninja/start", 2);
-    sima_tick_threshold = SIMA_TICK_THRESHOLD;
     sima_selected_plan = 0;
     sima_started = false;
 
@@ -42,22 +42,40 @@ StartUp::StartUp() : Node("startup_node"){
     plan_file_name = "";
     startup_state = StartUpState::INIT;
     start_position = geometry_msgs::msg::PoseWithCovarianceStamped();
-    std::fill(std::begin(group_state), std::end(group_state), 0);
     is_plugged = false;
+    end_logged = false;
     game_time = 0;
-    initParam();
 }
 
 void StartUp::initParam() {
+    // Timing parameters
+    this->declare_parameter<int>("time_rate", 100);
+    this->declare_parameter<int>("game_time", 100);
+    this->declare_parameter<int>("sima_tick_threshold", 85);
+    this->declare_parameter<int>("group_num", 5);
+    
+    // Robot parameters
     this->declare_parameter<std::string>("robot_name", "White");
     this->declare_parameter<std::vector<double>>("blue_team.start_pose", std::vector<double>{0.0, 0.0, 0.0});
     this->declare_parameter<std::vector<double>>("yellow_team.start_pose", std::vector<double>{0.0, 0.0, 0.0});
 
+    // Get timing parameters
+    this->get_parameter("time_rate", time_rate);
+    this->get_parameter("game_time", game_time_limit);
+    this->get_parameter("sima_tick_threshold", sima_tick_threshold);
+    this->get_parameter("group_num", group_num);
+    
+    // Get robot parameters
     this->get_parameter("robot_name", robot_name);
     this->get_parameter("blue_team.start_pose", blue_start_pose);
     this->get_parameter("yellow_team.start_pose", yellow_start_pose);
+    
+    // Initialize group_state with the configured size
+    group_state.resize(group_num, 0);
 
     RCLCPP_INFO(this->get_logger(), "[StartUp]: Loaded config for robot: %s", robot_name.c_str());
+    RCLCPP_INFO(this->get_logger(), "[StartUp]: Game time: %d, Sima threshold: %d, Groups: %d", 
+                game_time_limit, sima_tick_threshold, group_num);
 }
 
 void StartUp::stateTransition() {
@@ -69,10 +87,12 @@ void StartUp::stateTransition() {
             break;
         case StartUpState::READY:
             publishSystemCheckSignal();
+            publishPlanFile();
             if(isAllSystemReady()) {
                 // TODO: add one hot trigger for startSignal and initialPose, if not theorically publish once
                 publishStartSignal();
                 publishInitialPose();
+                start_time = this->get_clock()->now().seconds();
                 startup_state = StartUpState::START;
             }
             break;
@@ -81,7 +101,10 @@ void StartUp::stateTransition() {
             if(gameOver(game_time)) startup_state = StartUpState::END;
             break;
         case StartUpState::END:
-            RCLCPP_INFO(this->get_logger(), "[StartUp]: End state");
+            if(!end_logged) {
+                RCLCPP_INFO(this->get_logger(), "[StartUp]: End state");
+                end_logged = true;
+            }
             break;
         case StartUpState::ERROR:
             RCLCPP_ERROR(this->get_logger(), "[StartUp]: Error state");
@@ -135,6 +158,10 @@ void StartUp::parsePlanCode() {
     RCLCPP_INFO(this->get_logger(), "[StartUp]: Parsed Plan: %s", plan_file_name.c_str());
 
     // publish plan file
+    publishPlanFile();
+}
+
+void StartUp::publishPlanFile() {
     auto msg = std_msgs::msg::String();
     msg.data = plan_file_name;
     plan_file_pub->publish(msg);
@@ -171,7 +198,7 @@ void StartUp::systemCheckFeedback(const std::shared_ptr<btcpp_ros2_interfaces::s
 }
 
 bool StartUp::isAllSystemReady() {
-    for(int i = 1; i < GROUP_NUM; i++) {  // Use literal 5 instead of .size()
+    for(int i = 1; i < group_num; i++) {
         if(group_state[i] != 1) {
             group_state[0] = 0;
             return false;
@@ -224,6 +251,7 @@ void StartUp::publishInitialPose() {
     start_position.pose.covariance[7]  = 1e-4;
     start_position.pose.covariance[35] = 0.068; // (15 deg)^2
     initialpose_pub->publish(start_position);
+    RCLCPP_INFO(this->get_logger(), "[StartUp]: Initial pose published at point (%f, %f) with yaw %f", start_position.pose.pose.position.x, start_position.pose.pose.position.y, start_position.pose.pose.orientation.z);
 }
 
 void StartUp::tickSima(double game_time) {
@@ -231,8 +259,9 @@ void StartUp::tickSima(double game_time) {
         auto msg = std_msgs::msg::Int16();
         msg.data = sima_selected_plan;
         start_sima_pub->publish(msg);
+        start_ninja_pub->publish(msg);
         sima_started = true;
-
+        RCLCPP_INFO(this->get_logger(), "[StartUp]: Sima started at game time %f using plan %d", game_time, sima_selected_plan);
         // TODO: add continuous publishing if sima is not started for one time publish
         // add after testing sima
     }
@@ -248,7 +277,10 @@ void StartUp::publishTime() {
 }
 
 bool StartUp::gameOver(double game_time) {
-    if(game_time >= GAME_TIME) return true;
+    if(game_time >= game_time_limit) {
+        RCLCPP_INFO(this->get_logger(), "[StartUp]: Game over at game time: %f", game_time);
+        return true;
+    }
     return false;
 }
 

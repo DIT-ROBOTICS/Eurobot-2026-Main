@@ -32,7 +32,7 @@
 #include "btcpp_ros2_interfaces/msg/circle_obstacle.hpp"
 #include "btcpp_ros2_interfaces/msg/segment_obstacle.hpp"
 
-#include "../../main/include/bt_config.hpp"
+#include "../../bt_core/include/bt_config.hpp"
 
 #define PI 3.1415926
 
@@ -53,6 +53,7 @@ public:
     void parsePlanCode();
 
     // ready phase
+    void publishPlanFile();
     void publishSystemCheckSignal();
     void systemCheckFeedback(const std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Request> request,
         std::shared_ptr<btcpp_ros2_interfaces::srv::StartUpSrv::Response> response);
@@ -91,7 +92,6 @@ private:
     // sima will be start by a int topic for potiential plan selection
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr start_sima_pub;
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr start_ninja_pub;
-    int sima_tick_threshold;
     int sima_selected_plan;
     bool sima_started;
 
@@ -113,10 +113,15 @@ private:
     geometry_msgs::msg::PoseWithCovarianceStamped start_position;
     double start_time;
     bool is_plugged;
-    int group_state[5];
+    bool end_logged;
+    std::vector<int> group_state;
 
     // Parameters
     std::string robot_name;
     std::vector<double> blue_start_pose;
     std::vector<double> yellow_start_pose;
+    int time_rate;
+    int game_time_limit;
+    int sima_tick_threshold;
+    int group_num;
 };
