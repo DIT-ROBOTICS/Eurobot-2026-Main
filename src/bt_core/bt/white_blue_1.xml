@@ -6,47 +6,28 @@
             <!-- Initialize receivers -->
             <CamReceiver/>
             
-            <!-- Main mission loop -->
-            <Repeat num_cycles="-1">
-                <Sequence>
-                    <!-- Get next target from DecisionCore -->
-                    <DecisionCore 
-                        next_target_index="{target_index}"
-                        next_target_pose="{target_pose}"
-                        action_type="{action_type}"/>
-                    
-                    <!-- Navigate to target -->
-                    <NavigationActionNode
-                        goal="{target_pose}"
-                        dock_type="front"
-                        finish_pose="{nav_result_pose}"/>
-                    
-                    <!-- Precise docking at target -->
-                    <Docking
-                        goal="{nav_result_pose}"
-                        offset="0.1"
-                        shift="0.0"
-                        dock_type="front"
-                        isPureDocking="true"
-                        finish_pose="{dock_result_pose}"/>
-                </Sequence>
-            </Repeat>
+            <!-- Main mission loop with timeout -->
+            <Parallel failure_count="2" success_count="1">
+                <Repeat num_cycles="-1">
+                    <Sequence>
+                        <!-- Get next target from DecisionCore -->
+                        <DecisionCore 
+                            next_target_index="{target_index}"
+                            next_target_pose="{target_pose}"
+                            action_type="{action_type}"/>
+                        
+                        <!-- Navigate to target -->
+                        <NavigationActionNode
+                            goal="{target_pose}"
+                            dock_type="dock_y_loose_linearBoost"
+                            finish_pose="{nav_result_pose}"/>
+                    </Sequence>
+                </Repeat>
+                <Sleep msec="100000"/>  <!-- 100 seconds timeout -->
+            </Parallel>
             
             <!-- Stop robot when done -->
             <StopRobotNode/>
-        </Sequence>
-    </BehaviorTree>
-
-    <!-- Docking subtree for precise positioning -->
-    <BehaviorTree ID="DockingSubTree">
-        <Sequence>
-            <Docking
-                goal="{dock_target}"
-                offset="{dock_offset}"
-                shift="{dock_shift}"
-                dock_type="{dock_type}"
-                isPureDocking="true"
-                finish_pose="{dock_result}"/>
         </Sequence>
     </BehaviorTree>
 
@@ -55,7 +36,7 @@
         <Sequence>
             <NavigationActionNode
                 goal="{nav_goal}"
-                dock_type="front"
+                dock_type="dock_y_loose_linearBoost"
                 finish_pose="{nav_result}"/>
         </Sequence>
     </BehaviorTree>

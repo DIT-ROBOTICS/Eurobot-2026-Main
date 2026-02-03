@@ -22,8 +22,13 @@ StartUp::StartUp() : Node("startup_node"){
     plan_file_pub = this->create_publisher<std_msgs::msg::String>("/robot/startup/plan_file", 2);
     start_signal_client = this->create_client<std_srvs::srv::SetBool>(
         "/robot/start_signal");
+    
+    rclcpp::QoS qos(1);
+    qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+    qos.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+    
     initialpose_pub = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-        "/initialpose", 2);
+        "/initial_pose", qos);
 
     // sima
     start_sima_pub = this->create_publisher<std_msgs::msg::Int16>("/sima/start", 2);
@@ -83,6 +88,7 @@ void StartUp::stateTransition() {
         case StartUpState::INIT:
             getWebPlan();
             parsePlanCode();
+            publishInitialPose();
             startup_state = StartUpState::READY;
             break;
         case StartUpState::READY:
@@ -91,7 +97,6 @@ void StartUp::stateTransition() {
             if(isAllSystemReady()) {
                 // TODO: add one hot trigger for startSignal and initialPose, if not theorically publish once
                 publishStartSignal();
-                publishInitialPose();
                 start_time = this->get_clock()->now().seconds();
                 startup_state = StartUpState::START;
             }

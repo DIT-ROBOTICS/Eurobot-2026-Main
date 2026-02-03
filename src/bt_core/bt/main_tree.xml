@@ -18,7 +18,7 @@
                     <!-- Navigate to target -->
                     <NavigationActionNode
                         goal="{target_pose}"
-                        dock_type="front"
+                        dock_type="dock_y_loose_linearBoost"
                         finish_pose="{nav_result_pose}"/>
                     
                     <!-- Precise docking at target -->
@@ -26,7 +26,7 @@
                         goal="{nav_result_pose}"
                         offset="0.1"
                         shift="0.0"
-                        dock_type="front"
+                        dock_type="dock_y_loose_linearBoost"
                         isPureDocking="true"
                         finish_pose="{dock_result_pose}"/>
                 </Sequence>
@@ -55,7 +55,7 @@
         <Sequence>
             <NavigationActionNode
                 goal="{nav_goal}"
-                dock_type="front"
+                dock_type="dock_y_loose_linearBoost"
                 finish_pose="{nav_result}"/>
         </Sequence>
     </BehaviorTree>

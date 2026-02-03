@@ -3,6 +3,12 @@
 NavigationActionNode::NavigationActionNode(const std::string& name, const NodeConfig& conf, const RosNodeParams& params)
     : RosActionNode<opennav_docking_msgs::action::DockRobot>(name, conf, params), tf_buffer(params.nh.lock()->get_clock()), listener(tf_buffer) {
         node = params.nh.lock();
+        
+        // Declare parameters with default values
+        node->declare_parameter("nav_dist_error_torlence", 0.005);
+        node->declare_parameter("nav_angle_error_torlence", 0.4);
+        node->declare_parameter("frame_id", "map");
+        
         node->get_parameter("frame_id", frame_id);
         tf_buffer.setUsingDedicatedThread(true);
         nav_finished = false;

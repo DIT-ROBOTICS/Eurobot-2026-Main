@@ -37,6 +37,7 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     isReady = false;
     readySent = false;  // Will be set to true after first ready signal
     treeCreated = false;  // Will be set to true after tree is created
+    canStart = false;  // Will be set to true when start signal is received
     tree_name = TREE_NAME;
     bt_tree_node_model = BT_TREE_NODE_MODEL;
     group = 1;  // Main BT group
@@ -175,20 +176,12 @@ void BTengine::createTreeNodes() {
 }
 
 void BTengine::createTree() {
-    RCLCPP_INFO_STREAM(this->get_logger(), "[BTengine]: --Loading XML-- waiting for plan file...");
-    
-    // Wait until plan file is received
-    int wait_count = 0;
-    while (rclcpp::ok() && !isReady) {
-        rclcpp::spin_some(node);
-        rate->sleep();
-        wait_count++;
-        if (wait_count % 100 == 0) {
-            RCLCPP_INFO(this->get_logger(), "[BTengine]: Still waiting for plan file... (isReady=%d)", isReady);
-        }
+    if (!isReady) {
+        RCLCPP_WARN(this->get_logger(), "[BTengine]: createTree called but plan file not ready yet");
+        return;
     }
     
-    RCLCPP_INFO(this->get_logger(), "[BTengine]: Plan file received: %s", plan_file_name.c_str());
+    RCLCPP_INFO(this->get_logger(), "[BTengine]: Plan file received: %s, creating tree...", plan_file_name.c_str());
     
     // Build the full path to the XML file
     std::string xml_file_path = BT_XML_DIRECTORY + plan_file_name;
@@ -231,19 +224,24 @@ void BTengine::gameTimeCallback(const std_msgs::msg::Float32::SharedPtr msg) {
 }
 
 void BTengine::runTree() {
+    BT::NodeStatus status = BT::NodeStatus::RUNNING;
+    
     RCLCPP_INFO(this->get_logger(), "[BTengine]: --Running tree--");
     
-    while (rclcpp::ok() && game_time < TERMINATE_TIME) {
-        BT::NodeStatus status = tree.tickOnce();
+    try {
+        do {
+            rate->sleep();
+            status = tree.rootNode()->executeTick();
+        } while (rclcpp::ok() && status == BT::NodeStatus::RUNNING && game_time < TERMINATE_TIME);
         
-        if (status == BT::NodeStatus::SUCCESS || status == BT::NodeStatus::FAILURE) {
-            RCLCPP_INFO(this->get_logger(), "[BTengine]: Tree finished with status: %s", 
-                        BT::toStr(status).c_str());
-            break;
-        }
-        
-        rclcpp::spin_some(node);
-        rate->sleep();
+        RCLCPP_INFO(this->get_logger(), "[BTengine]: Tree finished with status: %s", 
+                    BT::toStr(status).c_str());
+    }
+    catch (const std::exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "[BTengine]: Exception during tree execution: %s", e.what());
+    }
+    catch (...) {
+        RCLCPP_ERROR(this->get_logger(), "[BTengine]: Unknown exception during tree execution");
     }
     
     RCLCPP_INFO(this->get_logger(), "[BTengine]: --Tree execution ended--");
@@ -265,8 +263,8 @@ void BTengine::startCallback(const std::shared_ptr<std_srvs::srv::SetBool::Reque
     if (request->data && isReady && treeCreated) {
         response->success = true;
         response->message = "BTengine starting tree execution";
-        RCLCPP_INFO(this->get_logger(), "[BTengine]: Received start signal, running tree...");
-        runTree();
+        setStartFlag(true);
+        RCLCPP_INFO(this->get_logger(), "[BTengine]: Received start signal, tree will start running");
     } else {
         response->success = false;
         if (!treeCreated) {
@@ -278,6 +276,18 @@ void BTengine::startCallback(const std::shared_ptr<std_srvs::srv::SetBool::Reque
         }
         RCLCPP_WARN(this->get_logger(), "[BTengine]: Start rejected: %s", response->message.c_str());
     }
+}
+
+bool BTengine::isTreeCreated() {
+    return treeCreated;
+}
+
+bool BTengine::isStarted() {
+    return canStart;
+}
+
+void BTengine::setStartFlag(bool start) {
+    canStart = start;
 }
 
 // Main function
@@ -292,11 +302,33 @@ int main(int argc, char** argv) {
     bt_engine->createTreeNodes();
     bt_engine->addJsonPoint();
     bt_engine->setBlackboard();
-    bt_engine->createTree();
+    
+    // Spin until tree is created
+    while (rclcpp::ok() && !bt_engine->isTreeCreated()) {
+        rclcpp::spin_some(bt_engine);
+        
+        // Only call createTree once isReady is true (plan file received)
+        if (bt_engine->isReady && !bt_engine->isTreeCreated()) {
+            bt_engine->createTree();
+        }
+        
+        bt_engine->rate->sleep();
+    }
     
     RCLCPP_INFO(bt_engine->get_logger(), "[BTengine]: Node ready, waiting for start signal...");
     
-    rclcpp::spin(bt_engine);
+    // Continue spinning while running tree
+    while (rclcpp::ok()) {
+        rclcpp::spin_some(bt_engine);
+        
+        if (bt_engine->isStarted()) {
+            bt_engine->runTree();
+            bt_engine->setStartFlag(false);  // Reset start flag after running
+        }
+        
+        bt_engine->rate->sleep();
+    }
+    
     rclcpp::shutdown();
     
     return 0;

@@ -71,8 +71,8 @@ public:
     /**
      * @brief read plan file and create tree
      */
-    
     void addJsonPoint();
+    
     void createTree();
     void runTree();
     void setBlackboard();
@@ -82,6 +82,13 @@ public:
     void planFileCallback(const std_msgs::msg::String::SharedPtr msg);
     void startCallback(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
         std::shared_ptr<std_srvs::srv::SetBool::Response> response);
+    bool isTreeCreated();
+    bool isStarted();
+    void setStartFlag(bool start);
+    
+    // Public flags for main loop access
+    bool isReady;           // Flag indicating plan_file received
+    std::shared_ptr<rclcpp::Rate> rate;
 
 private:
     // startup relative
@@ -103,9 +110,9 @@ private:
     std::vector<int> json_point;
     
     // Tree creation state
-    bool isReady;           // Flag indicating plan_file received
     bool readySent;         // Flag to prevent sending ready signal multiple times
     bool treeCreated;       // Flag indicating tree was successfully created
+    bool canStart;          // Flag indicating start signal received
     std::string tree_name;  // Name of the main tree to create (e.g., "MainTree")
     std::string bt_tree_node_model;  // Path to save tree node model XML
     int group;              // Group ID for ready signal
@@ -117,6 +124,5 @@ private:
 
     // ros variables
     std::shared_ptr<rclcpp::Node> node;
-    std::shared_ptr<rclcpp::Rate> rate;
 };
 
