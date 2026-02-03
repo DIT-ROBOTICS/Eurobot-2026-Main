@@ -27,24 +27,6 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/../main/include
 )
 
-add_executable(startup src/startup.cpp)
-ament_target_dependencies(startup
-  ${THIS_PACKAGE_DEPS}
-  "rclcpp"
-  "geometry_msgs"
-  "nav_msgs"
-  "std_msgs"
-  "std_srvs"
-  "tf2"
-  "tf2_ros"
-  "tf2_geometry_msgs"
-  "btcpp_ros2_interfaces"
-  "jsoncpp"
-)
-target_link_libraries(startup
-  jsoncpp
-)
-
 add_executable(startup_new src/startup_new.cpp)
 ament_target_dependencies(startup_new
   ${THIS_PACKAGE_DEPS}
