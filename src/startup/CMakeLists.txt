@@ -46,7 +46,6 @@ target_link_libraries(startup_new
 )
 
 install(TARGETS
-  startup
   startup_new
   DESTINATION lib/${PROJECT_NAME}
 )
