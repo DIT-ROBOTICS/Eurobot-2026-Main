@@ -117,6 +117,13 @@ private:
     std::string bt_tree_node_model;  // Path to save tree node model XML
     int group;              // Group ID for ready signal
 
+    // Configuration parameters
+    int time_rate;          // Timer rate in microseconds
+    int terminate_time;     // Game time limit in seconds (when to stop tree execution)
+    std::string pkg_share_dir;      // Package share directory path
+    std::string json_file_path;     // Full path to mission sequence JSON
+    std::string bt_xml_directory;   // Full path to BT XML directory
+
     // BT utilities
     BT::Tree tree;
     BT::BehaviorTreeFactory factory;

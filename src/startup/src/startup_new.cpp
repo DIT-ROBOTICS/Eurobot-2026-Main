@@ -61,6 +61,7 @@ void StartUp::initParam() {
     
     // Robot parameters
     this->declare_parameter<std::string>("robot_name", "White");
+    this->declare_parameter<int>("default_plan", 11);
     this->declare_parameter<std::vector<double>>("blue_team.start_pose", std::vector<double>{0.0, 0.0, 0.0});
     this->declare_parameter<std::vector<double>>("yellow_team.start_pose", std::vector<double>{0.0, 0.0, 0.0});
 
@@ -122,8 +123,8 @@ void StartUp::stateTransition() {
 
 void StartUp::getWebPlan() {
     if(!web_plan_client->wait_for_service(std::chrono::seconds(1))) {
-        RCLCPP_ERROR(this->get_logger(), "Service not available, use default plan");
-        selected_plan = 11;
+        this->get_parameter("default_plan", selected_plan);
+        RCLCPP_INFO(this->get_logger(), "[StartUp]: Web service not available, using default plan: %d", selected_plan);
         return;
     }
     auto request = std::make_shared<std_srvs::srv::Trigger::Request>();

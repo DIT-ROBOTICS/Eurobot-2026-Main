@@ -1,13 +1,5 @@
 #include "bt_engine.hpp"
 
-const int TIME_RATE = 100;
-// Paths relative to package share directory (set at runtime)
-std::string JSON_FILE_PATH = "";
-std::string BT_XML_DIRECTORY = "";
-const std::string TREE_NAME = "MainTree";
-std::string BT_TREE_NODE_MODEL = "";
-const int TERMINATE_TIME = 101;
-
 BTengine::BTengine() : rclcpp::Node("bt_engine") {
     start_srv_server = this->create_service<std_srvs::srv::SetBool>("/robot/start_signal", 
         std::bind(&BTengine::startCallback, this, std::placeholders::_1, std::placeholders::_2));
@@ -30,20 +22,19 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
         std::bind(&BTengine::gameTimeCallback, this, std::placeholders::_1));
 
     json_point_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/robot/startup/json_point", 2);
-
-    rate = std::make_shared<rclcpp::Rate>(TIME_RATE);
+    
+    // Initialize parameters first
+    initParam();
+    
+    rate = std::make_shared<rclcpp::Rate>(time_rate);
     
     // Initialize new variables
     isReady = false;
     readySent = false;  // Will be set to true after first ready signal
     treeCreated = false;  // Will be set to true after tree is created
     canStart = false;  // Will be set to true when start signal is received
-    tree_name = TREE_NAME;
-    bt_tree_node_model = BT_TREE_NODE_MODEL;
     group = 1;  // Main BT group
     file_logged = false;
-    
-    initParam();
 }
 
 void BTengine::init() {
@@ -53,19 +44,34 @@ void BTengine::init() {
 }
 
 void BTengine::initParam() {
-    // Set paths using package share directory
-    // At runtime, these should point to installed locations
-    std::string pkg_share = "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core";
+    // Declare parameters with defaults
+    this->declare_parameter<int>("time_rate", 100);
+    this->declare_parameter<int>("game_time", 100);
+    this->declare_parameter<std::string>("pkg_share_dir", "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core");
+    this->declare_parameter<std::string>("tree_name", "MainTree");
+    this->declare_parameter<std::string>("json_file_path", "params/mission_sequence.json");
+    this->declare_parameter<std::string>("bt_xml_directory", "bt/");
+    this->declare_parameter<std::string>("bt_tree_node_model", "bt/tree_node_model.xml");
     
-    JSON_FILE_PATH = pkg_share + "/params/mission_sequence.json";
-    BT_XML_DIRECTORY = pkg_share + "/bt/";
-    BT_TREE_NODE_MODEL = pkg_share + "/bt/tree_node_model.xml";
+    // Get parameters
+    this->get_parameter("time_rate", time_rate);
+    this->get_parameter("game_time", terminate_time);
+    this->get_parameter("pkg_share_dir", pkg_share_dir);
+    this->get_parameter("tree_name", tree_name);
     
-    // Update member variables
-    bt_tree_node_model = BT_TREE_NODE_MODEL;
+    std::string json_rel_path, bt_xml_rel_path, bt_model_rel_path;
+    this->get_parameter("json_file_path", json_rel_path);
+    this->get_parameter("bt_xml_directory", bt_xml_rel_path);
+    this->get_parameter("bt_tree_node_model", bt_model_rel_path);
     
-    RCLCPP_INFO(this->get_logger(), "[BTengine] JSON path: %s", JSON_FILE_PATH.c_str());
-    RCLCPP_INFO(this->get_logger(), "[BTengine] BT XML dir: %s", BT_XML_DIRECTORY.c_str());
+    // Build full paths
+    json_file_path = pkg_share_dir + "/" + json_rel_path;
+    bt_xml_directory = pkg_share_dir + "/" + bt_xml_rel_path;
+    bt_tree_node_model = pkg_share_dir + "/" + bt_model_rel_path;
+    
+    RCLCPP_INFO(this->get_logger(), "[BTengine] JSON path: %s", json_file_path.c_str());
+    RCLCPP_INFO(this->get_logger(), "[BTengine] BT XML dir: %s", bt_xml_directory.c_str());
+    RCLCPP_INFO(this->get_logger(), "[BTengine] Time rate: %d, Terminate time: %d", time_rate, terminate_time);
 }
 
 void BTengine::readyCallback(const std_msgs::msg::Bool::SharedPtr msg) {
@@ -117,7 +123,7 @@ void BTengine::planFileCallback(const std_msgs::msg::String::SharedPtr msg) {
 void BTengine::addJsonPoint() {
     std::vector<int> default_point = {1,1,1,1};
 
-    std::ifstream json_file(JSON_FILE_PATH);
+    std::ifstream json_file(json_file_path);
     if (!json_file.is_open()) {
         RCLCPP_ERROR(this->get_logger(), "[BTengine]: Failed to open json file");
         json_point = default_point;
@@ -184,7 +190,7 @@ void BTengine::createTree() {
     RCLCPP_INFO(this->get_logger(), "[BTengine]: Plan file received: %s, creating tree...", plan_file_name.c_str());
     
     // Build the full path to the XML file
-    std::string xml_file_path = BT_XML_DIRECTORY + plan_file_name;
+    std::string xml_file_path = bt_xml_directory + plan_file_name;
     RCLCPP_INFO_STREAM(this->get_logger(), "[BTengine]: Loading tree from: " << xml_file_path);
     
     // Register behavior tree from XML file
@@ -232,7 +238,7 @@ void BTengine::runTree() {
         do {
             rate->sleep();
             status = tree.rootNode()->executeTick();
-        } while (rclcpp::ok() && status == BT::NodeStatus::RUNNING && game_time < TERMINATE_TIME);
+        } while (rclcpp::ok() && status == BT::NodeStatus::RUNNING && game_time < terminate_time);
         
         RCLCPP_INFO(this->get_logger(), "[BTengine]: Tree finished with status: %s", 
                     BT::toStr(status).c_str());
