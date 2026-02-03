@@ -88,7 +88,7 @@ void StartUp::stateTransition() {
         case StartUpState::INIT:
             getWebPlan();
             parsePlanCode();
-            publishInitialPose();
+            // publishInitialPose();
             startup_state = StartUpState::READY;
             break;
         case StartUpState::READY:
