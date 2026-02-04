@@ -65,7 +65,8 @@ public:
     void publishInitialPose();
 
     // start phase
-    void tickSima(double game_time);
+    void tickLittleSima(double game_time);
+    void tickNinjaSima();
     void publishTime();
     bool gameOver(double game_time);
 

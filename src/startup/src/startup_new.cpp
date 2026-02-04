@@ -31,8 +31,8 @@ StartUp::StartUp() : Node("startup_node"){
         "/initial_pose", qos);
 
     // sima
-    start_sima_pub = this->create_publisher<std_msgs::msg::Int16>("/sima/start", 2);
-    start_ninja_pub = this->create_publisher<std_msgs::msg::Int16>("/ninja/start", 2);
+    start_sima_pub = this->create_publisher<std_msgs::msg::Int16>("/robot/startup/sima/start", 2);
+    start_ninja_pub = this->create_publisher<std_msgs::msg::Int16>("/robot/startup/ninja/start", 2);
     sima_selected_plan = 0;
     sima_started = false;
 
@@ -98,6 +98,8 @@ void StartUp::stateTransition() {
             if(isAllSystemReady()) {
                 // TODO: add one hot trigger for startSignal and initialPose, if not theorically publish once
                 publishStartSignal();
+                tickNinjaSima();
+                publishInitialPose();
                 start_time = this->get_clock()->now().seconds();
                 startup_state = StartUpState::START;
             }
@@ -260,17 +262,24 @@ void StartUp::publishInitialPose() {
     RCLCPP_INFO(this->get_logger(), "[StartUp]: Initial pose published at point (%f, %f) with yaw %f", start_position.pose.pose.position.x, start_position.pose.pose.position.y, start_position.pose.pose.orientation.z);
 }
 
-void StartUp::tickSima(double game_time) {
+void StartUp::tickLittleSima(double game_time) {
     if(game_time >= sima_tick_threshold && !sima_started) {
         auto msg = std_msgs::msg::Int16();
         msg.data = sima_selected_plan;
         start_sima_pub->publish(msg);
-        start_ninja_pub->publish(msg);
         sima_started = true;
         RCLCPP_INFO(this->get_logger(), "[StartUp]: Sima started at game time %f using plan %d", game_time, sima_selected_plan);
         // TODO: add continuous publishing if sima is not started for one time publish
         // add after testing sima
     }
+}
+
+void StartUp::tickNinjaSima() {
+    auto msg = std_msgs::msg::Int16();
+    msg.data = sima_selected_plan;
+    start_ninja_pub->publish(msg);
+    sima_started = true;
+    RCLCPP_INFO(this->get_logger(), "[StartUp]: Ninja Sima started at game time %f using plan %d", game_time, sima_selected_plan);
 }
 
 void StartUp::publishTime() {
@@ -279,7 +288,7 @@ void StartUp::publishTime() {
     cur_time_msg.data = cur_time - start_time;
     game_time = cur_time_msg.data;
     game_time_pub->publish(cur_time_msg);
-    tickSima(cur_time_msg.data);
+    tickLittleSima(cur_time_msg.data);
 }
 
 bool StartUp::gameOver(double game_time) {
