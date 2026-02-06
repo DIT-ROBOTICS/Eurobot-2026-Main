@@ -165,6 +165,7 @@ void BTengine::createTreeNodes() {
     
     // sensors / receivers
     factory.registerNodeType<CamReceiver>("CamReceiver", params, blackboard);
+    factory.registerNodeType<LocReceiver>("LocReceiver", params, blackboard);
 
     // decision core
     factory.registerNodeType<DecisionCore>("DecisionCore", params, blackboard);
@@ -173,6 +174,7 @@ void BTengine::createTreeNodes() {
     // navigation
     factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);
     factory.registerNodeType<Docking>("Docking", params, blackboard);
+    factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
     factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
     factory.registerNodeType<RotateActionNode>("RotateActionNode", params);
 
@@ -254,8 +256,8 @@ void BTengine::runTree() {
 }
 
 void BTengine::setBlackboard() {
-    blackboard->set<int>("team", static_cast<int>(team));
-    blackboard->set<int>("robot", static_cast<int>(robot));
+    blackboard->set<std::string>("team", teamToString(team));
+    blackboard->set<std::string>("robot", robotToString(robot));
     blackboard->set<int>("selected_plan", selected_plan);
     blackboard->set<double>("game_time", game_time);
     blackboard->set<std::vector<int>>("json_point", json_point);

@@ -25,11 +25,13 @@
 // navigation nodes
 #include "nav_action_node.hpp"
 #include "dock_action_node.hpp"
+#include "onDock.hpp"
 #include "stop_robot_node.hpp"
 #include "rotate_action_node.hpp"
 
 // receiver nodes
 #include "CamReceiver.hpp"
+#include "LocReceiver.hpp"
 
 // decision core
 #include "decision_core.hpp"
