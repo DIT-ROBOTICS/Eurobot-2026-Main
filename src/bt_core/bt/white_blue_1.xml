@@ -5,6 +5,7 @@
         <Sequence>
             <!-- Initialize receivers -->
             <CamReceiver/>
+            <LocReceiver/>
             
             <!-- Main mission loop with timeout -->
             <Parallel failure_count="2" success_count="1">

@@ -5,6 +5,7 @@
         <Sequence>
             <!-- Initialize receivers -->
             <CamReceiver/>
+            <LocReceiver/>
             
             <!-- Main mission loop -->
             <Repeat num_cycles="-1">
