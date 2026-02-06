@@ -8,9 +8,27 @@
 #include "rclcpp/rclcpp.hpp"
 #include <vector>
 #include <cmath>
+#include <queue>
+#include "bt_config.hpp"
 
 using namespace BT;
+using namespace std;
 
+/**
+ * @brief PointScore - Used for priority queue to rank goal points by reward
+ * Higher score = higher priority (max-heap behavior in priority_queue)
+ */
+struct PointScore {
+    GoalPose pose;
+    int score;
+    
+    PointScore(GoalPose p, int s) : pose(p), score(s) {}
+    
+    // For max-heap: higher score should have higher priority
+    bool operator<(const PointScore& other) const {
+        return score < other.score;
+    }
+};
 /**
  * @brief DecisionCore - A BT SyncActionNode that decides the next target
  * 
@@ -25,112 +43,88 @@ using namespace BT;
  */
 class DecisionCore : public BT::SyncActionNode {
 public:
-    /**
-     * @brief Construct DecisionCore node
-     * @param name Node name for BT
-     * @param config BT node configuration
-     * @param params ROS node parameters
-     * @param blackboard Shared blackboard pointer
-     */
+    // BT function
     DecisionCore(const std::string& name, const BT::NodeConfig& config, 
                  const RosNodeParams& params, BT::Blackboard::Ptr blackboard);
-
-    /**
-     * @brief Define BT ports for this node
-     * @return List of input/output ports
-     */
     static BT::PortsList providedPorts();
-
-    /**
-     * @brief Main tick function called by behavior tree
-     * @return SUCCESS if target found, FAILURE otherwise
-     */
     BT::NodeStatus tick() override;
+    
+    // system function
+    void doTake();
+    void doPut();
+    void doFlip();
+    void doDock();
 
 private:
-    // ============ Private Helper Methods ============
+    // subscriber
+    rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr json_point_sub;
     
-    /**
-     * @brief Load map points from ROS parameter
-     */
+    // init
     void loadMapPoints();
+    // only get json once
+    void loadJsonPoint(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
 
-    /**
-     * @brief Get mission sequence from blackboard
-     * @return Vector of point indices
-     */
-    std::vector<int> getMissionSequence();
-
-    /**
-     * @brief Get camera sensor data from blackboard
-     * @param collection_info Output collection info
-     * @param pantry_info Output pantry info
-     */
-    void getSensorData(std_msgs::msg::Int32MultiArray& collection_info,
-                       std_msgs::msg::Int32MultiArray& pantry_info);
-
-    /**
-     * @brief Convert point index to PoseStamped
-     * @param point_index Index into map_points array
-     * @return PoseStamped with position and orientation
-     */
-    geometry_msgs::msg::PoseStamped indexToPose(int point_index);
-
-    /**
-     * @brief Convert direction value to quaternion orientation
-     * @param direction Direction value (0=E, 1=N, 2=W, 3=S)
-     * @return Quaternion orientation
-     */
-    geometry_msgs::msg::Quaternion directionToQuaternion(double direction);
-
-    /**
-     * @brief Determine action type based on target and state
-     * @param point_index Target point index
-     * @return Action type string ("navigate", "dock", "collect", etc.)
-     */
-    std::string determineActionType(int point_index);
-
-    /**
-     * @brief Check if sequence is complete
-     * @param sequence_size Total size of sequence
-     * @return true if all points visited
-     */
-    bool isSequenceComplete(size_t sequence_size);
-
-    /**
-     * @brief Reset sequence to start
-     */
-    void resetSequence();
-
-    /**
-     * @brief Advance to next point in sequence
-     */
-    void advanceSequence();
-
-    /**
-     * @brief Write decision outputs to blackboard
-     * @param target_index Target point index
-     * @param target_pose Target pose
-     * @param action_type Action type string
-     */
-    void writeOutputs(int target_index, 
-                      const geometry_msgs::msg::PoseStamped& target_pose,
-                      const std::string& action_type);
-
-    // ============ Member Variables ============
+    void getVisionData();
+    void getFieldInfo();
+    void getRobotInfo();
+    void getInputPort();
+    void sortPantryPriority();
+    void sortCollectionPriority();
+    pair<GoalPose, RobotSide> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
+    RobotSide getTargetSideIndex();
+    Direction decideDirection(GoalPose goal_pose, RobotSide robot_side);
+    ActionType decideNextActionType(ActionType action_type);
+    void writeOutputPort();
+    void writeBlackboard();
     
-    std::shared_ptr<rclcpp::Node> node_;
-    BT::Blackboard::Ptr blackboard_;
+    // Reward calculation helpers
+    int calculatePantryScore(int pantry_idx);
+    int calculateCollectionScore(int collection_idx);
     
-    // Map point data (7 values per point: x, y, dir, back_off, shift, front_off, dock_dist)
-    std::vector<double> map_points_;
-    static constexpr int VALUES_PER_POINT = 7;
+    // Distance and location helpers
+    double calculateDistance(GoalPose pose);
+    double calculateRivalDistance(GoalPose pose);
+    geometry_msgs::msg::Point getPointPosition(GoalPose pose);
+    bool isOwnSidePantry(GoalPose pose);
+    bool isOwnSideCollection(GoalPose pose);
+    bool isMiddlePantry(GoalPose pose);
+    bool isMiddleCollection(GoalPose pose);
+    void updatePoseData();
+
+    // blackboard variable
+    vector<FieldStatus> collection_info;
+    vector<FieldStatus> pantry_info;
+    vector<FieldStatus> robot_side_status;
+    vector<vector<FlipStatus>> hazelnut_status;
+    priority_queue<PointScore> pantry_priority;
+    priority_queue<PointScore> collection_priority;
+    geometry_msgs::msg::PoseStamped robot_pose;
+    geometry_msgs::msg::PoseStamped rival_pose;
+    vector<double> map_points;
+    Team current_team;
     
-    // Sequence tracking
-    int current_sequence_index_;
-    
-    // Default sequence if none provided
-    const std::vector<int> DEFAULT_SEQUENCE = {0, 1, 2, 3};
+    // Reward constants
+    static constexpr int SCORE_BASE_AVAILABLE = 100;
+    static constexpr int SCORE_MIDDLE_BONUS = 80;       // E,F for pantry; middle collection
+    static constexpr int SCORE_OWN_SIDE_BONUS = 40;
+    static constexpr int SCORE_OPPONENT_SIDE_PENALTY = -20;
+    static constexpr int SCORE_DISTANCE_FACTOR = 10;    // Points per meter closer
+    static constexpr double RIVAL_PROXIMITY_THRESHOLD = 0.3; // meters
+    static constexpr int SCORE_RIVAL_NEARBY_PENALTY = -200;
+
+
+    // system variable
+    shared_ptr<rclcpp::Node> node_ptr;
+    BT::Blackboard::Ptr blackboard_ptr;
+    vector<int> json_point;
+    bool has_received_json_point;
+    RobotSide decided_robot_side;
+    ActionType decided_action_type;
+    ActionType next_action_type;
+    GoalPose target_goal_pose_idx;
+    RobotSide target_pose_side_idx;
+    RobotSide target_robot_side;
+    Direction target_direction;
 };
 
 #endif // DECISION_CORE_HPP
