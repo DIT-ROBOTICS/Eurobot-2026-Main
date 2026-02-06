@@ -1,43 +1,77 @@
 #include "LocReceiver.hpp"
 
-bool LocReceiver::UpdateRobotPose(geometry_msgs::msg::PoseStamped &robot_pose_, tf2_ros::Buffer &tf_buffer_, std::string frame_id_) {
-    geometry_msgs::msg::TransformStamped transformStamped;
+LocReceiver::LocReceiver(const std::string& name, const BT::NodeConfig& config, 
+                         const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
+    : BT::SyncActionNode(name, config), 
+      node_(params.nh.lock()), 
+      blackboard_(blackboard),
+      robot_pose_received(false),
+      rival_pose_received(false) {
 
-    try {
-        transformStamped = tf_buffer_.lookupTransform(
-            "map", 
-            frame_id_,
-            rclcpp::Time()
-        );
-        robot_pose_.pose.position.x = transformStamped.transform.translation.x;
-        robot_pose_.pose.position.y = transformStamped.transform.translation.y;
-        robot_pose_.pose.position.z = 0;
-        robot_pose_.pose.orientation = transformStamped.transform.rotation;
-        return true;
-    }
-    catch (tf2::TransformException &ex) {
-        RCLCPP_WARN_STREAM(rclcpp::get_logger("localization"), "[UpdateRobotPose]: line " << __LINE__ << " " << ex.what());
-        return false;
-    }
+    // Subscribe to robot pose from localization
+    robot_pose_sub = node_->create_subscription<nav_msgs::msg::Odometry>(
+        "/final_pose", 10, 
+        std::bind(&LocReceiver::robot_pose_callback, this, std::placeholders::_1));
+    
+    // Subscribe to rival pose from tracking
+    rival_pose_sub = node_->create_subscription<nav_msgs::msg::Odometry>(
+        "/rhino_pose", 10, 
+        std::bind(&LocReceiver::rival_pose_callback, this, std::placeholders::_1));
+    
+    // Initialize poses
+    robot_pose.header.frame_id = "map";
+    rival_pose.header.frame_id = "map";
+    
+    RCLCPP_INFO(node_->get_logger(), "LocReceiver: Subscribed to /final_pose and /rhino_pose");
 }
 
-bool LocReceiver::UpdateRivalPose(geometry_msgs::msg::PoseStamped &rival_pose_, tf2_ros::Buffer &tf_buffer_, std::string frame_id_) {
-    geometry_msgs::msg::TransformStamped transformStamped;
+BT::PortsList LocReceiver::providedPorts() {
+    return {};
+}
 
-    try {
-        transformStamped = tf_buffer_.lookupTransform(
-            "map" /* Parent frame - map */, 
-            "rival/" + frame_id_ /* Child frame - base */,
-            rclcpp::Time()
-        );
-        rival_pose_.pose.position.x = transformStamped.transform.translation.x;
-        rival_pose_.pose.position.y = transformStamped.transform.translation.y;
-        rival_pose_.pose.position.z = 0;
-        rival_pose_.pose.orientation = transformStamped.transform.rotation;
-        return true;
+void LocReceiver::robot_pose_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
+    // Convert Odometry to PoseStamped
+    robot_pose.header = msg->header;
+    robot_pose.pose = msg->pose.pose;
+    robot_pose_received = true;
+    
+    // Write to blackboard
+    blackboard_->set<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
+    
+    RCLCPP_DEBUG(node_->get_logger(), "LocReceiver: Robot pose updated (%.2f, %.2f)", 
+                 robot_pose.pose.position.x, robot_pose.pose.position.y);
+}
+
+void LocReceiver::rival_pose_callback(const nav_msgs::msg::Odometry::SharedPtr msg) {
+    // Convert Odometry to PoseStamped
+    rival_pose.header = msg->header;
+    rival_pose.pose = msg->pose.pose;
+    rival_pose_received = true;
+    
+    // Write to blackboard
+    blackboard_->set<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose);
+    
+    RCLCPP_DEBUG(node_->get_logger(), "LocReceiver: Rival pose updated (%.2f, %.2f)", 
+                 rival_pose.pose.position.x, rival_pose.pose.position.y);
+}
+
+BT::NodeStatus LocReceiver::tick() {
+    RCLCPP_INFO(node_->get_logger(), "LocReceiver: tick");
+    
+    // Log current pose info
+    if (robot_pose_received) {
+        RCLCPP_INFO(node_->get_logger(), "Robot pose: (%.2f, %.2f)", 
+                    robot_pose.pose.position.x, robot_pose.pose.position.y);
+    } else {
+        RCLCPP_WARN(node_->get_logger(), "LocReceiver: Robot pose not yet received");
     }
-    catch (tf2::TransformException &ex) {
-        RCLCPP_WARN_STREAM(rclcpp::get_logger("localization"), "[UpdateRivalPose]: line " << __LINE__ << " " << ex.what());
-        return false;
+    
+    if (rival_pose_received) {
+        RCLCPP_INFO(node_->get_logger(), "Rival pose: (%.2f, %.2f)", 
+                    rival_pose.pose.position.x, rival_pose.pose.position.y);
+    } else {
+        RCLCPP_DEBUG(node_->get_logger(), "LocReceiver: Rival pose not yet received");
     }
+    
+    return BT::NodeStatus::SUCCESS;
 }

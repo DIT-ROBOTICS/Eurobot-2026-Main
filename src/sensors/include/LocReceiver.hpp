@@ -2,27 +2,51 @@
 #define LOC_RECEIVER_HPP
 
 #include "receiver_util.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
-// receive the robot pose and rival pose from localization team
+using namespace std;
 
-class LocReceiver
+/**
+ * @brief LocReceiver - BT Node that receives robot and rival pose from localization
+ * 
+ * Subscribes to:
+ *   - /final_pose (nav_msgs/Odometry) -> robot_pose
+ *   - /rhino_pose (nav_msgs/Odometry) -> rival_pose
+ * 
+ * Writes to blackboard:
+ *   - robot_pose: geometry_msgs::msg::PoseStamped
+ *   - rival_pose: geometry_msgs::msg::PoseStamped
+ */
+class LocReceiver : public BT::SyncActionNode
 {
 public:
-    LocReceiver(const RosNodeParams& params)
-        : node_(params.nh.lock()), tf_buffer_(node_->get_clock()), listener_(tf_buffer_)
-    {
-        node_->get_parameter("frame_id", frame_id_);
-    }
-    static bool UpdateRobotPose(geometry_msgs::msg::PoseStamped &robot_pose_, tf2_ros::Buffer &tf_buffer_, std::string frame_id_);
-    static bool UpdateRivalPose(geometry_msgs::msg::PoseStamped &rival_pose_, tf2_ros::Buffer &tf_buffer_, std::string frame_id_);
+    LocReceiver(const std::string& name, const BT::NodeConfig& config, 
+                const RosNodeParams& params, BT::Blackboard::Ptr blackboard);
+    
+    static BT::PortsList providedPorts();
+    
+    BT::NodeStatus tick() override;
 
 private:
-    std::shared_ptr<rclcpp::Node> node_;
-    tf2_ros::Buffer tf_buffer_;
-    tf2_ros::TransformListener listener_;
-    std::string frame_id_;
+    // Callbacks
+    void robot_pose_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+    void rival_pose_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+    
+    // Subscribers
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr robot_pose_sub;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr rival_pose_sub;
 
-    geometry_msgs::msg::PoseStamped robot_pose_;
-    geometry_msgs::msg::PoseStamped rival_pose_;
+    // Node references
+    shared_ptr<rclcpp::Node> node_;
+    BT::Blackboard::Ptr blackboard_;
+    
+    // Pose data
+    geometry_msgs::msg::PoseStamped robot_pose;
+    geometry_msgs::msg::PoseStamped rival_pose;
+    
+    // Flags to track if data received
+    bool robot_pose_received;
+    bool rival_pose_received;
 };
+
 #endif // LOC_RECEIVER_HPP
