@@ -7,6 +7,14 @@
 #include <sstream>
 #include <algorithm>
 
+enum class StartUpState {
+    INIT,
+    READY,
+    START,
+    END,
+    ERROR
+};
+
 enum class Team {
     YELLOW,
     BLUE
@@ -17,13 +25,32 @@ enum class Robot {
     BLACK
 };
 
-enum class StartUpState {
-    INIT,
-    READY,
-    START,
-    END,
-    ERROR
+enum class ActionType {
+    TAKE,
+    PUT,
+    FLIP,
+    DOCK,
+    NAV,
+    ROTATE
 };
+
+enum class RobotSide {
+    FRONT,
+    RIGHT,
+    BACK,
+    LEFT
+};
+
+enum class GoalPose {
+    A, B, C, D, E, F, G, H, I, J, // pantry pose point index
+    K, L, M, N, O, P, Q, R // collection pose point index
+    YellowNinjaPantry, BlueNinjaPantry, YellowCursor, BlueCursor, YellowHome, BlueHome 
+};
+
+enum PANTRY_LENGTH = 10;
+enum COLLECTION_LENGTH = 8;
+
+
 
 inline std::string teamToString(Team team) {
     switch (team) {
