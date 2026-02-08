@@ -21,10 +21,16 @@
         "18": false,
         "19": false
     },
-    "sequence": [
+    "pantry_sequence": [
         0,
         1,
         2,
         3
+    ],
+    "collection_sequence": [
+        10,
+        11,
+        12,
+        13
     ]
 }

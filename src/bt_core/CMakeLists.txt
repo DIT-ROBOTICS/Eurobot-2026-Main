@@ -37,6 +37,7 @@ include_directories(
 add_executable(bt_engine 
   src/bt_engine.cpp
   src/decision_core.cpp
+  src/MissionPublisher.cpp
 )
 ament_target_dependencies(bt_engine
   "rclcpp"

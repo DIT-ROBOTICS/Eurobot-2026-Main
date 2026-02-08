@@ -36,6 +36,9 @@
 // decision core
 #include "decision_core.hpp"
 
+// mission publisher
+#include "MissionPublisher.hpp"
+
 // utils nodes
 
 // firmware nodes
@@ -108,8 +111,6 @@ private:
     double game_time;
     BT::Blackboard::Ptr blackboard;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr game_time_sub;
-    rclcpp::Publisher<std_msgs::msg::Int32MultiArray>::SharedPtr json_point_pub;
-    std::vector<int> json_point;
     
     // Tree creation state
     bool readySent;         // Flag to prevent sending ready signal multiple times
