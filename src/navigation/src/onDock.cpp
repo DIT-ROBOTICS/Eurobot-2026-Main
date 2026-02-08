@@ -1,5 +1,12 @@
 #include "onDock.hpp"
 
+// YELLOW colored logs for OnDockAction testing
+#define DOCK_COLOR "\033[33m"  // Yellow
+#define DOCK_RESET "\033[0m"
+#define DOCK_INFO(node, fmt, ...) RCLCPP_INFO(node->get_logger(), DOCK_COLOR "[OnDockAction] " fmt DOCK_RESET, ##__VA_ARGS__)
+#define DOCK_WARN(node, fmt, ...) RCLCPP_WARN(node->get_logger(), DOCK_COLOR "[OnDockAction] " fmt DOCK_RESET, ##__VA_ARGS__)
+#define DOCK_ERROR(node, fmt, ...) RCLCPP_ERROR(node->get_logger(), DOCK_COLOR "[OnDockAction] " fmt DOCK_RESET, ##__VA_ARGS__)
+
 OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf, 
                            const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
     : RosActionNode<opennav_docking_msgs::action::DockRobot>(name, conf, params),
@@ -38,14 +45,14 @@ void OnDockAction::loadMapPoints() {
 BT::PortsList OnDockAction::providedPorts() {
     return {
         // Inputs from DecisionCore
-        BT::InputPort<int>("targetPoseIdx"),
-        BT::InputPort<int>("targetPoseSideIdx"),
-        BT::InputPort<int>("targetDirection"),
+        BT::InputPort<int>("targetPoseIdx", "Target pose index in map_points"),
+        BT::InputPort<int>("targetPoseSideIdx", "Robot side index to face target"),
+        BT::InputPort<int>("targetDirection", "Target direction"),
         // Optional overrides
-        BT::InputPort<std::string>("dock_type", "dock_y_loose_linearBoost"),
-        BT::InputPort<bool>("isPureDocking", false),
+        BT::InputPort<std::string>("dock_type", "dock_y_loose_linearBoost", "Dock type"),
+        BT::InputPort<bool>("isPureDocking", false, "Whether to skip navigation to staging pose"),
         // Output
-        BT::OutputPort<geometry_msgs::msg::PoseStamped>("finish_pose")
+        BT::OutputPort<geometry_msgs::msg::PoseStamped>("finish_pose", "Final robot pose after docking")
     };
 }
 
@@ -234,7 +241,6 @@ NodeStatus OnDockAction::onFeedback(const std::shared_ptr<const Feedback> feedba
     
     // If too many retries, consider it failed
     if (dock_recov_times > 2) {
-        LocReceiver::UpdateRobotPose(robot_pose, tf_buffer, frame_id);
         RCLCPP_WARN(node->get_logger(), 
                     "[OnDockAction] Too many retries, returning current pose: (%.2f, %.2f)",
                     robot_pose.pose.position.x, robot_pose.pose.position.y);
@@ -257,7 +263,6 @@ NodeStatus OnDockAction::onResultReceived(const WrappedResult& wr) {
         }
         
         blackboard->set<bool>("enable_vision_check", true);
-        LocReceiver::UpdateRobotPose(robot_pose, tf_buffer, frame_id);
         
         RCLCPP_ERROR(node->get_logger(), 
                      "[OnDockAction] Dock failed with error_code=%d, robot at (%.2f, %.2f)",
@@ -281,11 +286,7 @@ NodeStatus OnDockAction::goalErrorDetect() {
         dock_ang_error = node->get_parameter("dock_angle_error_tolerance").as_double();
     }
     
-    blackboard->set<bool>("enable_vision_check", true);
-    
-    // Get current robot pose
-    LocReceiver::UpdateRobotPose(robot_pose, tf_buffer, frame_id);
-    
+    blackboard->set<bool>("enable_vision_check", true);    
     // Check pose accuracy
     double dist_error = calculateDistance(robot_pose.pose, goal_pose.pose);
     double ang_error = calculateAngleDifference(robot_pose.pose, goal_pose.pose);

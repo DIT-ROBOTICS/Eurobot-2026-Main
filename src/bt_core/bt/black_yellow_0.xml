@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+    <!-- 
+        Black Robot, Yellow Team, Plan 0 (Test Plan)
+        Tests the DecisionCore -> OnDockAction pipeline
+    -->
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <!-- Initialize receivers first -->
+            <CamReceiver/>
+            <LocReceiver/>
+            
+            <!-- Main mission loop: TAKE -> DOCK -> PUT -> DOCK cycle -->
+            <Repeat num_cycles="3">
+                <Sequence>
+                    <!-- ============ TAKE Phase ============ -->
+                    <!-- DecisionCore decides where to TAKE from -->
+                    <DecisionCore 
+                        ActionType="take"
+                        RobotSideIdx="0"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    
+                    <!-- Dock to collection point -->
+                    <OnDockAction
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"
+                        dock_type="dock_y_loose_linearBoost"
+                        isPureDocking="false"
+                        finish_pose="{dock_result}"/>
+                    
+                    <!-- Publish TAKE command to firmware -->
+                    <MissionPublisher
+                        ActionType="take"
+                        targetPoseSideIdx="{target_side}"
+                        targetPoseIdx="{target_idx}"/>
+                    
+                    <!-- ============ PUT Phase ============ -->
+                    <!-- DecisionCore decides where to PUT -->
+                    <DecisionCore 
+                        ActionType="put"
+                        RobotSideIdx="0"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    
+                    <!-- Dock to pantry point -->
+                    <OnDockAction
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"
+                        dock_type="dock_y_loose_linearBoost"
+                        isPureDocking="false"
+                        finish_pose="{dock_result}"/>
+                    
+                    <!-- Publish PUT command to firmware -->
+                    <MissionPublisher
+                        ActionType="put"
+                        targetPoseSideIdx="{target_side}"
+                        targetPoseIdx="{target_idx}"/>
+                </Sequence>
+            </Repeat>
+        </Sequence>
+    </BehaviorTree>
+</root>

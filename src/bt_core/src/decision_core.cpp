@@ -1,5 +1,12 @@
 #include "decision_core.hpp"
 
+// CYAN colored logs for DecisionCore testing
+#define DC_COLOR "\033[36m"  // Cyan
+#define DC_RESET "\033[0m"
+#define DC_INFO(node, fmt, ...) RCLCPP_INFO(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
+#define DC_WARN(node, fmt, ...) RCLCPP_WARN(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
+#define DC_ERROR(node, fmt, ...) RCLCPP_ERROR(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
+
 DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, const RosNodeParams& params, BT::Blackboard::Ptr blackboard) : SyncActionNode(name, config)
 {
     node_ptr = params.nh.lock();
@@ -10,8 +17,8 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     pantry_info = std::vector<FieldStatus>(PANTRY_LENGTH, FieldStatus::EMPTY);
     robot_side_status = std::vector<FieldStatus>(4, FieldStatus::EMPTY);
     hazelnut_status = std::vector<vector<FlipStatus>>(4, vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
-    pantry_priority = std::priority_queue<int>();
-    collection_priority = std::priority_queue<int>();
+    pantry_priority = std::priority_queue<PointScore>();
+    collection_priority = std::priority_queue<PointScore>();
     robot_pose = geometry_msgs::msg::PoseStamped();
     map_points = std::vector<double>();
     
@@ -77,21 +84,38 @@ BT::PortsList DecisionCore::providedPorts()
 }
 
 void DecisionCore::getInputPort() {
-    decided_action_type = stringToActionType(getInput<string>("ActionType"));
-    decided_robot_side = static_cast<RobotSide>(getInput<int>("RobotSideIdx"));
+    auto action_type_opt = getInput<string>("ActionType");
+    if (action_type_opt) {
+        decided_action_type = stringToActionType(action_type_opt.value());
+    } else {
+        RCLCPP_ERROR(node_ptr->get_logger(), "ActionType input not found");
+        decided_action_type = ActionType::TAKE; // default
+    }
+    
+    auto side_idx_opt = getInput<int>("RobotSideIdx");
+    if (side_idx_opt) {
+        decided_robot_side = static_cast<RobotSide>(side_idx_opt.value());
+    } else {
+        decided_robot_side = RobotSide::FRONT; // default
+    }
 }
 
 void DecisionCore::getVisionData() {
-    if(!blackboard_ptr->get<std_msgs::msg::Int32MultiArray>("collection_info")) {
-        RCLCPP_ERROR(node_ptr->get_logger(), "collection_info not found");
-        throw std::runtime_error("collection_info not found");
+    // Get collection_info from blackboard (stored as vector<FieldStatus> by CamReceiver)
+    std::vector<FieldStatus> collection_data;
+    if (!blackboard_ptr->get<std::vector<FieldStatus>>("collection_info", collection_data)) {
+        RCLCPP_WARN(node_ptr->get_logger(), "collection_info not found, using defaults");
+    } else {
+        collection_info = collection_data;
     }
-    if(!blackboard_ptr->get<std_msgs::msg::Int32MultiArray>("pantry_info")) {
-        RCLCPP_ERROR(node_ptr->get_logger(), "pantry_info not found");
-        throw std::runtime_error("pantry_info not found");
+    
+    // Get pantry_info from blackboard
+    std::vector<FieldStatus> pantry_data;
+    if (!blackboard_ptr->get<std::vector<FieldStatus>>("pantry_info", pantry_data)) {
+        RCLCPP_WARN(node_ptr->get_logger(), "pantry_info not found, using defaults");
+    } else {
+        pantry_info = pantry_data;
     }
-    collection_info = blackboard_ptr->get<std_msgs::msg::Int32MultiArray>("collection_info");
-    pantry_info = blackboard_ptr->get<std_msgs::msg::Int32MultiArray>("pantry_info");
 
     // TODO: get robot side status
     // TODO: get hazelnut status
@@ -453,3 +477,32 @@ void DecisionCore::sortCollectionPriority() {
     }
 }
 
+void DecisionCore::doDock() {
+    // Dock action - just pass through the current target
+    writeOutputPort();
+}
+
+Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
+    // Get target position
+    geometry_msgs::msg::Point target = getPointPosition(goal_pose);
+    
+    // Calculate angle from robot to target
+    double dx = target.x - robot_pose.pose.position.x;
+    double dy = target.y - robot_pose.pose.position.y;
+    double angle = atan2(dy, dx);
+    
+    // Convert angle to direction (0=East, 1=North, 2=West, 3=South)
+    // Normalize angle to [0, 2*PI)
+    if (angle < 0) angle += 2 * M_PI;
+    
+    // Each quadrant is PI/4 to 3*PI/4, etc.
+    if (angle < M_PI / 4 || angle >= 7 * M_PI / 4) {
+        return Direction::EAST;   // 0
+    } else if (angle < 3 * M_PI / 4) {
+        return Direction::NORTH;  // 1
+    } else if (angle < 5 * M_PI / 4) {
+        return Direction::WEST;   // 2
+    } else {
+        return Direction::SOUTH;  // 3
+    }
+}

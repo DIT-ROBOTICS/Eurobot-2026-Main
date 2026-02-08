@@ -27,6 +27,7 @@ find_package(nav2_msgs REQUIRED)
 find_package(jsoncpp REQUIRED)
 find_package(btcpp_ros2_interfaces REQUIRED)
 find_package(opennav_docking_msgs REQUIRED)
+find_package(utils REQUIRED)
 
 # Include directories
 include_directories(
@@ -55,6 +56,7 @@ ament_target_dependencies(sensors_nodes
   nav2_msgs
   btcpp_ros2_interfaces
   opennav_docking_msgs
+  utils
 )
 
 # Install library
@@ -99,6 +101,7 @@ ament_export_dependencies(
   nav2_msgs
   btcpp_ros2_interfaces
   opennav_docking_msgs
+  utils
 )
 
 ament_package()

@@ -181,11 +181,11 @@ void BTengine::createTreeNodes() {
     
     params.default_port_value = "dock_robot";
     // navigation
-    factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);
-    factory.registerNodeType<Docking>("Docking", params, blackboard);
+    // factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);  // Source commented out
+    // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
-    factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
-    factory.registerNodeType<RotateActionNode>("RotateActionNode", params);
+    // factory.registerNodeType<StopRobotNode>("StopRobotNode", params);  // Source commented out
+    // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
 
     // utils
 
@@ -269,7 +269,7 @@ void BTengine::setBlackboard() {
     blackboard->set<std::string>("robot", robotToString(robot));
     blackboard->set<int>("selected_plan", selected_plan);
     blackboard->set<double>("game_time", game_time);
-    blackboard->set<std::vector<int>>("json_point", json_point);
+    // json_point is loaded separately via loadSequenceFromJson in DecisionCore
     
     RCLCPP_INFO(this->get_logger(), "[BTengine]: Blackboard initialized");
 }

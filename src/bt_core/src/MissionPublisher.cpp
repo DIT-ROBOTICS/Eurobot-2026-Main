@@ -1,5 +1,12 @@
 #include "MissionPublisher.hpp"
 
+// MAGENTA colored logs for MissionPublisher testing
+#define MP_COLOR "\033[35m"  // Magenta
+#define MP_RESET "\033[0m"
+#define MP_INFO(node, fmt, ...) RCLCPP_INFO(node->get_logger(), MP_COLOR "[MissionPublisher] " fmt MP_RESET, ##__VA_ARGS__)
+#define MP_WARN(node, fmt, ...) RCLCPP_WARN(node->get_logger(), MP_COLOR "[MissionPublisher] " fmt MP_RESET, ##__VA_ARGS__)
+#define MP_ERROR(node, fmt, ...) RCLCPP_ERROR(node->get_logger(), MP_COLOR "[MissionPublisher] " fmt MP_RESET, ##__VA_ARGS__)
+
 MissionPublisher::MissionPublisher(const std::string& name, const BT::NodeConfig& config,
                                    const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
     : BT::SyncActionNode(name, config),

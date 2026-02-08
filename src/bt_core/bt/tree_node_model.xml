@@ -2,28 +2,26 @@
     <TreeNodesModel>
         <Action ID="CamReceiver"/>
         <Action ID="DecisionCore">
-            <output_port name="action_type" type="std::string"/>
-            <output_port name="next_target_pose" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
-            <output_port name="next_target_index" type="int"/>
+            <output_port name="targetDirection" type="int"/>
+            <output_port name="targetPoseIdx" type="int"/>
+            <output_port name="targetPoseSideIdx" type="int"/>
+            <output_port name="nextActionType" type="std::string"/>
+            <input_port name="RobotSideIdx" type="int"/>
+            <input_port name="ActionType" type="std::string"/>
         </Action>
-        <Action ID="Docking">
-            <output_port name="finish_pose" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
-            <input_port name="isPureDocking" type="bool"/>
-            <input_port name="dock_type" type="std::string"/>
-            <input_port name="shift" type="double"/>
-            <input_port name="offset" type="double"/>
-            <input_port name="goal" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
+        <Action ID="LocReceiver"/>
+        <Action ID="MissionPublisher">
+            <input_port name="targetPoseIdx" type="int"/>
+            <input_port name="targetPoseSideIdx" type="int"/>
+            <input_port name="ActionType" type="std::string"/>
         </Action>
-        <Action ID="NavigationActionNode">
-            <output_port name="finish_pose" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
-            <input_port name="dock_type" type="std::string"/>
-            <input_port name="goal" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
+        <Action ID="OnDockAction">
+            <output_port name="finish_pose" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">Final robot pose after docking</output_port>
+            <input_port name="isPureDocking" type="bool" default="false">Whether to skip navigation to staging pose</input_port>
+            <input_port name="targetDirection" type="int">Target direction</input_port>
+            <input_port name="dock_type" type="std::string" default="dock_y_loose_linearBoost">Dock type</input_port>
+            <input_port name="targetPoseSideIdx" type="int">Robot side index to face target</input_port>
+            <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
         </Action>
-        <Action ID="RotateActionNode">
-            <output_port name="finish_pose" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
-            <input_port name="degree" type="double"/>
-            <input_port name="goal" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
-        </Action>
-        <Action ID="StopRobotNode"/>
     </TreeNodesModel>
 </root>
