@@ -51,7 +51,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+    && echo "Keep cache"
 
 ##############################################################################
 # Install packages
@@ -78,7 +78,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     python3-pip \
     bash-completion \
     python3-colcon-common-extensions \
-    && rm -rf /var/lib/apt/lists/*
+    && echo "Keep cache"
 
 # Install dependencies for ROS and Nav2
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -104,7 +104,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ros-${ROS_DISTRO}-generate-parameter-library \
     ros-${ROS_DISTRO}-teleop-twist-keyboard \
     ros-${ROS_DISTRO}-rviz2 \
-    && rm -rf /var/lib/apt/lists/*
+    && echo "Keep cache"
 
 ##############################################################################
 # Set Language
@@ -117,7 +117,9 @@ ENV LANG=en_US.UTF-8
 # Set timezone (Taipei)
 ##############################################################################
 
-RUN DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends tzdata
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends tzdata
 RUN TZ=Asia/Taipei && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo $TZ > /etc/timezone && \

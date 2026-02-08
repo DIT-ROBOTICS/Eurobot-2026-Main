@@ -19,6 +19,6 @@ apt-get install -y \
     xfce4 \
     xfce4-terminal \
     x11-xserver-utils \
-&& rm -rf /var/lib/apt/lists/*
+
 
 echo "VNC installation complete!"
