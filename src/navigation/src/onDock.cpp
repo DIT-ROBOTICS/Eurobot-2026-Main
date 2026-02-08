@@ -59,21 +59,33 @@ BT::PortsList OnDockAction::providedPorts() {
  * - LEFT facing target: robot yaw = target direction + 90°
  */
 double OnDockAction::getSideYaw(RobotSide side, double base_direction) {
-    // base_direction: 0=East, 1=North, 2=West, 3=South (in 90° units)
+    // base_direction: 0=East(+X), 1=North(+Y), 2=West(-X), 3=South(-Y) (in 90° units)
+    // 
+    // Robot coordinate system:
+    //   FRONT = +Y of robot
+    //   RIGHT = +X of robot
+    //   BACK  = -Y of robot
+    //   LEFT  = -X of robot
+    //
+    // yaw_offset: rotation needed so that chosen side faces the target direction
     double yaw_offset = 0.0;
     
     switch (side) {
         case RobotSide::FRONT:
-            yaw_offset = 0.0;
-            break;
-        case RobotSide::RIGHT:
+            // FRONT (+Y) should face target: rotate -90° so +Y aligns with base direction
             yaw_offset = -PI / 2.0;  // -90°
             break;
+        case RobotSide::RIGHT:
+            // RIGHT (+X) should face target: no rotation needed, +X already aligns
+            yaw_offset = 0.0;
+            break;
         case RobotSide::BACK:
-            yaw_offset = PI;  // 180°
+            // BACK (-Y) should face target: rotate +90° so -Y aligns with base direction
+            yaw_offset = PI / 2.0;  // +90°
             break;
         case RobotSide::LEFT:
-            yaw_offset = PI / 2.0;  // +90°
+            // LEFT (-X) should face target: rotate 180° so -X aligns with base direction
+            yaw_offset = PI;  // 180°
             break;
     }
     
