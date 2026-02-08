@@ -5,11 +5,7 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     node_ptr = params.nh.lock();
     blackboard_ptr = blackboard;
 
-    // json point
-    has_received_json_point = false;
-    json_point_sub = node_ptr->create_subscription<std_msgs::msg::Int32MultiArray>(
-        "/robot/startup/json_point", 2, std::bind(&DecisionCore::loadJsonPoint, this, std::placeholders::_1));
-    json_point = std::vector<int>();
+    // Initialize field status
     collection_info = std::vector<FieldStatus>(COLLECTION_LENGTH, FieldStatus::OCCUPIED);
     pantry_info = std::vector<FieldStatus>(PANTRY_LENGTH, FieldStatus::EMPTY);
     robot_side_status = std::vector<FieldStatus>(4, FieldStatus::EMPTY);
@@ -19,8 +15,15 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     robot_pose = geometry_msgs::msg::PoseStamped();
     map_points = std::vector<double>();
     
+    // Sequence priority initialization
+    pantry_sequence = std::vector<int>();
+    collection_sequence = std::vector<int>();
+    use_pantry_sequence = false;
+    use_collection_sequence = false;
+    
     // map point
     loadMapPoints();
+    loadSequenceFromJson();  // Load sequences from blackboard
     writeBlackboard();
 }
 
@@ -40,11 +43,25 @@ void DecisionCore::writeBlackboard() {
     blackboard_ptr->set<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
 }
 
-void DecisionCore::loadJsonPoint(const std_msgs::msg::Int32MultiArray::SharedPtr msg) {
-    if(has_received_json_point) return;
-    json_point = msg->data;
-    has_received_json_point = true;
-    RCLCPP_INFO(node_ptr->get_logger(), "json_point loaded");
+void DecisionCore::loadSequenceFromJson() {
+    // Try to get sequences from blackboard (loaded by bt_engine from JSON)
+    if (blackboard_ptr->get<vector<int>>("pantry_sequence", pantry_sequence)) {
+        use_pantry_sequence = !pantry_sequence.empty();
+        RCLCPP_INFO(node_ptr->get_logger(), "Loaded pantry_sequence with %zu items, use_sequence=%s",
+                    pantry_sequence.size(), use_pantry_sequence ? "true" : "false");
+    } else {
+        use_pantry_sequence = false;
+        RCLCPP_WARN(node_ptr->get_logger(), "pantry_sequence not found in blackboard");
+    }
+    
+    if (blackboard_ptr->get<vector<int>>("collection_sequence", collection_sequence)) {
+        use_collection_sequence = !collection_sequence.empty();
+        RCLCPP_INFO(node_ptr->get_logger(), "Loaded collection_sequence with %zu items, use_sequence=%s",
+                    collection_sequence.size(), use_collection_sequence ? "true" : "false");
+    } else {
+        use_collection_sequence = false;
+        RCLCPP_WARN(node_ptr->get_logger(), "collection_sequence not found in blackboard");
+    }
 }
 
 BT::PortsList DecisionCore::providedPorts()
@@ -138,7 +155,23 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
     RobotSide selected_side = getTargetSideIndex();
     
     if (action_type == ActionType::PUT) {
-        // For PUT: find empty pantry with highest score
+        // PRIORITY 1: Use pantry_sequence if available
+        if (use_pantry_sequence && !pantry_sequence.empty()) {
+            int next_pantry = pantry_sequence.front();
+            pantry_sequence.erase(pantry_sequence.begin());  // Pop from front
+            
+            // Update blackboard with modified sequence
+            blackboard_ptr->set<vector<int>>("pantry_sequence", pantry_sequence);
+            use_pantry_sequence = !pantry_sequence.empty();  // Update flag
+            
+            GoalPose pose = static_cast<GoalPose>(next_pantry);
+            RCLCPP_INFO(node_ptr->get_logger(), 
+                        "[SEQUENCE] Selected pantry from sequence: %d, remaining: %zu",
+                        next_pantry, pantry_sequence.size());
+            return {pose, selected_side};
+        }
+        
+        // PRIORITY 2: Fallback to reward system
         sortPantryPriority();
         
         if (pantry_priority.empty()) {
@@ -147,12 +180,28 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
         }
         
         GoalPose best_pantry = pantry_priority.top().pose;
-        RCLCPP_INFO(node_ptr->get_logger(), "Selected pantry: %d with score: %d", 
+        RCLCPP_INFO(node_ptr->get_logger(), "[REWARD] Selected pantry: %d with score: %d", 
                     static_cast<int>(best_pantry), pantry_priority.top().score);
         return {best_pantry, selected_side};
         
     } else if (action_type == ActionType::TAKE) {
-        // For TAKE: find full collection with highest score
+        // PRIORITY 1: Use collection_sequence if available
+        if (use_collection_sequence && !collection_sequence.empty()) {
+            int next_collection = collection_sequence.front();
+            collection_sequence.erase(collection_sequence.begin());  // Pop from front
+            
+            // Update blackboard with modified sequence
+            blackboard_ptr->set<vector<int>>("collection_sequence", collection_sequence);
+            use_collection_sequence = !collection_sequence.empty();  // Update flag
+            
+            GoalPose pose = static_cast<GoalPose>(next_collection);
+            RCLCPP_INFO(node_ptr->get_logger(), 
+                        "[SEQUENCE] Selected collection from sequence: %d, remaining: %zu",
+                        next_collection, collection_sequence.size());
+            return {pose, selected_side};
+        }
+        
+        // PRIORITY 2: Fallback to reward system
         sortCollectionPriority();
         
         if (collection_priority.empty()) {
@@ -161,7 +210,7 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
         }
         
         GoalPose best_collection = collection_priority.top().pose;
-        RCLCPP_INFO(node_ptr->get_logger(), "Selected collection: %d with score: %d",
+        RCLCPP_INFO(node_ptr->get_logger(), "[REWARD] Selected collection: %d with score: %d",
                     static_cast<int>(best_collection), collection_priority.top().score);
         return {best_collection, selected_side};
     }

@@ -56,13 +56,9 @@ public:
     void doDock();
 
 private:
-    // subscriber
-    rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr json_point_sub;
-    
     // init
     void loadMapPoints();
-    // only get json once
-    void loadJsonPoint(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+    void loadSequenceFromJson();  // Load pantry_sequence and collection_sequence
 
     void getVisionData();
     void getFieldInfo();
@@ -116,8 +112,13 @@ private:
     // system variable
     shared_ptr<rclcpp::Node> node_ptr;
     BT::Blackboard::Ptr blackboard_ptr;
-    vector<int> json_point;
-    bool has_received_json_point;
+    
+    // Sequence priority (from mission_sequence.json)
+    vector<int> pantry_sequence;      // Priority order for PUT action
+    vector<int> collection_sequence;  // Priority order for TAKE action
+    bool use_pantry_sequence;         // True if pantry_sequence has items
+    bool use_collection_sequence;     // True if collection_sequence has items
+    
     RobotSide decided_robot_side;
     ActionType decided_action_type;
     ActionType next_action_type;
