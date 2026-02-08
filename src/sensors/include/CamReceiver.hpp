@@ -15,6 +15,9 @@ public:
     BT::NodeStatus tick() override;
 
 private:
+    // Initialize default values for when camera is down (fallback)
+    void initializeDefaultStatus();
+    
     // collection for material that original placed, pantry for the collected materials will be placed.
     // for encoding rules, the ref: https://www.notion.so/ditrobotics/2e2c8b048fcf8030a296da55379e06dc?source=copy_link#2e2c8b048fcf8081b59ade2d18562558
     void collection_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
