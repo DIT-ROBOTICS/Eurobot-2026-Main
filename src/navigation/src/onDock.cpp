@@ -107,14 +107,15 @@ double OnDockAction::getSideYaw(RobotSide side, double base_direction) {
 /**
  * @brief Calculate dock pose from map_points index and robot side
  * 
- * map_points layout per point (7 values):
- *   [0] x position
- *   [1] y position
- *   [2] direction (0=E, 1=N, 2=W, 3=S)
- *   [3] back_offset
- *   [4] shift
- *   [5] front_offset
- *   [6] dock_dist
+ * map_points layout per point (5 values):
+ *   [0] x position (final dock pose x)
+ *   [1] y position (final dock pose y)
+ *   [2] stage_dist (staging distance)
+ *   [3] sign (1 or -1)
+ *   [4] dock_type (0=dock_y, 1=dock_x, 2=cam_dock_y, 3=cam_dock_x)
+ * 
+ * Position z = stage_dist * sign (nav system uses this for staging)
+ * Orientation: chosen side faces the target point
  */
 geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, RobotSide robot_side) {
     geometry_msgs::msg::PoseStamped dock_pose;
@@ -129,70 +130,28 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
         return dock_pose;
     }
     
-    // Get base position and direction
-    double base_x = map_points[data_idx + IDX_X];
-    double base_y = map_points[data_idx + IDX_Y];
-    double base_dir = map_points[data_idx + IDX_DIR];
-    double back_offset = map_points[data_idx + IDX_BACK_OFFSET];
-    double shift = map_points[data_idx + IDX_SHIFT];
-    double front_offset = map_points[data_idx + IDX_FRONT_OFFSET];
-    double dock_dist = map_points[data_idx + IDX_DOCK_DIST];
+    // Get position and staging info from map_points
+    double x = map_points[data_idx + IDX_X];
+    double y = map_points[data_idx + IDX_Y];
+    double stage_dist = map_points[data_idx + IDX_STAGE_DIST];
+    double sign = map_points[data_idx + IDX_SIGN];
     
-    // Select offset based on robot side
-    // FRONT/BACK use front_offset/back_offset, LEFT/RIGHT would need different handling
-    double offset = 0.0;
-    switch (robot_side) {
-        case RobotSide::FRONT:
-            offset = front_offset;
-            break;
-        case RobotSide::BACK:
-            offset = back_offset;
-            break;
-        case RobotSide::LEFT:
-        case RobotSide::RIGHT:
-            offset = front_offset; // Default to front for sides
-            break;
-    }
-    
-    // Apply offset based on direction (direction tells us which axis to offset on)
-    // Direction encoding: 0=East (+X), 1=North (+Y), 2=West (-X), 3=South (-Y)
-    double final_x = base_x;
-    double final_y = base_y;
-    
-    int dir_int = static_cast<int>(base_dir);
-    switch (dir_int) {
-        case 0: // East: offset along X, shift along Y
-            final_x += offset;
-            final_y += shift;
-            break;
-        case 1: // North: offset along Y, shift along -X
-            final_y += offset;
-            final_x -= shift;
-            break;
-        case 2: // West: offset along -X, shift along -Y
-            final_x -= offset;
-            final_y -= shift;
-            break;
-        case 3: // South: offset along -Y, shift along X
-            final_y -= offset;
-            final_x += shift;
-            break;
-    }
-    
-    // Set position
-    dock_pose.pose.position.x = final_x;
-    dock_pose.pose.position.y = final_y;
-    dock_pose.pose.position.z = dock_dist; // Store dock_dist in z for reference
+    // Set position: x, y are final dock pose, z = stage_dist * sign for nav system
+    dock_pose.pose.position.x = x;
+    dock_pose.pose.position.y = y;
+    dock_pose.pose.position.z = stage_dist * sign;
     
     // Calculate orientation based on robot side
+    // The chosen side should face the target direction (from DecisionCore)
+    double base_dir = static_cast<double>(target_direction);
     double yaw = getSideYaw(robot_side, base_dir);
     tf2::Quaternion q;
     q.setRPY(0, 0, yaw);
     dock_pose.pose.orientation = tf2::toMsg(q);
     
     RCLCPP_INFO(node->get_logger(), 
-                "[OnDockAction] Calculated dock pose: idx=%d, side=%d -> (%.3f, %.3f) yaw=%.1f°",
-                pose_idx, static_cast<int>(robot_side), final_x, final_y, yaw * 180.0 / PI);
+                "[OnDockAction] Dock pose: idx=%d, side=%d -> (%.3f, %.3f, z=%.3f) yaw=%.1f°",
+                pose_idx, static_cast<int>(robot_side), x, y, dock_pose.pose.position.z, yaw * 180.0 / PI);
     
     return dock_pose;
 }
@@ -212,8 +171,30 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     target_side = side_idx_opt ? static_cast<RobotSide>(side_idx_opt.value()) : RobotSide::FRONT;
     target_direction = dir_opt ? static_cast<Direction>(dir_opt.value()) : Direction::NORTH;
     
-    // Get optional parameters
-    getInput<std::string>("dock_type", dock_type);
+    // Get dock_type from map_points based on DockType value
+    int data_idx = target_pose_idx * VALUES_PER_POINT;
+    if (data_idx + VALUES_PER_POINT <= static_cast<int>(map_points.size())) {
+        int dock_type_val = static_cast<int>(map_points[data_idx + IDX_DOCK_TYPE]);
+        switch (dock_type_val) {
+            case 0: // MISSION_DOCK_Y
+                dock_type = "dock_y_loose_linearBoost";
+                break;
+            case 1: // MISSION_DOCK_X
+                dock_type = "dock_x_loose_linearBoost";
+                break;
+            case 2: // CAM_DOCK_Y
+                dock_type = "mission_dock_cam_y";
+                break;
+            case 3: // CAM_DOCK_X
+                dock_type = "mission_dock_cam_x";
+                break;
+            default:
+                dock_type = "dock_y_loose_linearBoost"; // fallback
+                DOCK_WARN(node, "Unknown dock_type value %d, using default", dock_type_val);
+                break;
+        }
+    }
+    
     getInput<bool>("isPureDocking", isPureDocking);
     
     // Reset timeout flag

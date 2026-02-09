@@ -48,17 +48,15 @@ private:
     // Publisher to notify camera team which side is docking
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr dock_side_pub;
     
-    // Map points data (7 values per point)
+    // Map points data (5 values per point)
     std::vector<double> map_points;
-    static constexpr int VALUES_PER_POINT = 7;
-    // Indices within each point
+    static constexpr int VALUES_PER_POINT = 5;
+    // Indices: x, y, stage_dist, sign, dock_type
     static constexpr int IDX_X = 0;
     static constexpr int IDX_Y = 1;
-    static constexpr int IDX_DIR = 2;
-    static constexpr int IDX_BACK_OFFSET = 3;
-    static constexpr int IDX_SHIFT = 4;
-    static constexpr int IDX_FRONT_OFFSET = 5;
-    static constexpr int IDX_DOCK_DIST = 6;
+    static constexpr int IDX_STAGE_DIST = 2;
+    static constexpr int IDX_SIGN = 3;
+    static constexpr int IDX_DOCK_TYPE = 4;
     
     // Dock state
     bool dock_finished;

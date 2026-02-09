@@ -378,8 +378,8 @@ geometry_msgs::msg::Point DecisionCore::getPointPosition(GoalPose pose) {
     geometry_msgs::msg::Point point;
     int idx = static_cast<int>(pose);
     
-    // 7 values per point: x, y, dir, back_off, shift, front_off, dock_dist
-    constexpr int VALUES_PER_POINT = 7;
+    // 5 values per point: x, y, stage_dist, sign, dock_type
+    constexpr int VALUES_PER_POINT = 5;
     int data_idx = idx * VALUES_PER_POINT;
     
     if (data_idx + 1 < static_cast<int>(map_points.size())) {
