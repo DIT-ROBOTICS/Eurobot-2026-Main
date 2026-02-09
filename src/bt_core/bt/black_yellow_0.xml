@@ -27,6 +27,19 @@
                 targetPoseIdx="{target_idx}"/>
         </Sequence>
     </BehaviorTree>
+
+    <!-- ============================================= -->
+    <!-- FLIP SubTree: Flip the hazelnut               -->
+    <!-- ============================================= -->
+    <BehaviorTree ID="FlipSubTree">
+        <Sequence>
+            <!-- Publish FLIP command to firmware -->
+            <MissionPublisher
+                ActionType="flip"
+                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"/>
+        </Sequence>
+    </BehaviorTree>
     
     <!-- ============================================= -->
     <!-- PUT SubTree: Go to pantry point and put -->

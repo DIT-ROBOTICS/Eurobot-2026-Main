@@ -7,48 +7,17 @@
             <CamReceiver/>
             <LocReceiver/>
             
-            <!-- Main mission loop -->
-            <Repeat num_cycles="-1">
-                <Sequence>
-                    <!-- Get next target from DecisionCore -->
-                    <DecisionCore 
-                        next_target_index="{target_index}"
-                        next_target_pose="{target_pose}"
-                        action_type="{action_type}"/>
-                    
-                    <!-- Navigate to target -->
-                    <NavigationActionNode
-                        goal="{target_pose}"
-                        dock_type="dock_y_loose_linearBoost"
-                        finish_pose="{nav_result_pose}"/>
-                </Sequence>
-            </Repeat>
-            
-            <!-- Stop robot when done -->
-            <StopRobotNode/>
-        </Sequence>
-    </BehaviorTree>
-
-    <!-- Docking subtree for precise positioning -->
-    <BehaviorTree ID="DockingSubTree">
-        <Sequence>
-            <Docking
-                goal="{dock_target}"
-                offset="{dock_offset}"
-                shift="{dock_shift}"
-                dock_type="{dock_type}"
-                isPureDocking="true"
-                finish_pose="{dock_result}"/>
-        </Sequence>
-    </BehaviorTree>
-
-    <!-- Navigation subtree -->
-    <BehaviorTree ID="NavigationSubTree">
-        <Sequence>
-            <NavigationActionNode
-                goal="{nav_goal}"
-                dock_type="dock_y_loose_linearBoost"
-                finish_pose="{nav_result}"/>
+           <DecisionCore 
+                ActionType="flip"
+                RobotSideIdx="2"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <MissionPublisher
+                ActionType="flip"
+                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"/>
         </Sequence>
     </BehaviorTree>
 </root>

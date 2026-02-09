@@ -204,6 +204,7 @@ void DecisionCore::doPut() {
 void DecisionCore::doFlip() {
     decided_action_type = ActionType::FLIP;
     // TODO: more action inside Flip
+    target_pose_side_idx = getTargetSideIndex(ActionType::FLIP);
     writeOutputPort();
 }
 
@@ -343,6 +344,7 @@ RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
             }
         }
     }
+    else return default_robot_side; // For FLIP and DOCK, just return default side without checks
     
     // Fallback: return default_robot_side
     DC_WARN(node_ptr, "No suitable side found, using default_robot_side %d", default_idx);
