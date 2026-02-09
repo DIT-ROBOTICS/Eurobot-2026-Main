@@ -25,35 +25,35 @@ MissionPublisher::MissionPublisher(const std::string& name, const BT::NodeConfig
     hazelnut_status = std::vector<std::vector<FlipStatus>>(
         ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
     
-    RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] Initialized publishers");
+    MP_INFO(node_, "Initialized publishers");
 }
 
 void MissionPublisher::readBlackboard() {
     // Read current state from blackboard into member variables
     if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status)) {
-        RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] robot_side_status not in blackboard, using defaults");
+        MP_INFO(node_, "robot_side_status not in blackboard, using defaults");
     }
     
     if (!blackboard_->get<std::vector<FieldStatus>>("collection_info", collection_info)) {
-        RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] collection_info not in blackboard, using defaults");
+        MP_INFO(node_, "collection_info not in blackboard, using defaults");
     }
     
     if (!blackboard_->get<std::vector<FieldStatus>>("pantry_info", pantry_info)) {
-        RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] pantry_info not in blackboard, using defaults");
+        MP_INFO(node_, "pantry_info not in blackboard, using defaults");
     }
     
     if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
-        RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] hazelnut_status not in blackboard, using defaults");
-        // print hazelnut_status 
-        for (int side = 0; side < ROBOT_SIDES; ++side) {
-            std::string status_str = "Side " + std::to_string(side) + ": [";
-            for (int slot = 0; slot < HAZELNUT_LENGTH; ++slot) {
-                status_str += std::to_string(static_cast<int>(hazelnut_status[side][slot]));
-                if (slot < HAZELNUT_LENGTH - 1) status_str += ", ";
-            }
-            status_str += "]";
-            RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] %s", status_str.c_str());
+        MP_INFO(node_, "hazelnut_status not in blackboard, using defaults");
+    }
+    // print hazelnut_status 
+    for (int side = 0; side < ROBOT_SIDES; ++side) {
+        std::string status_str = "Side " + std::to_string(side) + ": [";
+        for (int slot = 0; slot < HAZELNUT_LENGTH; ++slot) {
+            status_str += std::to_string(static_cast<int>(hazelnut_status[side][slot]));
+            if (slot < HAZELNUT_LENGTH - 1) status_str += ", ";
         }
+        status_str += "]";
+        MP_INFO(node_, "%s", status_str.c_str());
     }
 }
 
@@ -80,14 +80,14 @@ BT::NodeStatus MissionPublisher::tick() {
     // Get action type from input port
     std::string action_str;
     if (!getInput<std::string>("ActionType", action_str)) {
-        RCLCPP_ERROR(node_->get_logger(), "[MissionPublisher] Missing ActionType input");
+        MP_ERROR(node_, "Missing ActionType input");
         return BT::NodeStatus::FAILURE;
     }
     
     // Get side index from input port
     int side_idx = 0;
     if (!getInput<int>("targetPoseSideIdx", side_idx)) {
-        RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Missing targetPoseSideIdx, using default 0");
+        MP_WARN(node_, "Missing targetPoseSideIdx, using default 0");
     }
     
     // Get target pose index for collection/pantry status updates
@@ -104,20 +104,28 @@ BT::NodeStatus MissionPublisher::tick() {
     switch (action) {
         case ActionType::FLIP:
             publishFlip(side_idx);
+            // Only write back robot_side_status and hazelnut_status for FLIP
+            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
             break;
         case ActionType::TAKE:
             publishTake(side_idx, target_pose_idx);
+            // Only write back robot_side_status and collection_info for TAKE
+            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info);
             break;
         case ActionType::PUT:
             publishPut(side_idx, target_pose_idx);
+            // Only write back robot_side_status and pantry_info for PUT
+            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_info);
             break;
         default:
             MP_WARN(node_, "Unknown action: %s", action_str.c_str());
             return BT::NodeStatus::FAILURE;
     }
     
-    // Write updated state back to blackboard
-    writeBlackboard();
+    // Don't call writeBlackboard() here - we already wrote only what we modified above
     
     return BT::NodeStatus::SUCCESS;
 }
@@ -156,13 +164,9 @@ void MissionPublisher::publishFlip(int side_idx) {
     // Set side index in last position
     msg.data[4] = static_cast<int16_t>(side_idx);
     
-    RCLCPP_INFO(node_->get_logger(), 
-                "[MissionPublisher] Publishing FLIP: [%d, %d, %d, %d, %d]",
-                msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4]);
-    msg.data[0] = 0;
-    msg.data[1] = 1;
-    msg.data[2] = 1;
-    msg.data[3] = 0;
+    MP_INFO(node_, 
+            "Publishing FLIP: [%d, %d, %d, %d, %d]",
+            msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4]);
     flip_pub->publish(msg);
     
     // Reset hazelnut_status to NO_FLIP for this side (trust firmware will flip them)
@@ -170,7 +174,7 @@ void MissionPublisher::publishFlip(int side_idx) {
         hazelnut_status[side_idx][i] = FlipStatus::NO_FLIP;
     }
     
-    RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] Reset hazelnut_status for side %d to NO_FLIP", side_idx);
+    MP_INFO(node_, "Reset hazelnut_status for side %d to NO_FLIP", side_idx);
 }
 
 /**
@@ -208,10 +212,10 @@ void MissionPublisher::publishTake(int side_idx, int target_pose_idx) {
     
     if (collection_idx >= 0 && collection_idx < static_cast<int>(collection_info.size())) {
         collection_info[collection_idx] = FieldStatus::EMPTY;
-        RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] collection_info[%d] (GoalPose %d) = EMPTY", 
+        MP_INFO(node_, "collection_info[%d] (GoalPose %d) = EMPTY", 
                     collection_idx, target_pose_idx);
     } else {
-        RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Invalid collection_idx %d for size %zu", 
+        MP_INFO(node_, "Invalid collection_idx %d for size %zu", 
                     collection_idx, collection_info.size());
     }
 }
@@ -247,9 +251,9 @@ void MissionPublisher::publishPut(int side_idx, int target_pose_idx) {
     
     if (pantry_idx >= 0 && pantry_idx < static_cast<int>(pantry_info.size())) {
         pantry_info[pantry_idx] = FieldStatus::OCCUPIED;
-        RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] pantry_info[%d] = OCCUPIED", pantry_idx);
+        MP_INFO(node_, "pantry_info[%d] = OCCUPIED", pantry_idx);
     } else {
-        RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Invalid pantry_idx %d for size %zu", 
+        MP_INFO(node_, "Invalid pantry_idx %d for size %zu", 
                     pantry_idx, pantry_info.size());
     }
 }

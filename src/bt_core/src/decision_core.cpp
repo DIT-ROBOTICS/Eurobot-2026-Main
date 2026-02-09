@@ -68,7 +68,8 @@ void DecisionCore::loadSequenceFromJson() {
 
 void DecisionCore::writeBlackboard() {
     blackboard_ptr->set<vector<FieldStatus>>("robot_side_status", robot_side_status);
-    blackboard_ptr->set<vector<vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
+    // NOTE: Do NOT write hazelnut_status here - it's managed by CamReceiver and MissionPublisher
+    // Writing it here would overwrite CamReceiver's vision updates
     blackboard_ptr->set<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
 }
 
