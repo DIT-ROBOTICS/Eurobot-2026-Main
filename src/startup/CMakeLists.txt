@@ -20,6 +20,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(jsoncpp REQUIRED)
 find_package(btcpp_ros2_interfaces REQUIRED)
+find_package(utils REQUIRED)
 
 # Include directories
 include_directories(
@@ -40,6 +41,7 @@ ament_target_dependencies(startup_new
   "tf2_geometry_msgs"
   "btcpp_ros2_interfaces"
   "jsoncpp"
+  "utils"
 )
 target_link_libraries(startup_new
   jsoncpp

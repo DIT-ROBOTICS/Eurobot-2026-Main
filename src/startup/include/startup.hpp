@@ -32,7 +32,7 @@
 #include "btcpp_ros2_interfaces/msg/circle_obstacle.hpp"
 #include "btcpp_ros2_interfaces/msg/segment_obstacle.hpp"
 
-#include "../../bt_core/include/bt_config.hpp"
+#include "bt_config.hpp"
 
 #define PI 3.1415926
 

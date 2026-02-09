@@ -33,7 +33,7 @@ public:
 private:
     // Helper methods
     void loadMapPoints();
-    geometry_msgs::msg::PoseStamped calculateDockPose(int pose_idx, RobotSide robot_side);
+    geometry_msgs::msg::PoseStamped calculateDockPose(int pose_idx, RobotSide robot_side, DockType chosen_dock_type);
     double getSideYaw(RobotSide side, double base_direction);
     
     // Error detection

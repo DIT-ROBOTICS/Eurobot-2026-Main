@@ -573,26 +573,36 @@ void DecisionCore::doDock() {
 }
 
 Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
-    // Get target position
-    geometry_msgs::msg::Point target = getPointPosition(goal_pose);
+    // Direction determined from map_points sign parameter
+    int idx = static_cast<int>(goal_pose);
+    constexpr int VALUES_PER_POINT = 5;
+    int data_idx = idx * VALUES_PER_POINT;
     
-    // Calculate angle from robot to target
-    double dx = target.x - robot_pose.pose.position.x;
-    double dy = target.y - robot_pose.pose.position.y;
-    double angle = atan2(dy, dx);
-    
-    // Convert angle to direction (0=East, 1=North, 2=West, 3=South)
-    // Normalize angle to [0, 2*PI)
-    if (angle < 0) angle += 2 * M_PI;
-    
-    // Each quadrant is PI/4 to 3*PI/4, etc.
-    if (angle < M_PI / 4 || angle >= 7 * M_PI / 4) {
-        return Direction::EAST;   // 0
-    } else if (angle < 3 * M_PI / 4) {
-        return Direction::NORTH;  // 1
-    } else if (angle < 5 * M_PI / 4) {
-        return Direction::WEST;   // 2
-    } else {
-        return Direction::SOUTH;  // 3
+    if (data_idx + 4 >= static_cast<int>(map_points.size())) {
+        DC_ERROR(node_ptr, "Invalid goal_pose index %d for decideDirection", idx);
+        return Direction::EAST;
     }
+    
+    // map_points indices: [x, y, stage_dist, sign, dock_type]
+    double sign = map_points[data_idx + 3];
+    int dock_type = static_cast<int>(map_points[data_idx + 4]);
+    
+    // sign indicates which direction the target is (where selected side should face):
+    //   dock_x, sign=1.0  -> target at WEST
+    //   dock_x, sign=-1.0 -> target at EAST
+    //   dock_y, sign=1.0  -> target at SOUTH
+    //   dock_y, sign=-1.0 -> target at NORTH
+    
+    Direction result;
+    if (dock_type == 0 || dock_type == 2) {  // DOCK_Y types
+        result = (sign > 0) ? Direction::SOUTH : Direction::NORTH;
+        DC_INFO(node_ptr, "Dock direction for pose %d DOCK_Y (sign=%.1f): %s", 
+                idx, sign, result == Direction::SOUTH ? "SOUTH" : "NORTH");
+    } else {  // DOCK_X types
+        result = (sign > 0) ? Direction::WEST : Direction::EAST;
+        DC_INFO(node_ptr, "Dock direction for pose %d DOCK_X (sign=%.1f): %s", 
+                idx, sign, result == Direction::WEST ? "WEST" : "EAST");
+    }
+    
+    return result;
 }

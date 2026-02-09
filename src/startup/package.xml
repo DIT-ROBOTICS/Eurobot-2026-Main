@@ -11,6 +11,7 @@
 
   <depend>main</depend>
   <depend>btcpp_ros2_interfaces</depend>
+  <depend>utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>

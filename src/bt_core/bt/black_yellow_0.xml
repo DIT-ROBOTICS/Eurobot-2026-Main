@@ -51,7 +51,9 @@
     </BehaviorTree>
     
     <!-- ============================================= -->
-    <!-- Main Tree: TAKE x2, then PUT x2 -->
+    <!-- Main Tree: Complete collection cycle -->
+    <!-- Pattern: Fill all 4 robot sides, then empty them to pantries -->
+    <!-- Repeat twice to handle all 8 collection points -->
     <!-- ============================================= -->
     <BehaviorTree ID="MainTree">
         <Sequence>
@@ -59,7 +61,9 @@
             <CamReceiver/>
             <LocReceiver/>
             
-            <!-- TAKE Phase: Take from 2 collection points -->
+            <!-- ========== CYCLE 1: Fill 4 sides, empty to pantries ========== -->
+            
+            <!-- TAKE 1: Fill BACK side (2) -->
             <DecisionCore 
                 ActionType="take"
                 RobotSideIdx="2"
@@ -69,6 +73,7 @@
                 targetDirection="{target_dir}"/>
             <SubTree ID="TakeSubTree" _autoremap="true"/>
             
+            <!-- TAKE 2: Fill FRONT side (0) -->
             <DecisionCore 
                 ActionType="take"
                 RobotSideIdx="0"
@@ -78,7 +83,37 @@
                 targetDirection="{target_dir}"/>
             <SubTree ID="TakeSubTree" _autoremap="true"/>
             
-            <!-- PUT Phase: Put to 2 pantry points -->
+            <!-- TAKE 3: Fill RIGHT side (1) -->
+            <DecisionCore 
+                ActionType="take"
+                RobotSideIdx="1"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="TakeSubTree" _autoremap="true"/>
+            
+            <!-- TAKE 4: Fill LEFT side (3) -->
+            <DecisionCore 
+                ActionType="take"
+                RobotSideIdx="3"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="TakeSubTree" _autoremap="true"/>
+            
+            <!-- PUT 1: Empty BACK side (2) to pantry -->
+            <DecisionCore 
+                ActionType="put"
+                RobotSideIdx="2"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="PutSubTree" _autoremap="true"/>
+            
+            <!-- PUT 2: Empty FRONT side (0) to pantry -->
             <DecisionCore 
                 ActionType="put"
                 RobotSideIdx="0"
@@ -88,15 +123,29 @@
                 targetDirection="{target_dir}"/>
             <SubTree ID="PutSubTree" _autoremap="true"/>
             
+            <!-- PUT 3: Empty RIGHT side (1) to pantry -->
             <DecisionCore 
                 ActionType="put"
-                RobotSideIdx="0"
+                RobotSideIdx="1"
                 nextActionType="{next_action}"
                 targetPoseIdx="{target_idx}"
                 targetPoseSideIdx="{target_side}"
                 targetDirection="{target_dir}"/>
             <SubTree ID="PutSubTree" _autoremap="true"/>
-
+            
+            <!-- PUT 4: Empty LEFT side (3) to pantry -->
+            <DecisionCore 
+                ActionType="put"
+                RobotSideIdx="3"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="PutSubTree" _autoremap="true"/>
+            
+            <!-- ========== CYCLE 2: Fill 4 sides again, empty to pantries ========== -->
+            
+            <!-- TAKE 5: Fill BACK side (2) -->
             <DecisionCore 
                 ActionType="take"
                 RobotSideIdx="2"
@@ -105,25 +154,48 @@
                 targetPoseSideIdx="{target_side}"
                 targetDirection="{target_dir}"/>
             <SubTree ID="TakeSubTree" _autoremap="true"/>
-
-            <DecisionCore 
-                ActionType="put"
-                RobotSideIdx="0"
-                nextActionType="{next_action}"
-                targetPoseIdx="{target_idx}"
-                targetPoseSideIdx="{target_side}"
-                targetDirection="{target_dir}"/>
-            <SubTree ID="PutSubTree" _autoremap="true"/>
-
+            
+            <!-- TAKE 6: Fill FRONT side (0) -->
             <DecisionCore 
                 ActionType="take"
-                RobotSideIdx="2"
+                RobotSideIdx="0"
                 nextActionType="{next_action}"
                 targetPoseIdx="{target_idx}"
                 targetPoseSideIdx="{target_side}"
                 targetDirection="{target_dir}"/>
             <SubTree ID="TakeSubTree" _autoremap="true"/>
-
+            
+            <!-- TAKE 7: Fill RIGHT side (1) -->
+            <DecisionCore 
+                ActionType="take"
+                RobotSideIdx="1"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="TakeSubTree" _autoremap="true"/>
+            
+            <!-- TAKE 8: Fill LEFT side (3) -->
+            <DecisionCore 
+                ActionType="take"
+                RobotSideIdx="3"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="TakeSubTree" _autoremap="true"/>
+            
+            <!-- PUT 5: Empty BACK side (2) to pantry -->
+            <DecisionCore 
+                ActionType="put"
+                RobotSideIdx="2"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="PutSubTree" _autoremap="true"/>
+            
+            <!-- PUT 6: Empty FRONT side (0) to pantry -->
             <DecisionCore 
                 ActionType="put"
                 RobotSideIdx="0"
@@ -132,6 +204,27 @@
                 targetPoseSideIdx="{target_side}"
                 targetDirection="{target_dir}"/>
             <SubTree ID="PutSubTree" _autoremap="true"/>
+            
+            <!-- PUT 7: Empty RIGHT side (1) to pantry -->
+            <DecisionCore 
+                ActionType="put"
+                RobotSideIdx="1"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="PutSubTree" _autoremap="true"/>
+            
+            <!-- PUT 8: Empty LEFT side (3) to pantry -->
+            <DecisionCore 
+                ActionType="put"
+                RobotSideIdx="3"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <SubTree ID="PutSubTree" _autoremap="true"/>
+            
         </Sequence>
     </BehaviorTree>
 </root>

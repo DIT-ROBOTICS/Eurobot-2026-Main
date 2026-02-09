@@ -69,39 +69,70 @@ BT::PortsList OnDockAction::providedPorts() {
  * - LEFT facing target: robot yaw = target direction + 90°
  */
 double OnDockAction::getSideYaw(RobotSide side, double base_direction) {
-    // base_direction: 0=East(+X), 1=North(+Y), 2=West(-X), 3=South(-Y) (in 90° units)
+    // base_direction: Direction enum value (0=NORTH, 1=EAST, 2=SOUTH, 3=WEST)
     // 
-    // Robot coordinate system:
+    // Robot coordinate system (ROS standard):
+    //   At yaw=0°: +X points EAST, +Y points NORTH
     //   FRONT = +Y of robot
     //   RIGHT = +X of robot
     //   BACK  = -Y of robot
     //   LEFT  = -X of robot
     //
-    // yaw_offset: rotation needed so that chosen side faces the target direction
-    double yaw_offset = 0.0;
+    // World yaw angles:
+    //   0° = EAST, 90° = NORTH, 180° = WEST, 270° = SOUTH
     
-    switch (side) {
-        case RobotSide::FRONT:
-            // FRONT (+Y) should face target: rotate -90° so +Y aligns with base direction
-            yaw_offset = -PI / 2.0;  // -90°
+    // Convert Direction enum to world yaw angle
+    double target_yaw = 0.0;
+    int dir = static_cast<int>(base_direction);
+    switch (dir) {
+        case 0: // NORTH
+            target_yaw = PI / 2.0;  // 90°
             break;
-        case RobotSide::RIGHT:
-            // RIGHT (+X) should face target: no rotation needed, +X already aligns
-            yaw_offset = 0.0;
+        case 1: // EAST
+            target_yaw = 0.0;  // 0°
             break;
-        case RobotSide::BACK:
-            // BACK (-Y) should face target: rotate +90° so -Y aligns with base direction
-            yaw_offset = PI / 2.0;  // +90°
+        case 2: // SOUTH
+            target_yaw = 3.0 * PI / 2.0;  // 270°
             break;
-        case RobotSide::LEFT:
-            // LEFT (-X) should face target: rotate 180° so -X aligns with base direction
-            yaw_offset = PI;  // 180°
+        case 3: // WEST
+            target_yaw = PI;  // 180°
             break;
     }
     
-    // Convert base direction to radians and add offset
-    double base_yaw = base_direction * PI / 2.0;
-    return base_yaw + yaw_offset;
+    // Calculate robot yaw so the chosen side faces the target direction
+    double yaw = 0.0;
+    switch (side) {
+        case RobotSide::FRONT:
+            // FRONT (+Y) should face target_yaw
+            // At yaw θ, +Y points to θ + 90°
+            // We want θ + 90° = target_yaw, so θ = target_yaw - 90°
+            yaw = target_yaw - PI / 2.0;
+            break;
+        case RobotSide::RIGHT:
+            // RIGHT (+X) should face target_yaw
+            // At yaw θ, +X points to θ
+            // We want θ = target_yaw
+            yaw = target_yaw;
+            break;
+        case RobotSide::BACK:
+            // BACK (-Y) should face target_yaw
+            // At yaw θ, -Y points to θ + 270° = θ - 90°
+            // We want θ - 90° = target_yaw, so θ = target_yaw + 90°
+            yaw = target_yaw + PI / 2.0;
+            break;
+        case RobotSide::LEFT:
+            // LEFT (-X) should face target_yaw
+            // At yaw θ, -X points to θ + 180°
+            // We want θ + 180° = target_yaw, so θ = target_yaw - 180°
+            yaw = target_yaw - PI;
+            break;
+    }
+    
+    // Normalize to [0, 2π)
+    while (yaw < 0) yaw += 2.0 * PI;
+    while (yaw >= 2.0 * PI) yaw -= 2.0 * PI;
+    
+    return yaw;
 }
 
 /**
@@ -117,7 +148,7 @@ double OnDockAction::getSideYaw(RobotSide side, double base_direction) {
  * Position z = stage_dist * sign (nav system uses this for staging)
  * Orientation: chosen side faces the target point
  */
-geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, RobotSide robot_side) {
+geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, RobotSide robot_side, DockType chosen_dock_type) {
     geometry_msgs::msg::PoseStamped dock_pose;
     dock_pose.header.frame_id = "map";
     dock_pose.header.stamp = node->now();
@@ -137,9 +168,21 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     double sign = map_points[data_idx + IDX_SIGN];
     
     // Set position: x, y are final dock pose, z = stage_dist * sign for nav system
-    dock_pose.pose.position.x = x;
-    dock_pose.pose.position.y = y;
-    dock_pose.pose.position.z = stage_dist * sign;
+    if(chosen_dock_type == DockType::MISSION_DOCK_Y || chosen_dock_type == DockType::CAM_DOCK_Y) {
+        dock_pose.pose.position.z = stage_dist * (-sign);
+        dock_pose.pose.position.y = y;  // Adjust y for staging
+        dock_pose.pose.position.x = x;
+    }
+    else if(chosen_dock_type == DockType::MISSION_DOCK_X || chosen_dock_type == DockType::CAM_DOCK_X) {
+        dock_pose.pose.position.z = stage_dist * (-sign);
+        dock_pose.pose.position.x = x;  // Adjust x for staging
+        dock_pose.pose.position.y = y;
+    }
+    else {  // For camera docks, use the exact position without staging offset
+        dock_pose.pose.position.x = x;
+        dock_pose.pose.position.y = y;
+        dock_pose.pose.position.z = stage_dist * sign;  // Still set z for nav system, but it won't affect camera docking
+    }
     
     // Calculate orientation based on robot side
     // The chosen side should face the target direction (from DecisionCore)
@@ -151,7 +194,7 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     
     RCLCPP_INFO(node->get_logger(), 
                 "[OnDockAction] Dock pose: idx=%d, side=%d -> (%.3f, %.3f, z=%.3f) yaw=%.1f°",
-                pose_idx, static_cast<int>(robot_side), x, y, dock_pose.pose.position.z, yaw * 180.0 / PI);
+                pose_idx, static_cast<int>(robot_side), dock_pose.pose.position.x, dock_pose.pose.position.y, dock_pose.pose.position.z, yaw * 180.0 / PI);
     
     return dock_pose;
 }
@@ -201,7 +244,10 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     blackboard->set<bool>("Timeout", false);
     
     // Calculate dock pose from map_points
-    goal_pose = calculateDockPose(target_pose_idx, target_side);
+    DOCK_INFO(node, "Calculating dock pose for pose_idx=%d, side=%d, direction=%d, dock_type=%d",
+              target_pose_idx, static_cast<int>(target_side), static_cast<int>(target_direction), 
+              static_cast<int>(map_points[data_idx + IDX_DOCK_TYPE]));
+    goal_pose = calculateDockPose(target_pose_idx, target_side, static_cast<DockType>(map_points[data_idx + IDX_DOCK_TYPE]));
     
     // Set up dock goal
     dock_goal.use_dock_id = false;
