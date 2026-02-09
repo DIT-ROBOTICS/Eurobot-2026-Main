@@ -41,6 +41,7 @@ private:
     // Callbacks
     void collection_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void pantry_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+    void hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     
     // Background spin thread
     void spinThread();
@@ -53,6 +54,7 @@ private:
     // Subscribers
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr collection_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr pantry_sub;
+    rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hazelnut_flip_sub;
 
     // Node references (order must match constructor initialization)
     shared_ptr<rclcpp::Node> node_;

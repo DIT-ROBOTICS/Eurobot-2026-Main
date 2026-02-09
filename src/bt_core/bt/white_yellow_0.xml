@@ -7,15 +7,44 @@
             <CamReceiver/>
             <LocReceiver/>
             
-           <DecisionCore 
-                ActionType="flip"
+            <DecisionCore 
+                ActionType="take"
                 RobotSideIdx="2"
                 nextActionType="{next_action}"
                 targetPoseIdx="{target_idx}"
                 targetPoseSideIdx="{target_side}"
                 targetDirection="{target_dir}"/>
             <MissionPublisher
+                ActionType="take"
+                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"/>
+
+            <Sleep msec="6000"/>
+            
+            <DecisionCore 
                 ActionType="flip"
+                RobotSideIdx="2"
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            
+            <MissionPublisher
+                ActionType="flip"
+                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"/>
+
+            <Sleep msec="6000"/>
+
+        <DecisionCore 
+            ActionType="put"
+            RobotSideIdx="2"
+            nextActionType="{next_action}"
+            targetPoseIdx="{target_idx}"
+            targetPoseSideIdx="{target_side}"
+            targetDirection="{target_dir}"/>
+            <MissionPublisher
+                ActionType="put"
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"/>
         </Sequence>

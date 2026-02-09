@@ -31,6 +31,12 @@ CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config,
         std::bind(&CamReceiver::pantry_info_callback, this, std::placeholders::_1),
         sub_options);
     
+    // Subscribe to hazelnut flip information
+    hazelnut_flip_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
+        "/robot/vision/hazelnut/flip", 10,
+        std::bind(&CamReceiver::hazelnut_flip_callback, this, std::placeholders::_1),
+        sub_options);
+    
     // Initialize with default values (camera fallback)
     initializeDefaultStatus();
     
@@ -109,6 +115,47 @@ void CamReceiver::pantry_info_callback(const std_msgs::msg::Int32MultiArray::Sha
         blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info_raw", pantry_info);
     }
+}
+
+void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg) {
+    RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: Received hazelnut flip info update.");
+    
+    if (msg->data.size() < 5) {
+        RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid hazelnut flip data size: %zu", msg->data.size());
+        return;
+    }
+    
+    // Parse message: indices 0-3 are flip status (0=NO_FLIP, 1=NEED_FLIP), index 4 is side index
+    int side_idx = msg->data[4];
+    
+    if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
+        RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid side index: %d", side_idx);
+        return;
+    }
+    
+    // Get current hazelnut_status from blackboard
+    std::vector<std::vector<FlipStatus>> hazelnut_status;
+    if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
+        // Initialize if not found
+        hazelnut_status = std::vector<std::vector<FlipStatus>>(
+            ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
+    }
+    
+    // Update the specified side with flip information
+    for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); ++i) {
+        if (msg->data[i] == 1) {
+            hazelnut_status[side_idx][i] = FlipStatus::NEED_FLIP;
+        } else {
+            hazelnut_status[side_idx][i] = FlipStatus::NO_FLIP;
+        }
+    }
+    
+    // Write back to blackboard
+    blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
+    
+    RCLCPP_DEBUG(node_->get_logger(), 
+                "CamReceiver: Updated hazelnut flip status for side %d: [%d, %d, %d, %d]",
+                side_idx, msg->data[0], msg->data[1], msg->data[2], msg->data[3]);
 }
 
 BT::NodeStatus CamReceiver::tick() {

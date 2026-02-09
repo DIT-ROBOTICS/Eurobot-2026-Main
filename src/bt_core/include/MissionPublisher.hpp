@@ -35,6 +35,10 @@ public:
     BT::NodeStatus tick() override;
 
 private:
+    // Blackboard sync methods (similar to DecisionCore)
+    void readBlackboard();
+    void writeBlackboard();
+    
     // Action handlers
     void publishFlip(int side_idx);
     void publishTake(int side_idx, int target_pose_idx);
@@ -48,6 +52,11 @@ private:
     // Node references
     std::shared_ptr<rclcpp::Node> node_;
     BT::Blackboard::Ptr blackboard_;
+    
+    // State from blackboard (synced via readBlackboard/writeBlackboard)
+    std::vector<FieldStatus> robot_side_status;
+    std::vector<FieldStatus> collection_info;
+    std::vector<FieldStatus> pantry_info;
     
     // Hazelnut status from blackboard
     // hazelnut_status[side][slot] = FlipStatus (NO_FLIP or NEED_FLIP)
