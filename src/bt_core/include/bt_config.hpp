@@ -7,6 +7,13 @@
 #include <sstream>
 #include <algorithm>
 
+enum class DockType {
+    MISSION_DOCK_Y,
+    MISSION_DOCK_X,
+    CAM_DOCK_Y,
+    CAM_DOCK_X
+};
+
 enum class StartUpState {
     INIT,
     READY,
