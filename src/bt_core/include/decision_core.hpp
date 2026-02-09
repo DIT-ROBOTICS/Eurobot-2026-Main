@@ -58,8 +58,8 @@ public:
 private:
     // init
     void loadMapPoints();
-    void loadSequenceFromJson();  // Load pantry_sequence and collection_sequence
-
+    void readBlackboard();        // Read current state from blackboard
+    void loadSequenceFromJson();
     void getVisionData();
     void getFieldInfo();
     void getRobotInfo();
@@ -67,7 +67,7 @@ private:
     void sortPantryPriority();
     void sortCollectionPriority();
     pair<GoalPose, RobotSide> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
-    RobotSide getTargetSideIndex();
+    RobotSide getTargetSideIndex(ActionType action_type);
     Direction decideDirection(GoalPose goal_pose, RobotSide robot_side);
     ActionType decideNextActionType(ActionType action_type);
     void writeOutputPort();
@@ -119,7 +119,7 @@ private:
     bool use_pantry_sequence;         // True if pantry_sequence has items
     bool use_collection_sequence;     // True if collection_sequence has items
     
-    RobotSide decided_robot_side;
+    RobotSide default_robot_side;
     ActionType decided_action_type;
     ActionType next_action_type;
     GoalPose target_goal_pose_idx;

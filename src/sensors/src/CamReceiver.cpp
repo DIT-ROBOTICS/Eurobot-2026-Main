@@ -1,20 +1,61 @@
 #include "CamReceiver.hpp"
 #include "bt_config.hpp"
 
-CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config, const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
-    : BT::SyncActionNode(name, config), node_(params.nh.lock()), blackboard_(blackboard) {
+CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config, 
+                         const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
+    : BT::SyncActionNode(name, config), 
+      node_(params.nh.lock()), 
+      blackboard_(blackboard),
+      running_(true) {
 
+    // Create a dedicated callback group for our subscriptions
+    callback_group_ = node_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+    
+    // Create a dedicated executor for spinning our callback group
+    executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    executor_->add_callback_group(callback_group_, node_->get_node_base_interface());
+
+    // Create subscription options with our callback group
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = callback_group_;
+
+    // Subscribe to collection status
     collection_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
-        "collection_status", 10, std::bind(&CamReceiver::collection_info_callback, this, std::placeholders::_1));
+        "collection_status", 10, 
+        std::bind(&CamReceiver::collection_info_callback, this, std::placeholders::_1),
+        sub_options);
+    
+    // Subscribe to pantry status
     pantry_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
-        "pantry_status", 10, std::bind(&CamReceiver::pantry_info_callback, this, std::placeholders::_1));
+        "pantry_status", 10, 
+        std::bind(&CamReceiver::pantry_info_callback, this, std::placeholders::_1),
+        sub_options);
     
     // Initialize with default values (camera fallback)
-    // Pantry: all EMPTY (available for PUT)
-    // Collection: all OCCUPIED (has hazelnuts for TAKE)
     initializeDefaultStatus();
     
-    RCLCPP_INFO(node_->get_logger(), "CamReceiver: Initialized with default values (pantry=EMPTY, collection=OCCUPIED)");
+    // Start background spin thread
+    spin_thread_ = std::thread(&CamReceiver::spinThread, this);
+    
+    RCLCPP_INFO(node_->get_logger(), "CamReceiver: Started with background spin thread");
+}
+
+CamReceiver::~CamReceiver() {
+    // Stop the spin thread
+    running_ = false;
+    if (spin_thread_.joinable()) {
+        spin_thread_.join();
+    }
+    RCLCPP_INFO(node_->get_logger(), "CamReceiver: Destroyed, spin thread stopped");
+}
+
+void CamReceiver::spinThread() {
+    RCLCPP_INFO(node_->get_logger(), "CamReceiver: Spin thread started");
+    while (running_ && rclcpp::ok()) {
+        executor_->spin_some(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    RCLCPP_INFO(node_->get_logger(), "CamReceiver: Spin thread exiting");
 }
 
 void CamReceiver::initializeDefaultStatus() {

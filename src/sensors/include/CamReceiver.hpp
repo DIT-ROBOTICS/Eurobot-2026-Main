@@ -1,32 +1,67 @@
+#ifndef CAM_RECEIVER_HPP
+#define CAM_RECEIVER_HPP
+
 #include "receiver_util.hpp"
+#include <thread>
+#include <atomic>
+
 using namespace std;
 
-// receive the vision data
-// reconstruct and organize to the message, then store to the BT blackboard
+/**
+ * @brief CamReceiver - BT Node that receives camera vision data
+ * 
+ * Subscribes to:
+ *   - collection_status (std_msgs/Int32MultiArray) -> collection_info
+ *   - pantry_status (std_msgs/Int32MultiArray) -> pantry_info
+ * 
+ * Writes to blackboard:
+ *   - collection_info: vector<FieldStatus>
+ *   - pantry_info: vector<FieldStatus>
+ *   - robot_side_status: vector<FieldStatus>
+ *   - hazelnut_status: vector<vector<FlipStatus>>
+ * 
+ * Uses a background thread to keep subscriptions alive during tree execution.
+ */
 class CamReceiver : public BT::SyncActionNode
 {
 public:
-    CamReceiver(const std::string& name, const BT::NodeConfig& config, const RosNodeParams& params, BT::Blackboard::Ptr blackboard);
+    CamReceiver(const std::string& name, const BT::NodeConfig& config, 
+                const RosNodeParams& params, BT::Blackboard::Ptr blackboard);
     
-    /* Node remapping function */
+    ~CamReceiver();  // Destructor to stop the spin thread
+    
     static BT::PortsList providedPorts();
     
-    /* Start and running function */
     BT::NodeStatus tick() override;
 
 private:
     // Initialize default values for when camera is down (fallback)
     void initializeDefaultStatus();
     
-    // collection for material that original placed, pantry for the collected materials will be placed.
-    // for encoding rules, the ref: https://www.notion.so/ditrobotics/2e2c8b048fcf8030a296da55379e06dc?source=copy_link#2e2c8b048fcf8081b59ade2d18562558
+    // Callbacks
     void collection_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void pantry_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+    
+    // Background spin thread
+    void spinThread();
+    std::thread spin_thread_;
+    
+    // Callback group and executor for background spinning
+    rclcpp::CallbackGroup::SharedPtr callback_group_;
+    rclcpp::executors::SingleThreadedExecutor::SharedPtr executor_;
+    
+    // Subscribers
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr collection_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr pantry_sub;
 
+    // Node references (order must match constructor initialization)
     shared_ptr<rclcpp::Node> node_;
     BT::Blackboard::Ptr blackboard_;
+    std::atomic<bool> running_;
+    
+    // Data storage
     std_msgs::msg::Int32MultiArray collection_info;
     std_msgs::msg::Int32MultiArray pantry_info;
 };
+
+#endif // CAM_RECEIVER_HPP

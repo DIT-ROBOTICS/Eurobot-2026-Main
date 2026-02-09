@@ -45,6 +45,9 @@ private:
     tf2_ros::Buffer tf_buffer;
     tf2_ros::TransformListener listener;
     
+    // Publisher to notify camera team which side is docking
+    rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr dock_side_pub;
+    
     // Map points data (7 values per point)
     std::vector<double> map_points;
     static constexpr int VALUES_PER_POINT = 7;

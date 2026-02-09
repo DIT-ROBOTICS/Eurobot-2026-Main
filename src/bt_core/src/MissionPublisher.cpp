@@ -59,8 +59,8 @@ BT::NodeStatus MissionPublisher::tick() {
     // Convert action string to ActionType
     ActionType action = stringToActionType(action_str);
     
-    RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] tick: action=%s, side=%d", 
-                action_str.c_str(), side_idx);
+    MP_INFO(node_, "tick: action=%s, side=%d, pose=%d", 
+            action_str.c_str(), side_idx, target_pose_idx);
     
     // Dispatch to appropriate handler
     switch (action) {
@@ -74,7 +74,7 @@ BT::NodeStatus MissionPublisher::tick() {
             publishPut(side_idx, target_pose_idx);
             break;
         default:
-            RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Unknown action: %s", action_str.c_str());
+            MP_WARN(node_, "Unknown action: %s", action_str.c_str());
             return BT::NodeStatus::FAILURE;
     }
     
@@ -145,31 +145,42 @@ void MissionPublisher::publishTake(int side_idx, int target_pose_idx) {
     std_msgs::msg::Int16 msg;
     msg.data = static_cast<int16_t>(side_idx);
     
-    RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] Publishing TAKE: side=%d, pose=%d", 
-                side_idx, target_pose_idx);
+    MP_INFO(node_, "TAKE from collection %d (robot side %d now OCCUPIED)", 
+            target_pose_idx, side_idx);
     
     take_pub->publish(msg);
     
     // Update robot_side_status: this side now holds hazelnuts
-    std::vector<FieldStatus> robot_side_status;
-    if (blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status)) {
-        if (side_idx >= 0 && side_idx < static_cast<int>(robot_side_status.size())) {
-            robot_side_status[side_idx] = FieldStatus::OCCUPIED;
-            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+    // Update robot_side_status: this side now holds hazelnuts
+    std::vector<FieldStatus> robot_sides;
+    if (blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_sides)) {
+        if (side_idx >= 0 && side_idx < static_cast<int>(robot_sides.size())) {
+            robot_sides[side_idx] = FieldStatus::OCCUPIED;
+            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
             RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] robot_side_status[%d] = OCCUPIED", side_idx);
         }
     }
     
     // Update collection_info: this collection point is now empty
     // Collection points start at PANTRY_LENGTH in GoalPose enum
-    int collection_idx = target_pose_idx - PANTRY_LENGTH;
-    std::vector<FieldStatus> collection_info;
-    if (blackboard_->get<std::vector<FieldStatus>>("collection_info", collection_info)) {
-        if (collection_idx >= 0 && collection_idx < static_cast<int>(collection_info.size())) {
-            collection_info[collection_idx] = FieldStatus::EMPTY;
-            blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info);
-            RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] collection_info[%d] = EMPTY", collection_idx);
+    // But collection_info vector is 0-indexed for collections
+    // GoalPose: 0-9 (Pantry), 10-19 (Collection)
+    // So if target_pose_idx is 10 (Collection 0), collection_idx should be 0.
+    int collection_idx = target_pose_idx - 10; // PANTRY_LENGTH is 10
+    
+    std::vector<FieldStatus> collections;
+    if (blackboard_->get<std::vector<FieldStatus>>("collection_info", collections)) {
+        if (collection_idx >= 0 && collection_idx < static_cast<int>(collections.size())) {
+            collections[collection_idx] = FieldStatus::EMPTY;
+            blackboard_->set<std::vector<FieldStatus>>("collection_info", collections);
+            RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] collection_info[%d] (GoalPose %d) = EMPTY", 
+                        collection_idx, target_pose_idx);
+        } else {
+             RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Invalid collection_idx %d for size %zu", 
+                         collection_idx, collections.size());
         }
+    } else {
+        RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Failed to get collection_info from blackboard");
     }
 }
 
@@ -188,29 +199,36 @@ void MissionPublisher::publishPut(int side_idx, int target_pose_idx) {
     std_msgs::msg::Int16 msg;
     msg.data = static_cast<int16_t>(side_idx);
     
-    RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] Publishing PUT: side=%d, pose=%d", 
-                side_idx, target_pose_idx);
+    MP_INFO(node_, "PUT to pantry %d (robot side %d now EMPTY)", target_pose_idx, side_idx);
     
     put_pub->publish(msg);
     
     // Update robot_side_status: this side is now empty
-    std::vector<FieldStatus> robot_side_status;
-    if (blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status)) {
-        if (side_idx >= 0 && side_idx < static_cast<int>(robot_side_status.size())) {
-            robot_side_status[side_idx] = FieldStatus::EMPTY;
-            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+    // Update robot_side_status: this side is now empty
+    std::vector<FieldStatus> robot_sides;
+    if (blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_sides)) {
+        if (side_idx >= 0 && side_idx < static_cast<int>(robot_sides.size())) {
+            robot_sides[side_idx] = FieldStatus::EMPTY;
+            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
             RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] robot_side_status[%d] = EMPTY", side_idx);
         }
     }
     
     // Update pantry_info: this pantry is now occupied
-    int pantry_idx = target_pose_idx;  // Pantry points are 0 to PANTRY_LENGTH-1
-    std::vector<FieldStatus> pantry_info;
-    if (blackboard_->get<std::vector<FieldStatus>>("pantry_info", pantry_info)) {
-        if (pantry_idx >= 0 && pantry_idx < static_cast<int>(pantry_info.size())) {
-            pantry_info[pantry_idx] = FieldStatus::OCCUPIED;
-            blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_info);
-            RCLCPP_DEBUG(node_->get_logger(), "[MissionPublisher] pantry_info[%d] = OCCUPIED", pantry_idx);
+    // Pantry points are 0-9 in GoalPose enum
+    int pantry_idx = target_pose_idx; // 0-indexed for pantry
+    
+    std::vector<FieldStatus> pantries;
+    if (blackboard_->get<std::vector<FieldStatus>>("pantry_info", pantries)) {
+        if (pantry_idx >= 0 && pantry_idx < static_cast<int>(pantries.size())) {
+            pantries[pantry_idx] = FieldStatus::OCCUPIED;
+            blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantries);
+            RCLCPP_INFO(node_->get_logger(), "[MissionPublisher] pantry_info[%d] = OCCUPIED", pantry_idx);
+        } else {
+             RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Invalid pantry_idx %d for size %zu", 
+                         pantry_idx, pantries.size());
         }
+    } else {
+        RCLCPP_WARN(node_->get_logger(), "[MissionPublisher] Failed to get pantry_info from blackboard");
     }
 }

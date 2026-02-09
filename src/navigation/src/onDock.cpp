@@ -22,6 +22,9 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     dock_recov_times = 0;
     dock_type = "dock_y_loose_linearBoost";
     
+    // Create publisher to notify camera team which side is docking
+    dock_side_pub = node->create_publisher<std_msgs::msg::Int16>("/robot/dock_side", 10);
+    
     // Load map points from parameter
     loadMapPoints();
     
@@ -226,10 +229,15 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     dock_goal.max_staging_time = 1000.0;
     dock_goal.navigate_to_staging_pose = !isPureDocking;
     
-    RCLCPP_INFO(node->get_logger(), 
-                "[OnDockAction] Goal set: pose_idx=%d, side=%d, dock_type=%s, pure=%s",
-                target_pose_idx, static_cast<int>(target_side), 
-                dock_type.c_str(), isPureDocking ? "true" : "false");
+    // Publish dock side to camera team
+    std_msgs::msg::Int16 side_msg;
+    side_msg.data = static_cast<int16_t>(target_side);
+    dock_side_pub->publish(side_msg);
+    DOCK_INFO(node, "Published dock_side=%d to /robot/dock_side", static_cast<int>(target_side));
+    
+    DOCK_INFO(node, "Goal set: pose_idx=%d, side=%d, dock_type=%s, pure=%s",
+              target_pose_idx, static_cast<int>(target_side), 
+              dock_type.c_str(), isPureDocking ? "true" : "false");
     
     return true;
 }
@@ -263,7 +271,7 @@ NodeStatus OnDockAction::onResultReceived(const WrappedResult& wr) {
         }
         
         blackboard->set<bool>("enable_vision_check", true);
-        
+        blackboard->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
         RCLCPP_ERROR(node->get_logger(), 
                      "[OnDockAction] Dock failed with error_code=%d, robot at (%.2f, %.2f)",
                      wr.result->error_code, robot_pose.pose.position.x, robot_pose.pose.position.y);
@@ -288,6 +296,7 @@ NodeStatus OnDockAction::goalErrorDetect() {
     
     blackboard->set<bool>("enable_vision_check", true);    
     // Check pose accuracy
+    blackboard->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
     double dist_error = calculateDistance(robot_pose.pose, goal_pose.pose);
     double ang_error = calculateAngleDifference(robot_pose.pose, goal_pose.pose);
     
