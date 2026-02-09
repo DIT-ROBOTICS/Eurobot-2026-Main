@@ -220,10 +220,10 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
         int dock_type_val = static_cast<int>(map_points[data_idx + IDX_DOCK_TYPE]);
         switch (dock_type_val) {
             case 0: // MISSION_DOCK_Y
-                dock_type = "dock_y_loose_linearBoost";
+                dock_type = "mission_dock_y_gentle";
                 break;
             case 1: // MISSION_DOCK_X
-                dock_type = "dock_x_loose_linearBoost";
+                dock_type = "mission_dock_x_gentle";
                 break;
             case 2: // CAM_DOCK_Y
                 dock_type = "mission_dock_cam_y";
@@ -232,7 +232,7 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
                 dock_type = "mission_dock_cam_x";
                 break;
             default:
-                dock_type = "dock_y_loose_linearBoost"; // fallback
+                dock_type = "mission_dock_y_gentle"; // fallback
                 DOCK_WARN(node, "Unknown dock_type value %d, using default", dock_type_val);
                 break;
         }
