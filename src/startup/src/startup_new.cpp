@@ -33,7 +33,7 @@ StartUp::StartUp() : Node("startup_node"){
     // sima
     start_sima_pub = this->create_publisher<std_msgs::msg::Int16>("/robot/startup/sima/start", 2);
     start_ninja_pub = this->create_publisher<std_msgs::msg::Int16>("/robot/startup/ninja/start", 2);
-    sima_selected_plan = 0;
+    sima_selected_plan = 1;
     sima_started = false;
 
     // web
@@ -150,7 +150,8 @@ void StartUp::getWebPlan() {
         }
     );
     // TODO: get Sima plan from defined config file
-    sima_selected_plan = selected_plan; // temporary
+    sima_selected_plan = 1; // temporary
+    RCLCPP_INFO(this->get_logger(), "[StartUp]: Sima selected plan: %d", sima_selected_plan);
 }
 
 void StartUp::parsePlanCode() {
@@ -278,7 +279,6 @@ void StartUp::tickNinjaSima() {
     auto msg = std_msgs::msg::Int16();
     msg.data = sima_selected_plan;
     start_ninja_pub->publish(msg);
-    sima_started = true;
     RCLCPP_INFO(this->get_logger(), "[StartUp]: Ninja Sima started at game time %f using plan %d", game_time, sima_selected_plan);
 }
 
@@ -288,7 +288,7 @@ void StartUp::publishTime() {
     cur_time_msg.data = cur_time - start_time;
     game_time = cur_time_msg.data;
     game_time_pub->publish(cur_time_msg);
-    tickLittleSima(cur_time_msg.data);
+    tickLittleSima(game_time);
 }
 
 bool StartUp::gameOver(double game_time) {
