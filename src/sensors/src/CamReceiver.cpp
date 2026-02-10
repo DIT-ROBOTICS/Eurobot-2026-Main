@@ -153,7 +153,7 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
     // Write back to blackboard
     blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
     
-    RCLCPP_INFO(node_->get_logger(), 
+    RCLCPP_DEBUG(node_->get_logger(), 
                 "CamReceiver: Updated hazelnut flip status for side %d: [%d, %d, %d, %d]",
                 side_idx, msg->data[0], msg->data[1], msg->data[2], msg->data[3]);
 }
