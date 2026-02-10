@@ -303,7 +303,7 @@ NodeStatus OnDockAction::onResultReceived(const WrappedResult& wr) {
                      "[OnDockAction] Dock failed with error_code=%d, robot at (%.2f, %.2f)",
                      wr.result->error_code, robot_pose.pose.position.x, robot_pose.pose.position.y);
         
-        return NodeStatus::FAILURE;
+        return NodeStatus::SUCCESS;  // Return success to end the action, but report the error through blackboard and logs
     }
     
     return goalErrorDetect();
