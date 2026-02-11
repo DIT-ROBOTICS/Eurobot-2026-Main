@@ -35,7 +35,7 @@ fi
 
 cleanup() {
     echo ""
-    echo "🧹 Cleaning up..."
+    echo "Cleaning up..."
     # Kill the tmux session (kills all panes/processes inside)
     tmux kill-session -t "$SESSION_NAME" 2>/dev/null
     # Kill any lingering ROS2 nodes from our launches
