@@ -4,6 +4,8 @@ Main workspace for Eurobot 2026 robotics competition with behavior tree manageme
 
 ## Quick Start
 
+### Setup
+
 ```bash
 # Clone and setup
 git clone https://github.com/DIT-ROBOTICS/Eurobot-2026-Main.git
@@ -18,6 +20,42 @@ cd docker && docker compose build
 cd .. && ./main build
 ./main enter  # Enter development container
 ```
+
+### Testing
+
+**1. Prepare external systems**
+
+Make sure your **localization**, **navigation**, **vision**, and **mission** systems are ready and running before testing.
+
+**2. Enter the container**
+
+```bash
+./main enter
+```
+
+**3. Run the test script**
+
+```bash
+bash test_launch.sh
+```
+
+This launches a tmux session with 3 panes:
+
+| Pane | Command |
+|------|---------|
+| Left | `ros2 launch bt_core bt_engine_launch.py` |
+| Right-Top | `ros2 launch startup startup_launch.py` |
+| Right-Bottom | `python3 mock_groups_test.py` (interactive tester) |
+
+**Tmux controls:**
+
+| Key | Action |
+|-----|--------|
+| Mouse click | Switch between panes (mouse mode is enabled) |
+| `Ctrl+B` then arrow keys | Switch between panes |
+| `Ctrl+B` then `D` | Detach from session (triggers auto-reset prompt) |
+
+After detaching, you will be prompted to **press Enter to restart** all nodes or **press `q` to quit**.
 
 ## Workspace Structure
 
