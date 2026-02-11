@@ -9,11 +9,19 @@ def generate_launch_description():
     # Get source directory (relative to this launch file)
     launch_dir = os.path.dirname(os.path.realpath(__file__))
     src_dir = os.path.dirname(launch_dir)  # main package src dir
-
+    ros_domain_id = os.getenv('ROS_DOMAIN_ID')
+    
+    if ros_domain_id == '11':
+        map_points_name = 'map_points_white.yaml'
+    elif ros_domain_id == '13':
+        map_points_name = 'map_points_black.yaml'
+    else:
+        map_points_name = 'map_points_default.yaml'
+    
     # Declare launch arguments for parameter files
     map_points_arg = DeclareLaunchArgument(
         'map_points',
-        default_value=os.path.join(src_dir, 'params', 'map_points.yaml'),
+        default_value=os.path.join(src_dir, 'params', map_points_name),
         description='Map points configuration file'
     )
 

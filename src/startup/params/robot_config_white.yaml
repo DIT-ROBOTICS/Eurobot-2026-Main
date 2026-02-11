@@ -1,0 +1,30 @@
+/**:
+  ros__parameters:
+    robot_name: "White"
+    
+    # Timing Configuration
+    time_rate: 100          # Timer rate in microseconds (100 = 10kHz)
+    game_time: 100          # Total game time in seconds
+    sima_tick_threshold: 85 # Seconds before sima starts
+    group_num: 5            # Total number of groups (including index 0)
+    
+    # Plan Configuration
+    default_plan: 00        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
+    
+    # BT Engine Configuration
+    pkg_share_dir: "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core"
+    tree_name: "MainTree"   # Main behavior tree name
+    json_file_path: "params/mission_sequence_white.json"  # Relative path from pkg_share_dir
+    bt_xml_directory: "bt/"                          # Relative path from pkg_share_dir
+    bt_tree_node_model: "bt/tree_node_model.xml"   # Relative path from pkg_share_dir
+    
+    # Start Pose Configuration
+    # Format: [x, y, yaw_in_radians]
+    
+    # Configuration for Blue Team match
+    blue_team:
+      start_pose: [2.7, 1.775, 0.0]
+      
+    # Configuration for Yellow Team match
+    yellow_team:
+      start_pose: [0.3, 1.775, 0.0]
