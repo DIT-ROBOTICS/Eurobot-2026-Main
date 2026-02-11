@@ -142,4 +142,34 @@ inline std::string actionTypeToString(ActionType action_type) {
     }
 }
 
+inline std::string goalPoseToString(GoalPose goal_pose) {
+    switch (goal_pose) {
+        case GoalPose::A: return "A";
+        case GoalPose::B: return "B";
+        case GoalPose::C: return "C";
+        case GoalPose::D: return "D";
+        case GoalPose::E: return "E";
+        case GoalPose::F: return "F";
+        case GoalPose::G: return "G";
+        case GoalPose::H: return "H";
+        case GoalPose::I: return "I";
+        case GoalPose::J: return "J";
+        case GoalPose::K: return "K";
+        case GoalPose::L: return "L";
+        case GoalPose::M: return "M";
+        case GoalPose::N: return "N";
+        case GoalPose::O: return "O";
+        case GoalPose::P: return "P";
+        case GoalPose::Q: return "Q";
+        case GoalPose::R: return "R";
+        case GoalPose::YellowNinjaPantry: return "YellowNinjaPantry";
+        case GoalPose::BlueNinjaPantry: return "BlueNinjaPantry";
+        case GoalPose::YellowCursor: return "YellowCursor";
+        case GoalPose::BlueCursor: return "BlueCursor";
+        case GoalPose::YellowHome: return "YellowHome";
+        case GoalPose::BlueHome: return "BlueHome";
+        default: return "unknown";
+    }
+}
+
 #endif // BT_CONFIG_HPP

@@ -60,7 +60,6 @@ private:
     void loadMapPoints();
     void readBlackboard();        // Read current state from blackboard
     void loadSequenceFromJson();
-    void getVisionData();
     void getFieldInfo();
     void getRobotInfo();
     void getInputPort();

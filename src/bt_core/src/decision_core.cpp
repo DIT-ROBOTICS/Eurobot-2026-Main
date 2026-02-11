@@ -131,27 +131,6 @@ void DecisionCore::getInputPort() {
     }
 }
 
-void DecisionCore::getVisionData() {
-    // Get collection_info from blackboard (stored as vector<FieldStatus> by CamReceiver)
-    std::vector<FieldStatus> collection_data;
-    if (!blackboard_ptr->get<std::vector<FieldStatus>>("collection_info", collection_data)) {
-        RCLCPP_WARN(node_ptr->get_logger(), "collection_info not found, using defaults");
-    } else {
-        collection_info = collection_data;
-    }
-    
-    // Get pantry_info from blackboard
-    std::vector<FieldStatus> pantry_data;
-    if (!blackboard_ptr->get<std::vector<FieldStatus>>("pantry_info", pantry_data)) {
-        RCLCPP_WARN(node_ptr->get_logger(), "pantry_info not found, using defaults");
-    } else {
-        pantry_info = pantry_data;
-    }
-
-    // TODO: get robot side status
-    // TODO: get hazelnut status
-}
-
 void DecisionCore::writeOutputPort() {
     setOutput<string>("nextActionType", actionTypeToString(decided_action_type));
     setOutput<int>("targetPoseIdx", static_cast<int>(target_goal_pose_idx));
@@ -225,7 +204,7 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
             
             // Check if pantry is already full (OCCUPIED)
             if (pantry_info[next_pantry] == FieldStatus::OCCUPIED) {
-                DC_WARN(node_ptr, "[PUT->PANTRY] Skipping pantry %d (ALREADY OCCUPIED)", next_pantry);
+                DC_WARN(node_ptr, "[PUT->PANTRY] Skipping pantry %s (ALREADY OCCUPIED)", goalPoseToString(static_cast<GoalPose>(next_pantry)).c_str());
                 // Update blackboard with modified sequence even if skipping
                 blackboard_ptr->set<vector<int>>("pantry_sequence", pantry_sequence);
                 continue; // Try next in sequence
@@ -237,8 +216,8 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
             
             GoalPose pose = static_cast<GoalPose>(next_pantry);
             DC_INFO(node_ptr, 
-                    "[PUT->PANTRY] Selected pantry %d from sequence, remaining: %zu",
-                    next_pantry, pantry_sequence.size());
+                    "[PUT->PANTRY] Selected pantry %s from sequence, remaining: %zu",
+                    goalPoseToString(pose).c_str(), pantry_sequence.size());
             return {pose, selected_side};
         }
         
@@ -251,8 +230,8 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
         }
         
         GoalPose best_pantry = pantry_priority.top().pose;
-        DC_INFO(node_ptr, "[PUT->PANTRY] Selected pantry %d with score: %d", 
-                static_cast<int>(best_pantry), pantry_priority.top().score);
+        DC_INFO(node_ptr, "[PUT->PANTRY] Selected pantry %s with score: %d", 
+                goalPoseToString(best_pantry).c_str(), pantry_priority.top().score);
         return {best_pantry, selected_side};
         
     } else if (action_type == ActionType::TAKE) {
@@ -273,7 +252,7 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
             
             if (collection_local_idx >= 0 && collection_local_idx < static_cast<int>(collection_info.size())) {
                 if (collection_info[collection_local_idx] == FieldStatus::EMPTY) {
-                   DC_WARN(node_ptr, "[TAKE->COLLECTION] Skipping collection %d (ALREADY EMPTY)", next_collection);
+                   DC_WARN(node_ptr, "[TAKE->COLLECTION] Skipping collection %s (ALREADY EMPTY)", goalPoseToString(static_cast<GoalPose>(next_collection)).c_str());
                    // Update blackboard with modified sequence even if skipping
                    blackboard_ptr->set<vector<int>>("collection_sequence_current", collection_sequence);
                    continue; // Try next in sequence
@@ -288,8 +267,8 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
             
             GoalPose pose = static_cast<GoalPose>(next_collection);
             DC_INFO(node_ptr, 
-                    "[TAKE->COLLECTION] Selected collection %d from sequence, remaining: %zu",
-                    next_collection, collection_sequence.size());
+                    "[TAKE->COLLECTION] Selected collection %s from sequence, remaining: %zu",
+                    goalPoseToString(pose).c_str(), collection_sequence.size());
             return {pose, selected_side};
         }
         
@@ -302,8 +281,8 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
         }
         
         GoalPose best_collection = collection_priority.top().pose;
-        DC_INFO(node_ptr, "[TAKE->COLLECTION] Selected collection %d with score: %d",
-                static_cast<int>(best_collection), collection_priority.top().score);
+        DC_INFO(node_ptr, "[TAKE->COLLECTION] Selected collection %s with score: %d",
+                goalPoseToString(best_collection).c_str(), collection_priority.top().score);
         return {best_collection, selected_side};
     }
     
@@ -483,8 +462,8 @@ int DecisionCore::calculatePantryScore(int pantry_idx) {
     double rival_dist = calculateRivalDistance(pose);
     if (rival_dist < RIVAL_PROXIMITY_THRESHOLD) {
         score += SCORE_RIVAL_NEARBY_PENALTY;
-        RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %d: rival too close (%.2fm), penalizing", 
-                     pantry_idx, rival_dist);
+        RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %s: rival too close (%.2fm), penalizing", 
+                     goalPoseToString(pose).c_str(), rival_dist);
     }
     
     return score;
@@ -529,8 +508,8 @@ int DecisionCore::calculateCollectionScore(int collection_idx) {
     double rival_dist = calculateRivalDistance(pose);
     if (rival_dist < RIVAL_PROXIMITY_THRESHOLD) {
         score += SCORE_RIVAL_NEARBY_PENALTY;
-        RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %d: rival too close (%.2fm), penalizing", 
-                     collection_idx, rival_dist);
+        RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %s: rival too close (%.2fm), penalizing", 
+                     goalPoseToString(pose).c_str(), rival_dist);
     }
     
     return score;
@@ -548,7 +527,7 @@ void DecisionCore::sortPantryPriority() {
         if (score > 0) { // Only add viable options
             GoalPose pose = static_cast<GoalPose>(i);
             pantry_priority.push(PointScore(pose, score));
-            RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %d score: %d", i, score);
+            RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %s score: %d", goalPoseToString(pose).c_str(), score);
         }
     }
 }
@@ -565,7 +544,7 @@ void DecisionCore::sortCollectionPriority() {
         if (score > 0) { // Only add viable options
             GoalPose pose = static_cast<GoalPose>(PANTRY_LENGTH + i);
             collection_priority.push(PointScore(pose, score));
-            RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %d score: %d", i, score);
+            RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %s score: %d", goalPoseToString(pose).c_str(), score);
         }
     }
 }

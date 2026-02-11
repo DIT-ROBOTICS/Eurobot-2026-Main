@@ -193,8 +193,8 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     dock_pose.pose.orientation = tf2::toMsg(q);
     
     RCLCPP_INFO(node->get_logger(), 
-                "[OnDockAction] Dock pose: idx=%d, side=%d -> (%.3f, %.3f, z=%.3f) yaw=%.1f°",
-                pose_idx, static_cast<int>(robot_side), dock_pose.pose.position.x, dock_pose.pose.position.y, dock_pose.pose.position.z, yaw * 180.0 / PI);
+                "[OnDockAction] Dock pose: idx=%s, side=%d -> (%.3f, %.3f, z=%.3f) yaw=%.1f°",
+                goalPoseToString(static_cast<GoalPose>(pose_idx)).c_str(), static_cast<int>(robot_side), dock_pose.pose.position.x, dock_pose.pose.position.y, dock_pose.pose.position.z, yaw * 180.0 / PI);
     
     return dock_pose;
 }
@@ -244,8 +244,8 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     blackboard->set<bool>("Timeout", false);
     
     // Calculate dock pose from map_points
-    DOCK_INFO(node, "Calculating dock pose for pose_idx=%d, side=%d, direction=%d, dock_type=%d",
-              target_pose_idx, static_cast<int>(target_side), static_cast<int>(target_direction), 
+    DOCK_INFO(node, "Calculating dock pose for pose_idx=%s, side=%d, direction=%d, dock_type=%d",
+              goalPoseToString(static_cast<GoalPose>(target_pose_idx)).c_str(), static_cast<int>(target_side), static_cast<int>(target_direction), 
               static_cast<int>(map_points[data_idx + IDX_DOCK_TYPE]));
     goal_pose = calculateDockPose(target_pose_idx, target_side, static_cast<DockType>(map_points[data_idx + IDX_DOCK_TYPE]));
     
@@ -262,8 +262,8 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     dock_side_pub->publish(side_msg);
     DOCK_INFO(node, "Published dock_side=%d to /robot/dock_side", static_cast<int>(target_side));
     
-    DOCK_INFO(node, "Goal set: pose_idx=%d, side=%d, dock_type=%s, pure=%s",
-              target_pose_idx, static_cast<int>(target_side), 
+    DOCK_INFO(node, "Goal set: pose_idx=%s, side=%d, dock_type=%s, pure=%s",
+              goalPoseToString(static_cast<GoalPose>(target_pose_idx)).c_str(), static_cast<int>(target_side), 
               dock_type.c_str(), isPureDocking ? "true" : "false");
     
     return true;
