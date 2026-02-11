@@ -39,13 +39,14 @@ Make sure your **localization**, **navigation**, **vision**, and **mission** sys
 bash test_launch.sh
 ```
 
-This launches a tmux session with 3 panes:
+This launches a tmux session with 4 panes:
 
 | Pane | Command |
 |------|---------|
 | Left | `ros2 launch bt_core bt_engine_launch.py` |
 | Right-Top | `ros2 launch startup startup_launch.py` |
-| Right-Bottom | `python3 mock_groups_test.py` (interactive tester) |
+| Right-Middle | `python3 mock_groups_test.py` (interactive tester) |
+| Right-Bottom | `micro_ros_agent serial -b 115200 -D /dev/mission` |
 
 **Tmux controls:**
 

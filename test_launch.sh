@@ -4,10 +4,11 @@
 # =============================================================
 # Automates the tmux testing setup inside the Docker container.
 # 
-# This script creates a tmux session with 3 panes:
-#   Left:         ros2 launch bt_core bt_engine_launch.py
-#   Right-Top:    ros2 launch startup startup_launch.py
-#   Right-Bottom: python3 mock_groups_test.py
+# This script creates a tmux session with 4 panes:
+#   Left:                ros2 launch bt_core bt_engine_launch.py
+#   Right-Top:           ros2 launch startup startup_launch.py
+#   Right-Middle:        python3 mock_groups_test.py
+#   Right-Bottom (small): micro_ros_agent
 #
 # After you detach (Ctrl+B, D) or the session ends, you will
 # be prompted to restart everything or quit.
@@ -26,6 +27,12 @@ elif [ -f "/opt/ros/humble/setup.bash" ]; then
     SOURCE_CMD="source /opt/ros/humble/setup.bash && "
 fi
 
+# Source micro_ros workspace if it exists
+MICRO_ROS_SOURCE=""
+if [ -f "$HOME/micro_ros_ws/install/setup.bash" ]; then
+    MICRO_ROS_SOURCE="source $HOME/micro_ros_ws/install/setup.bash && "
+fi
+
 cleanup() {
     echo ""
     echo "🧹 Cleaning up..."
@@ -35,6 +42,7 @@ cleanup() {
     pkill -f "bt_engine" 2>/dev/null
     pkill -f "startup_new" 2>/dev/null
     pkill -f "mock_groups_test" 2>/dev/null
+    pkill -f "micro_ros_agent" 2>/dev/null
     # Small delay to let processes terminate
     sleep 1
     echo "Cleanup done."
@@ -54,7 +62,15 @@ launch() {
     # Split right pane into top and bottom (vertical split)
     tmux split-window -v -t "$SESSION_NAME"
 
+    # Split right-bottom pane again for micro_ros (small pane at the very bottom)
+    tmux split-window -v -t "$SESSION_NAME" -l 5
+
     # --- Send commands to each pane ---
+    # Pane layout after splits:
+    #   0 = Left (bt_engine)
+    #   1 = Right-Top (startup)
+    #   2 = Right-Middle (mock tester)
+    #   3 = Right-Bottom (micro_ros_agent)
 
     # Pane 0 (Left): bt_engine_launch.py
     tmux send-keys -t "$SESSION_NAME:0.0" "${SOURCE_CMD}ros2 launch bt_core bt_engine_launch.py" C-m
@@ -62,10 +78,13 @@ launch() {
     # Pane 1 (Right-Top): startup_launch.py
     tmux send-keys -t "$SESSION_NAME:0.1" "${SOURCE_CMD}ros2 launch startup startup_launch.py" C-m
 
-    # Pane 2 (Right-Bottom): mock_groups_test.py
+    # Pane 2 (Right-Middle): mock_groups_test.py
     tmux send-keys -t "$SESSION_NAME:0.2" "${SOURCE_CMD}python3 src/startup/scripts/mock_groups_test.py" C-m
 
-    # Select the right-bottom pane (mock tester) as active
+    # Pane 3 (Right-Bottom): micro_ros_agent
+    tmux send-keys -t "$SESSION_NAME:0.3" "${MICRO_ROS_SOURCE}ros2 run micro_ros_agent micro_ros_agent serial -b 115200 -D /dev/mission" C-m
+
+    # Select the mock tester pane as active
     tmux select-pane -t "$SESSION_NAME:0.2"
 
     # Attach to the session (blocks until detach or session ends)
