@@ -74,7 +74,7 @@
             <CamReceiver/>
             <LocReceiver/>
                         
-            <Repeat num_cycles="3">
+            <Repeat num_cycles="4">
                 <Sequence>
                     <DecisionCore 
                         ActionType="take"
