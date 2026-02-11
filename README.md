@@ -56,7 +56,7 @@ This launches a tmux session with 4 panes:
 | `Ctrl+B` then arrow keys | Switch between panes |
 | `Ctrl+B` then `D` | Detach from session (triggers auto-reset prompt) |
 
-After detaching, you will be prompted to **press Enter to restart** all nodes or **press `q` to quit**.
+After detaching, you will be prompted to **press Enter to restart** all nodes, **press `c` to colcon build** then restart, or **press `q` to quit**.
 
 ## Workspace Structure
 

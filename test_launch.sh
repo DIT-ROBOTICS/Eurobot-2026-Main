@@ -102,12 +102,20 @@ while true; do
     # After detach / session exit, prompt user
     echo ""
     echo "============================================================="
-    echo "  Session ended. Press ENTER to restart, or 'q' to quit."
+    echo "  Session ended."
+    echo "    ENTER  -> restart"
+    echo "    c      -> colcon build, then restart"
+    echo "    q      -> quit"
     echo "============================================================="
     read -r input
     if [ "$input" = "q" ] || [ "$input" = "Q" ]; then
         cleanup
         echo "Bye!"
         exit 0
+    elif [ "$input" = "c" ] || [ "$input" = "C" ]; then
+        echo ""
+        echo "Running colcon build..."
+        colcon build
+        echo "Build finished."
     fi
 done
