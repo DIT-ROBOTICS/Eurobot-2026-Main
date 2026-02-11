@@ -1,6 +1,6 @@
 {
     "states": {
-        "0": true,
+        "0": true, 
         "1": true,
         "2": true,
         "3": true,
@@ -22,15 +22,19 @@
         "19": false
     },
     "pantry_sequence": [
-        0,
-        1,
+        9,
+        8,
+        6,
         2,
-        3
+        4,
+        1
     ],
     "collection_sequence": [
-        10,
-        11,
+        14,
+        15,
+        17,
         12,
-        13
+        10,
+        11
     ]
 }

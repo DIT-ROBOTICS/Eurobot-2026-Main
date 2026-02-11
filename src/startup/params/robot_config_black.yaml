@@ -9,7 +9,7 @@
     group_num: 5            # Total number of groups (including index 0)
     
     # Plan Configuration
-    default_plan: 00        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
+    default_plan: 01        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
     
     # BT Engine Configuration
     pkg_share_dir: "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core"

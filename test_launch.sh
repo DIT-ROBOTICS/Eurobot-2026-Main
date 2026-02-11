@@ -115,7 +115,7 @@ while true; do
     elif [ "$input" = "c" ] || [ "$input" = "C" ]; then
         echo ""
         echo "Running colcon build..."
-        colcon build
+        colcon build --symlink-install
         echo "Build finished."
     fi
 done
