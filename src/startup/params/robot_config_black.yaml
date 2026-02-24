@@ -18,6 +18,12 @@
     bt_xml_directory: "bt/"                          # Relative path from pkg_share_dir
     bt_tree_node_model: "bt/tree_node_model.xml"   # Relative path from pkg_share_dir
     
+    # Dock Type Configuration
+    normal_dock_type_y: "mission_dock_y_rush"  # Dock type for MISSION_DOCK_Y (case 0)
+    normal_dock_type_x: "mission_dock_x_rush"  # Dock type for MISSION_DOCK_X (case 1)
+    cam_dock_type_y: "mission_dock_cam_y"         # Dock type for CAM_DOCK_Y (case 2)
+    cam_dock_type_x: "mission_dock_cam_x"         # Dock type for CAM_DOCK_X (case 3)
+    
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]
     

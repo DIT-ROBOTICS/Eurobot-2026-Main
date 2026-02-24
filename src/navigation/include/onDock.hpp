@@ -65,6 +65,10 @@ private:
     int dock_recov_times;
     std::string dock_type;
     std::string frame_id;
+    std::string normal_dock_type_y_param;  // From YAML: normal_dock_type_y
+    std::string normal_dock_type_x_param;  // From YAML: normal_dock_type_x
+    std::string cam_dock_type_y_param;     // From YAML: cam_dock_type_y
+    std::string cam_dock_type_x_param;     // From YAML: cam_dock_type_x
     
     // Pose data
     geometry_msgs::msg::PoseStamped goal_pose;

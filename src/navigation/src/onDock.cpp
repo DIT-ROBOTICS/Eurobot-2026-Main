@@ -28,8 +28,28 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     // Load map points from parameter
     loadMapPoints();
     
-    RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized with %zu map points", 
-                map_points.size() / VALUES_PER_POINT);
+    // Load dock type parameters
+    if (!node->has_parameter("normal_dock_type_y")) {
+        node->declare_parameter("normal_dock_type_y", std::string("mission_dock_y_gentle"));
+    }
+    if (!node->has_parameter("normal_dock_type_x")) {
+        node->declare_parameter("normal_dock_type_x", std::string("mission_dock_x_gentle"));
+    }
+    if (!node->has_parameter("cam_dock_type_y")) {
+        node->declare_parameter("cam_dock_type_y", std::string("mission_dock_cam_y"));
+    }
+    if (!node->has_parameter("cam_dock_type_x")) {
+        node->declare_parameter("cam_dock_type_x", std::string("mission_dock_cam_x"));
+    }
+    normal_dock_type_y_param = node->get_parameter("normal_dock_type_y").as_string();
+    normal_dock_type_x_param = node->get_parameter("normal_dock_type_x").as_string();
+    cam_dock_type_y_param = node->get_parameter("cam_dock_type_y").as_string();
+    cam_dock_type_x_param = node->get_parameter("cam_dock_type_x").as_string();
+    
+    RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized with %zu map points, dock types: ny=%s, nx=%s, cy=%s, cx=%s", 
+                map_points.size() / VALUES_PER_POINT,
+                normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
+                cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
 }
 
 void OnDockAction::loadMapPoints() {
@@ -220,19 +240,19 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
         int dock_type_val = static_cast<int>(map_points[data_idx + IDX_DOCK_TYPE]);
         switch (dock_type_val) {
             case 0: // MISSION_DOCK_Y
-                dock_type = "mission_dock_y_gentle";
+                dock_type = normal_dock_type_y_param;
                 break;
             case 1: // MISSION_DOCK_X
-                dock_type = "mission_dock_x_gentle";
+                dock_type = normal_dock_type_x_param;
                 break;
             case 2: // CAM_DOCK_Y
-                dock_type = "mission_dock_cam_y";
+                dock_type = cam_dock_type_y_param;
                 break;
             case 3: // CAM_DOCK_X
-                dock_type = "mission_dock_cam_x";
+                dock_type = cam_dock_type_x_param;
                 break;
             default:
-                dock_type = "mission_dock_y_gentle"; // fallback
+                dock_type = normal_dock_type_y_param; // fallback
                 DOCK_WARN(node, "Unknown dock_type value %d, using default", dock_type_val);
                 break;
         }
