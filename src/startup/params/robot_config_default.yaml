@@ -9,14 +9,20 @@
     group_num: 5            # Total number of groups (including index 0)
     
     # Plan Configuration
-    default_plan: 00        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
+    default_plan: 21        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
     
     # BT Engine Configuration
     pkg_share_dir: "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core"
     tree_name: "MainTree"   # Main behavior tree name
-    json_file_path: "params/mission_sequence.json"  # Relative path from pkg_share_dir
+    json_file_path: "params/mission_sequence_black.json"  # Relative path from pkg_share_dir
     bt_xml_directory: "bt/"                          # Relative path from pkg_share_dir
     bt_tree_node_model: "bt/tree_node_model.xml"   # Relative path from pkg_share_dir
+    
+    # Dock Type Configuration
+    normal_dock_type_y: "mission_dock_y_rush"  # Dock type for MISSION_DOCK_Y (case 0)
+    normal_dock_type_x: "mission_dock_x_rush"  # Dock type for MISSION_DOCK_X (case 1)
+    cam_dock_type_y: "mission_dock_cam_y"         # Dock type for CAM_DOCK_Y (case 2)
+    cam_dock_type_x: "mission_dock_cam_x"         # Dock type for CAM_DOCK_X (case 3)
     
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]
