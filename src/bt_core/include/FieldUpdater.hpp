@@ -5,6 +5,7 @@
 #include "behaviortree_ros2/bt_action_node.hpp"
 #include "behaviortree_cpp/bt_factory.h"
 #include "rclcpp/rclcpp.hpp"
+#include <std_msgs/msg/string.hpp>
 
 using namespace BT;
 using namespace std;
@@ -22,7 +23,10 @@ private:
     void updateFieldStatus();
     
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr keepout_zone_pub;
+    std::shared_ptr<rclcpp::Node> node_;
     BT::Blackboard::Ptr blackboard_ptr;
     vector<FieldStatus> collection_info;
     vector<FieldStatus> pantry_info;
 };
+
+#endif // FIELD_UPDATER_HPP
