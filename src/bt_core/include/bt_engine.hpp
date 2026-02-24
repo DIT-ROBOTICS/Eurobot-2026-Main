@@ -39,6 +39,9 @@
 // mission publisher
 #include "MissionPublisher.hpp"
 
+// field updater
+#include "FieldUpdater.hpp"
+
 // utils nodes
 
 // firmware nodes
