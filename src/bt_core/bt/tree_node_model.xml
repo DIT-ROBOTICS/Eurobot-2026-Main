@@ -9,6 +9,7 @@
             <input_port name="RobotSideIdx" type="int"/>
             <input_port name="ActionType" type="std::string"/>
         </Action>
+        <Action ID="FieldUpdater"/>
         <Action ID="LocReceiver"/>
         <Action ID="MissionPublisher">
             <input_port name="targetPoseIdx" type="int"/>

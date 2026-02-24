@@ -6,7 +6,7 @@
             <!-- Initialize receivers -->
             <CamReceiver/>
             <LocReceiver/>
-            
+            <FieldUpdater/>  
             <!-- Main mission loop with timeout -->
             <Parallel failure_count="2" success_count="1">
                 <Repeat num_cycles="-1">

@@ -25,6 +25,7 @@
                 ActionType="take"
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"/>
+            <FieldUpdater/>  
         </Sequence>
     </BehaviorTree>
 
@@ -60,6 +61,7 @@
                 ActionType="put"
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"/>
+            <FieldUpdater/>
         </Sequence>
     </BehaviorTree>
     
@@ -73,7 +75,7 @@
             <!-- Initialize receivers first -->
             <CamReceiver/>
             <LocReceiver/>
-                        
+            <FieldUpdater/>         
             <Repeat num_cycles="5">
                 <Sequence>
                     <DecisionCore 
