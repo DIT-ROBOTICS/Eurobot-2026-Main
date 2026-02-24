@@ -30,8 +30,8 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     
     // map point
     loadMapPoints();
-    loadSequenceFromJson();  // Load sequences ONCE during init
-    readBlackboard();        // Load current state from blackboard
+    loadSequenceFromJson();
+    readBlackboard();
     writeBlackboard();
 }
 
@@ -139,7 +139,7 @@ void DecisionCore::writeOutputPort() {
 }
 
 BT::NodeStatus DecisionCore::tick() {
-    readBlackboard();  // Ensure we have fresh state from other nodes
+    readBlackboard();
     getInputPort();
     DC_INFO(node_ptr, "Processing action: %s", actionTypeToString(decided_action_type).c_str());
     switch(decided_action_type) {
