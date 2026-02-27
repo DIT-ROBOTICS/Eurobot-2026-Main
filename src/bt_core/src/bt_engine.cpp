@@ -179,6 +179,9 @@ void BTengine::createTreeNodes() {
     // mission publisher
     factory.registerNodeType<MissionPublisher>("MissionPublisher", params, blackboard);
 
+    // mission checker
+    factory.registerNodeType<MissionChecker>("MissionChecker", params, blackboard);
+
     // field updater
     factory.registerNodeType<FieldUpdater>("FieldUpdater", params, blackboard);
     

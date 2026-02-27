@@ -39,6 +39,9 @@
 // mission publisher
 #include "MissionPublisher.hpp"
 
+// mission checker
+#include "MissionChecker.hpp"
+
 // field updater
 #include "FieldUpdater.hpp"
 

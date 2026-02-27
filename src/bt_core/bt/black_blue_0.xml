@@ -25,7 +25,13 @@
                 ActionType="take"
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"/>
-            <FieldUpdater/>  
+            <FieldUpdater/>
+
+            <!-- Wait for vision to confirm take, or timeout -->
+            <MissionChecker
+                ActionType="take"
+                targetPoseSideIdx="{target_side}"
+                timeout_ms="3000"/>
         </Sequence>
     </BehaviorTree>
 
@@ -39,6 +45,12 @@
                 ActionType="flip"
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"/>
+
+            <!-- Wait for flip to complete (pure timeout, no vision feedback) -->
+            <MissionChecker
+                ActionType="flip"
+                targetPoseSideIdx="{target_side}"
+                timeout_ms="3000"/>
         </Sequence>
     </BehaviorTree>
     
@@ -62,6 +74,12 @@
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"/>
             <FieldUpdater/>
+
+            <!-- Wait for vision to confirm put, or timeout -->
+            <MissionChecker
+                ActionType="put"
+                targetPoseSideIdx="{target_side}"
+                timeout_ms="3000"/>
         </Sequence>
     </BehaviorTree>
     
@@ -86,7 +104,6 @@
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
                     <SubTree ID="TakeSubTree" _autoremap="true"/>
-                    <Sleep msec="3000"/>
                     <DecisionCore 
                         ActionType="flip"
                         RobotSideIdx="1"
@@ -95,7 +112,6 @@
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
                     <SubTree ID="FlipSubTree" _autoremap="true"/>
-                    <Sleep msec="3000"/>
                     <DecisionCore 
                         ActionType="put"
                         RobotSideIdx="1"
@@ -104,7 +120,6 @@
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
                     <SubTree ID="PutSubTree" _autoremap="true"/>
-                    <Sleep msec="3000"/>
                 </Sequence>
             </Repeat>
             
