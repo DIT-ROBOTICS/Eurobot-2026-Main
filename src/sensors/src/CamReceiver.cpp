@@ -172,11 +172,13 @@ void CamReceiver::onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr
         return;
     }
     
-    for(int i = 0; i < msg->data.size(); i++) {
-        default_robot_sides[i] = static_cast<FieldStatus>(msg->data[i]);
+    // Read current robot_side_status from blackboard (or initialize a default)
+    std::vector<FieldStatus> robot_sides;
+    for(size_t i = 0; i < msg->data.size() && i < robot_sides.size(); i++) {
+        robot_sides[i] = static_cast<FieldStatus>(msg->data[i]);
     }
 
-    blackboard_->set<std::vector<FieldStatus>>("robot_side_status", default_robot_sides);
+    blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
 }
 
 BT::NodeStatus CamReceiver::tick() {
