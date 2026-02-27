@@ -36,6 +36,12 @@ CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config,
         "/robot/vision/hazelnut/flip", 10,
         std::bind(&CamReceiver::hazelnut_flip_callback, this, std::placeholders::_1),
         sub_options);
+
+    // Subscribe to on take feedback
+    on_take_feedback_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
+        "/robot/vision/onTakeSuccess", 10,
+        std::bind(&CamReceiver::onTakeFeedback, this, std::placeholders::_1),
+        sub_options);
     
     // Initialize with default values (camera fallback)
     initializeDefaultStatus();
@@ -156,6 +162,21 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
     RCLCPP_DEBUG(node_->get_logger(), 
                 "CamReceiver: Updated hazelnut flip status for side %d: [%d, %d, %d, %d]",
                 side_idx, msg->data[0], msg->data[1], msg->data[2], msg->data[3]);
+}
+
+void CamReceiver::onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr msg) {
+    RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: Received on take feedback update.");
+    
+    if(msg->data.size() < 4) {
+        RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid on take feedback data size: %zu", msg->data.size());
+        return;
+    }
+    
+    for(int i = 0; i < msg->data.size(); i++) {
+        default_robot_sides[i] = static_cast<FieldStatus>(msg->data[i]);
+    }
+
+    blackboard_->set<std::vector<FieldStatus>>("robot_side_status", default_robot_sides);
 }
 
 BT::NodeStatus CamReceiver::tick() {

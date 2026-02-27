@@ -42,6 +42,7 @@ private:
     void collection_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void pantry_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+    void onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     
     // Background spin thread
     void spinThread();
@@ -55,6 +56,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr collection_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr pantry_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hazelnut_flip_sub;
+    rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr on_take_feedback_sub;
 
     // Node references (order must match constructor initialization)
     shared_ptr<rclcpp::Node> node_;
@@ -64,6 +66,7 @@ private:
     // Data storage
     std_msgs::msg::Int32MultiArray collection_info;
     std_msgs::msg::Int32MultiArray pantry_info;
+    std_msgs::msg::Int32MultiArray on_take_feedback;
 };
 
 #endif // CAM_RECEIVER_HPP
