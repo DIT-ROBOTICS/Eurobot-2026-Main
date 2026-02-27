@@ -57,14 +57,6 @@ void MissionPublisher::readBlackboard() {
     }
 }
 
-void MissionPublisher::writeBlackboard() {
-    // Write updated state back to blackboard
-    blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
-    blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info);
-    blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_info);
-    blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
-}
-
 BT::PortsList MissionPublisher::providedPorts() {
     return {
         BT::InputPort<std::string>("ActionType"),
@@ -104,8 +96,7 @@ BT::NodeStatus MissionPublisher::tick() {
     switch (action) {
         case ActionType::FLIP:
             publishFlip(side_idx);
-            // Only write back robot_side_status and hazelnut_status for FLIP
-            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            // Only write back hazelnut_status for FLIP
             blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
             break;
         case ActionType::TAKE:
@@ -123,10 +114,7 @@ BT::NodeStatus MissionPublisher::tick() {
         default:
             MP_WARN(node_, "Unknown action: %s", action_str.c_str());
             return BT::NodeStatus::FAILURE;
-    }
-    
-    // Don't call writeBlackboard() here - we already wrote only what we modified above
-    
+    }    
     return BT::NodeStatus::SUCCESS;
 }
 

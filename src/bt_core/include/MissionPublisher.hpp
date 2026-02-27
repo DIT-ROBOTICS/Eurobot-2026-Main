@@ -37,7 +37,6 @@ public:
 private:
     // Blackboard sync methods (similar to DecisionCore)
     void readBlackboard();
-    void writeBlackboard();
     
     // Action handlers
     void publishFlip(int side_idx);
