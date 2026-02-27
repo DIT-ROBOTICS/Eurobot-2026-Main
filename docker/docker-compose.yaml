@@ -36,6 +36,7 @@ services:
       - XAUTHORITY=/home/main/.Xauthority
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - ENABLE_MICRO_ROS=${ENABLE_MICRO_ROS:-false}
 
   main-develop:
     build:
@@ -89,6 +90,7 @@ services:
       - RCUTILS_COLORIZED_OUTPUT=1
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+      - ENABLE_MICRO_ROS=${ENABLE_MICRO_ROS:-false}
     
     volumes:
       - ../:/home/main/eurobot-2026-main-ws/
