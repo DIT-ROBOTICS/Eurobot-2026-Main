@@ -156,7 +156,6 @@ void MissionPublisher::publishFlip(int side_idx) {
             "Publishing FLIP: [%d, %d, %d, %d, %d]",
             msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4]);
     flip_pub->publish(msg);
-    flip_pub->publish(msg);
     
     // Reset hazelnut_status to NO_FLIP for this side (trust firmware will flip them)
     for (int i = 0; i < HAZELNUT_LENGTH; ++i) {
