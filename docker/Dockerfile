@@ -167,14 +167,6 @@ COPY ./scripts/settings/.bashrc /home/${USERNAME}/.bashrc
 # Tmux configuration - enable mouse support
 RUN echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf
 
-##############################################################################
-# micro-ROS Agent Installation
-##############################################################################
-
-COPY ./scripts/micro_ros/install_micro_ros.sh /home/${USERNAME}/install_micro_ros.sh
-RUN sudo chmod +x /home/${USERNAME}/install_micro_ros.sh && \
-    bash /home/${USERNAME}/install_micro_ros.sh && \
-    rm /home/${USERNAME}/install_micro_ros.sh
 
 ##############################################################################
 # Clean apt-cache
