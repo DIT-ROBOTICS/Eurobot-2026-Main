@@ -11,6 +11,11 @@
         </Action>
         <Action ID="FieldUpdater"/>
         <Action ID="LocReceiver"/>
+        <Action ID="MissionChecker">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseSideIdx" type="int"/>
+            <input_port name="ActionType" type="std::string"/>
+        </Action>
         <Action ID="MissionPublisher">
             <input_port name="targetPoseIdx" type="int"/>
             <input_port name="targetPoseSideIdx" type="int"/>

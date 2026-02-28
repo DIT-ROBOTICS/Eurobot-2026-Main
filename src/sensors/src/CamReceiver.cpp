@@ -174,11 +174,16 @@ void CamReceiver::onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr
     
     // Read current robot_side_status from blackboard (or initialize a default)
     std::vector<FieldStatus> robot_sides;
+    if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_sides)) {
+        robot_sides = std::vector<FieldStatus>(ROBOT_SIDES, FieldStatus::EMPTY);
+    }
     for(size_t i = 0; i < msg->data.size() && i < robot_sides.size(); i++) {
         robot_sides[i] = static_cast<FieldStatus>(msg->data[i]);
+        // RCLCPP_WARN(node_->get_logger(), "CamReceiver: Updated robot side status for side %d: %d", i, static_cast<int>(robot_sides[i]));
     }
 
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
+
 }
 
 BT::NodeStatus CamReceiver::tick() {

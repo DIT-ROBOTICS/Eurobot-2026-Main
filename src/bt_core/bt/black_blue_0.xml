@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root BTCPP_format="4">
-    <!-- 
-        Black Robot, Yellow Team, Plan 0 (Test Plan)
-        Tests the DecisionCore -> OnDockAction pipeline
-        Pattern: TAKE x2, then PUT x2
-    -->
     
     <!-- ============================================= -->
     <!-- TAKE SubTree: Go to collection point and take -->
     <!-- ============================================= -->
     <BehaviorTree ID="TakeSubTree">
         <Sequence>
-            <!-- Dock to collection point -->
+            <!-- Dock to collection pdoint -->
             <OnDockAction
                 targetPoseIdx="{target_idx}"
                 targetPoseSideIdx="{target_side}"
@@ -50,7 +45,7 @@
             <MissionChecker
                 ActionType="flip"
                 targetPoseSideIdx="{target_side}"
-                timeout_ms="3000"/>
+                timeout_ms="1000"/>
         </Sequence>
     </BehaviorTree>
     
@@ -79,7 +74,7 @@
             <MissionChecker
                 ActionType="put"
                 targetPoseSideIdx="{target_side}"
-                timeout_ms="3000"/>
+                timeout_ms="1500"/>
         </Sequence>
     </BehaviorTree>
     
@@ -98,7 +93,7 @@
                 <Sequence>
                     <DecisionCore 
                         ActionType="take"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -106,7 +101,7 @@
                     <SubTree ID="TakeSubTree" _autoremap="true"/>
                     <DecisionCore 
                         ActionType="flip"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -114,7 +109,7 @@
                     <SubTree ID="FlipSubTree" _autoremap="true"/>
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"

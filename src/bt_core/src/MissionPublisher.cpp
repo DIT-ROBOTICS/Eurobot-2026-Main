@@ -102,13 +102,13 @@ BT::NodeStatus MissionPublisher::tick() {
         case ActionType::TAKE:
             publishTake(side_idx, target_pose_idx);
             // Only write back robot_side_status and collection_info for TAKE
-            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            // blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
             blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info);
             break;
         case ActionType::PUT:
             publishPut(side_idx, target_pose_idx);
             // Only write back robot_side_status and pantry_info for PUT
-            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            // blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
             blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_info);
             break;
         default:
@@ -155,6 +155,7 @@ void MissionPublisher::publishFlip(int side_idx) {
     MP_INFO(node_, 
             "Publishing FLIP: [%d, %d, %d, %d, %d]",
             msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4]);
+    flip_pub->publish(msg);
     flip_pub->publish(msg);
     
     // Reset hazelnut_status to NO_FLIP for this side (trust firmware will flip them)

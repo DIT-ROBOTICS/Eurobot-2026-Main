@@ -40,6 +40,7 @@ BT::NodeStatus MissionChecker::onStart() {
     }
     
     if (!getInput<int>("timeout_ms", timeout_ms_)) {
+        MC_WARN(node_, "Missing timeout_ms, defaulting to 3000");
         timeout_ms_ = 3000;
     }
     
