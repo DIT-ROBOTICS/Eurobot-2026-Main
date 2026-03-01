@@ -184,6 +184,9 @@ void BTengine::createTreeNodes() {
 
     // field updater
     factory.registerNodeType<FieldUpdater>("FieldUpdater", params, blackboard);
+
+    // flip publisher
+    factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
     
     params.default_port_value = "dock_robot";
     // navigation

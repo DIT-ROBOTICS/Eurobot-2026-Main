@@ -45,6 +45,9 @@
 // field updater
 #include "FieldUpdater.hpp"
 
+// flip publisher
+#include "FlipPublisher.hpp"
+
 // utils nodes
 
 // firmware nodes
