@@ -41,10 +41,11 @@ class ComponentTester(Node):
         super().__init__("component_tester")
 
         # ── publishers ──────────────────────────────────────────
-        self.flip_pub = self.create_publisher(Int16MultiArray, "/robot/on_flip", 10)
-        self.put_pub  = self.create_publisher(Int16,           "/robot/on_put",  10)
-        self.take_pub = self.create_publisher(Int16,           "/robot/on_take", 10)
-        self.vel_pub  = self.create_publisher(Twist,           "/cmd_vel",       10)
+        self.flip_pub      = self.create_publisher(Int16MultiArray, "/robot/on_flip",   10)
+        self.put_pub       = self.create_publisher(Int16,           "/robot/on_put",    10)
+        self.take_pub      = self.create_publisher(Int16,           "/robot/on_take",   10)
+        self.vel_pub       = self.create_publisher(Twist,           "/cmd_vel",         10)
+        self.dock_side_pub = self.create_publisher(Int16,           "/robot/dock_side", 10)
 
         # ── nav2 action client ──────────────────────────────────
         self.nav_client = ActionClient(self, NavigateToPose, "navigate_to_pose")
@@ -65,10 +66,12 @@ class ComponentTester(Node):
 ║         Component Test — Interactive Menu        ║
 ╠══════════════════════════════════════════════════╣
 ║  1  │ Nav2 NavigateToPose  (x, y, yaw)           ║
-║  2  │ Flip   → /robot/on_flip  (Int16MultiArray) ║
-║  3  │ Put    → /robot/on_put   (Int16)           ║
-║  4  │ Take   → /robot/on_take  (Int16)           ║
+║  2  │ Flip      → /robot/on_flip  (Int16Multi)   ║
+║  3  │ Put       → /robot/on_put   (Int16)        ║
+║  4  │ Take      → /robot/on_take  (Int16)        ║
 ║  5  │ Zero cmd_vel                               ║
+║  6  │ Dock Side → /robot/dock_side (Int16)       ║
+║  7  │ cmd_vel   → /cmd_vel  (vx, vy, wz)        ║
 ║  h  │ Show this menu                             ║
 ║  q  │ Quit                                       ║
 ╚══════════════════════════════════════════════════╝{RESET}
@@ -97,6 +100,10 @@ class ComponentTester(Node):
                     self._cmd_take()
                 elif cmd == "5":
                     self._cmd_zero_vel()
+                elif cmd == "6":
+                    self._cmd_dock_side()
+                elif cmd == "7":
+                    self._cmd_vel()
                 elif cmd == "":
                     pass
                 else:
@@ -234,6 +241,49 @@ class ComponentTester(Node):
         msg = Twist()  # all fields default to 0.0
         self.vel_pub.publish(msg)
         print(f"{GREEN}Published zero Twist to /cmd_vel{RESET}")
+
+    # ────────────────────────────────────────────────────────────
+    #  6 — Dock Side
+    # ────────────────────────────────────────────────────────────
+    def _cmd_dock_side(self):
+        """
+        /robot/dock_side  →  Int16
+          data : dock side index
+        """
+        raw = input(f"  {YELLOW}Enter dock side (Int16): {RESET}").strip()
+        try:
+            val = int(raw)
+        except ValueError:
+            print(f"{RED}Invalid integer.{RESET}")
+            return
+
+        msg = Int16()
+        msg.data = val
+        self.dock_side_pub.publish(msg)
+        print(f"{GREEN}Published /robot/dock_side → {val}{RESET}")
+
+    # ────────────────────────────────────────────────────────────
+    #  7 — cmd_vel
+    # ────────────────────────────────────────────────────────────
+    def _cmd_vel(self):
+        """
+        /cmd_vel  →  Twist
+          linear.x, linear.y, angular.z
+        """
+        try:
+            vx = float(input(f"  {YELLOW}linear.x  (vx) : {RESET}"))
+            vy = float(input(f"  {YELLOW}linear.y  (vy) : {RESET}"))
+            wz = float(input(f"  {YELLOW}angular.z (wz) : {RESET}"))
+        except ValueError:
+            print(f"{RED}Invalid number.{RESET}")
+            return
+
+        msg = Twist()
+        msg.linear.x = vx
+        msg.linear.y = vy
+        msg.angular.z = wz
+        self.vel_pub.publish(msg)
+        print(f"{GREEN}Published /cmd_vel → vx={vx}, vy={vy}, wz={wz}{RESET}")
 
 
 # ════════════════════════════════════════════════════════════════

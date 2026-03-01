@@ -10,6 +10,10 @@
             <input_port name="ActionType" type="std::string"/>
         </Action>
         <Action ID="FieldUpdater"/>
+        <Action ID="FlipPublisher">
+            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to flip</input_port>
+        </Action>
         <Action ID="LocReceiver"/>
         <Action ID="MissionChecker">
             <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
