@@ -139,6 +139,13 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
         return;
     }
     
+    // Check robot_side_status: skip update if this side is already OCCUPIED
+    // (camera may report all zeros when it can't see the hazelnuts during movement)
+    std::vector<FieldStatus> robot_sides;
+    if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_sides)) {
+        robot_sides = std::vector<FieldStatus>(ROBOT_SIDES, FieldStatus::EMPTY);
+    }
+
     // Get current hazelnut_status from blackboard
     std::vector<std::vector<FlipStatus>> hazelnut_status;
     if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
@@ -149,6 +156,8 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
     
     // Update the specified side with flip information
     for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); ++i) {
+        if(robot_sides[side_idx] == FieldStatus::OCCUPIED) continue;
+        
         if (msg->data[i] == 1) {
             hazelnut_status[side_idx][i] = FlipStatus::NEED_FLIP;
         } else {
