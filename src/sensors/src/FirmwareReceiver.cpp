@@ -1,0 +1,122 @@
+#include "FirmwareReceiver.hpp"
+#include "bt_config.hpp"
+
+FirmwareReceiver::FirmwareReceiver(const std::string& name, const BT::NodeConfig& config, 
+                                   const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
+    : BT::SyncActionNode(name, config), 
+      node_(params.nh.lock()), 
+      blackboard_(blackboard),
+      running_(true) {
+
+    // Create a dedicated callback group for our subscriptions
+    callback_group_ = node_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+    
+    // Create a dedicated executor for spinning our callback group
+    executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    executor_->add_callback_group(callback_group_, node_->get_node_base_interface());
+
+    // Create subscription options with our callback group
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = callback_group_;
+
+    // Subscribe to flip finish
+    flip_finish_sub_ = node_->create_subscription<std_msgs::msg::Int16>(
+        "/robot/firmware/finish/flip", 10, 
+        std::bind(&FirmwareReceiver::flipFinishCallback, this, std::placeholders::_1),
+        sub_options);
+    
+    // Subscribe to put finish
+    put_finish_sub_ = node_->create_subscription<std_msgs::msg::Int16>(
+        "/robot/firmware/finish/put", 10, 
+        std::bind(&FirmwareReceiver::putFinishCallback, this, std::placeholders::_1),
+        sub_options);
+    
+    // Subscribe to take finish
+    take_finish_sub_ = node_->create_subscription<std_msgs::msg::Int16>(
+        "/robot/firmware/finish/take", 10, 
+        std::bind(&FirmwareReceiver::takeFinishCallback, this, std::placeholders::_1),
+        sub_options);
+    
+    // Start background spin thread
+    spin_thread_ = std::thread(&FirmwareReceiver::spinThread, this);
+    
+    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Started with background spin thread");
+}
+
+FirmwareReceiver::~FirmwareReceiver() {
+    running_ = false;
+    if (spin_thread_.joinable()) {
+        spin_thread_.join();
+    }
+    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Destroyed, spin thread stopped");
+}
+
+void FirmwareReceiver::spinThread() {
+    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Spin thread started");
+    while (running_ && rclcpp::ok()) {
+        executor_->spin_some(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Spin thread exiting");
+}
+
+PortsList FirmwareReceiver::providedPorts() {
+    return {};
+}
+
+void FirmwareReceiver::flipFinishCallback(const std_msgs::msg::Int16::SharedPtr msg) {
+    int side_idx = msg->data;
+
+    if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
+        RCLCPP_WARN(node_->get_logger(), "FirmwareReceiver: Flip finish - invalid side index: %d", side_idx);
+        return;
+    }
+
+    // Flip finish: do nothing, just log
+    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Flip finish received for side %d (no action taken)", side_idx);
+}
+
+void FirmwareReceiver::putFinishCallback(const std_msgs::msg::Int16::SharedPtr msg) {
+    int side_idx = msg->data;
+
+    if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
+        RCLCPP_WARN(node_->get_logger(), "FirmwareReceiver: Put finish - invalid side index: %d", side_idx);
+        return;
+    }
+
+    // Put finish: set robot_side_status[side_idx] to EMPTY
+    std::vector<FieldStatus> robot_sides;
+    if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_sides)) {
+        robot_sides = std::vector<FieldStatus>(ROBOT_SIDES, FieldStatus::EMPTY);
+    }
+
+    robot_sides[side_idx] = FieldStatus::EMPTY;
+    blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
+
+    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Put finish - set robot_side_status[%d] to EMPTY", side_idx);
+}
+
+void FirmwareReceiver::takeFinishCallback(const std_msgs::msg::Int16::SharedPtr msg) {
+    int side_idx = msg->data;
+
+    if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
+        RCLCPP_WARN(node_->get_logger(), "FirmwareReceiver: Take finish - invalid side index: %d", side_idx);
+        return;
+    }
+
+    // Take finish: set robot_side_status[side_idx] to OCCUPIED
+    std::vector<FieldStatus> robot_sides;
+    if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_sides)) {
+        robot_sides = std::vector<FieldStatus>(ROBOT_SIDES, FieldStatus::EMPTY);
+    }
+
+    robot_sides[side_idx] = FieldStatus::OCCUPIED;
+    blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
+
+    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Take finish - set robot_side_status[%d] to OCCUPIED", side_idx);
+}
+
+BT::NodeStatus FirmwareReceiver::tick() {
+    RCLCPP_DEBUG(node_->get_logger(), "FirmwareReceiver tick");
+    return BT::NodeStatus::SUCCESS;
+}

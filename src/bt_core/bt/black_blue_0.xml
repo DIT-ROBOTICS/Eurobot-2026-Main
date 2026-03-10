@@ -95,6 +95,7 @@
             <!-- Initialize receivers first -->
             <CamReceiver/>
             <LocReceiver/>
+            <FirmwareReceiver/>
             <FieldUpdater/>         
             <Repeat num_cycles="4">
                 <Sequence>

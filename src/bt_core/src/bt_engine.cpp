@@ -182,6 +182,9 @@ void BTengine::createTreeNodes() {
     // mission checker
     factory.registerNodeType<MissionChecker>("MissionChecker", params, blackboard);
 
+    // firmware receiver
+    factory.registerNodeType<FirmwareReceiver>("FirmwareReceiver", params, blackboard);
+
     // field updater
     factory.registerNodeType<FieldUpdater>("FieldUpdater", params, blackboard);
 
