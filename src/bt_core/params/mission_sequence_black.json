@@ -42,16 +42,16 @@
     //     11
     // ]
      "pantry_sequence": [
-        6,
-        7,
-        8,
-        9
+        9,
+        4,
+        5,
+        7
     ],
     "collection_sequence": [
-        14,
         15,
-        16,
-        17
+        14,
+        17,
+        16
     ]
     //  "pantry_sequence": [
     //     6,
