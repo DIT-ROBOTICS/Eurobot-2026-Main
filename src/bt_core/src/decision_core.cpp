@@ -295,6 +295,7 @@ RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
     
     if (action_type == ActionType::TAKE) {
         // For TAKE: Need an EMPTY side to hold hazelnuts
+        DC_INFO(node_ptr, "[TAKE]: robot_side_status: %d, %d, %d, %d ", robot_side_status[0], robot_side_status[1], robot_side_status[2], robot_side_status[3]);
         // Priority 1: Use default_robot_side if it's EMPTY
         if (default_idx >= 0 && default_idx < ROBOT_SIDES && 
             robot_side_status[default_idx] == FieldStatus::EMPTY) {
@@ -310,6 +311,7 @@ RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
         }
     } else if (action_type == ActionType::PUT) {
         // For PUT: Need an OCCUPIED side that has hazelnuts to put
+        DC_INFO(node_ptr, "[PUT]: robot_side_status: %d, %d, %d, %d ", robot_side_status[0], robot_side_status[1], robot_side_status[2], robot_side_status[3]);
         // Priority 1: Use default_robot_side if it's OCCUPIED
         if (default_idx >= 0 && default_idx < ROBOT_SIDES && 
             robot_side_status[default_idx] == FieldStatus::OCCUPIED) {

@@ -76,6 +76,16 @@ BT::NodeStatus MissionChecker::onRunning() {
     if (elapsed >= timeout_ms_) {
         MC_WARN(node_, "%s on side %d timed out after %ld ms — proceeding anyway",
                 actionTypeToString(action_).c_str(), side_idx_, elapsed);
+        std::vector<FieldStatus> robot_side_status;
+        blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+        if(action_ == ActionType::TAKE){
+            robot_side_status[side_idx_] = FieldStatus::OCCUPIED;
+            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+        }
+        else if(action_ == ActionType::PUT){
+            robot_side_status[side_idx_] = FieldStatus::EMPTY;
+            blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+        }
         return BT::NodeStatus::SUCCESS;  // Don't block the game
     }
     
