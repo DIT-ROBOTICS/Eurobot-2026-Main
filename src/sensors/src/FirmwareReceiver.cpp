@@ -1,6 +1,13 @@
 #include "FirmwareReceiver.hpp"
 #include "bt_config.hpp"
 
+// BRIGHT CYAN colored logs for FirmwareReceiver
+#define FR_COLOR "\033[96m"  // Bright Cyan
+#define FR_RESET "\033[0m"
+#define FR_INFO(node, fmt, ...) RCLCPP_INFO(node->get_logger(), FR_COLOR "[FirmwareReceiver] " fmt FR_RESET, ##__VA_ARGS__)
+#define FR_WARN(node, fmt, ...) RCLCPP_WARN(node->get_logger(), FR_COLOR "[FirmwareReceiver] " fmt FR_RESET, ##__VA_ARGS__)
+#define FR_ERROR(node, fmt, ...) RCLCPP_ERROR(node->get_logger(), FR_COLOR "[FirmwareReceiver] " fmt FR_RESET, ##__VA_ARGS__)
+
 FirmwareReceiver::FirmwareReceiver(const std::string& name, const BT::NodeConfig& config, 
                                    const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
     : BT::SyncActionNode(name, config), 
@@ -40,7 +47,7 @@ FirmwareReceiver::FirmwareReceiver(const std::string& name, const BT::NodeConfig
     // Start background spin thread
     spin_thread_ = std::thread(&FirmwareReceiver::spinThread, this);
     
-    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Started with background spin thread");
+    FR_INFO(node_, "Started with background spin thread");
 }
 
 FirmwareReceiver::~FirmwareReceiver() {
@@ -48,16 +55,16 @@ FirmwareReceiver::~FirmwareReceiver() {
     if (spin_thread_.joinable()) {
         spin_thread_.join();
     }
-    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Destroyed, spin thread stopped");
+    FR_INFO(node_, "Destroyed, spin thread stopped");
 }
 
 void FirmwareReceiver::spinThread() {
-    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Spin thread started");
+    FR_INFO(node_, "Spin thread started");
     while (running_ && rclcpp::ok()) {
         executor_->spin_some(std::chrono::milliseconds(10));
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Spin thread exiting");
+    FR_INFO(node_, "Spin thread exiting");
 }
 
 PortsList FirmwareReceiver::providedPorts() {
@@ -68,19 +75,19 @@ void FirmwareReceiver::flipFinishCallback(const std_msgs::msg::Int16::SharedPtr 
     int side_idx = msg->data;
 
     if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
-        RCLCPP_WARN(node_->get_logger(), "FirmwareReceiver: Flip finish - invalid side index: %d", side_idx);
+        FR_WARN(node_, "Flip finish - invalid side index: %d", side_idx);
         return;
     }
 
     // Flip finish: do nothing, just log
-    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Flip finish received for side %d (no action taken)", side_idx);
+    FR_INFO(node_, "Flip finish received for side %d (no action taken)", side_idx);
 }
 
 void FirmwareReceiver::putFinishCallback(const std_msgs::msg::Int16::SharedPtr msg) {
     int side_idx = msg->data;
 
     if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
-        RCLCPP_WARN(node_->get_logger(), "FirmwareReceiver: Put finish - invalid side index: %d", side_idx);
+        FR_WARN(node_, "Put finish - invalid side index: %d", side_idx);
         return;
     }
 
@@ -93,14 +100,14 @@ void FirmwareReceiver::putFinishCallback(const std_msgs::msg::Int16::SharedPtr m
     robot_sides[side_idx] = FieldStatus::EMPTY;
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
 
-    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Put finish - set robot_side_status[%d] to EMPTY", side_idx);
+    FR_INFO(node_, "Put finish - set robot_side_status[%d] to EMPTY", side_idx);
 }
 
 void FirmwareReceiver::takeFinishCallback(const std_msgs::msg::Int16::SharedPtr msg) {
     int side_idx = msg->data;
 
     if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
-        RCLCPP_WARN(node_->get_logger(), "FirmwareReceiver: Take finish - invalid side index: %d", side_idx);
+        FR_WARN(node_, "Take finish - invalid side index: %d", side_idx);
         return;
     }
 
@@ -113,7 +120,7 @@ void FirmwareReceiver::takeFinishCallback(const std_msgs::msg::Int16::SharedPtr 
     robot_sides[side_idx] = FieldStatus::OCCUPIED;
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
 
-    RCLCPP_INFO(node_->get_logger(), "FirmwareReceiver: Take finish - set robot_side_status[%d] to OCCUPIED", side_idx);
+    FR_INFO(node_, "Take finish - set robot_side_status[%d] to OCCUPIED", side_idx);
 }
 
 BT::NodeStatus FirmwareReceiver::tick() {

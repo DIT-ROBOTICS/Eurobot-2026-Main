@@ -46,15 +46,15 @@ void MissionPublisher::readBlackboard() {
         MP_INFO(node_, "hazelnut_status not in blackboard, using defaults");
     }
     // print hazelnut_status 
-    for (int side = 0; side < ROBOT_SIDES; ++side) {
-        std::string status_str = "Side " + std::to_string(side) + ": [";
-        for (int slot = 0; slot < HAZELNUT_LENGTH; ++slot) {
-            status_str += std::to_string(static_cast<int>(hazelnut_status[side][slot]));
-            if (slot < HAZELNUT_LENGTH - 1) status_str += ", ";
-        }
-        status_str += "]";
-        MP_INFO(node_, "%s", status_str.c_str());
-    }
+    // for (int side = 0; side < ROBOT_SIDES; ++side) {
+    //     std::string status_str = "Side " + std::to_string(side) + ": [";
+    //     for (int slot = 0; slot < HAZELNUT_LENGTH; ++slot) {
+    //         status_str += std::to_string(static_cast<int>(hazelnut_status[side][slot]));
+    //         if (slot < HAZELNUT_LENGTH - 1) status_str += ", ";
+    //     }
+    //     status_str += "]";
+    //     MP_INFO(node_, "%s", status_str.c_str());
+    // }
 }
 
 BT::PortsList MissionPublisher::providedPorts() {

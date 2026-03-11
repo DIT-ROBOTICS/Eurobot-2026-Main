@@ -51,6 +51,7 @@
 // utils nodes
 
 // firmware nodes
+#include "FirmwareReceiver.hpp"
 
 // C++
 #include <memory>
