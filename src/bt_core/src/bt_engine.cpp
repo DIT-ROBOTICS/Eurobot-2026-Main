@@ -20,8 +20,6 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     blackboard = BT::Blackboard::create();
     game_time_sub = this->create_subscription<std_msgs::msg::Float32>("/robot/startup/game_time", 2, 
         std::bind(&BTengine::gameTimeCallback, this, std::placeholders::_1));
-
-    json_point_pub = this->create_publisher<std_msgs::msg::Int32MultiArray>("/robot/startup/json_point", 2);
     
     // Initialize parameters first
     initParam();
@@ -121,12 +119,9 @@ void BTengine::planFileCallback(const std_msgs::msg::String::SharedPtr msg) {
 }
 
 void BTengine::addJsonPoint() {
-    std::vector<int> default_point = {1,1,1,1};
-
     std::ifstream json_file(json_file_path);
     if (!json_file.is_open()) {
         RCLCPP_ERROR(this->get_logger(), "[BTengine]: Failed to open json file");
-        json_point = default_point;
         return;
     }
     Json::Value root;
@@ -135,29 +130,40 @@ void BTengine::addJsonPoint() {
     
     if (!Json::parseFromStream(reader, json_file, &root, &errors)) {
         RCLCPP_ERROR(this->get_logger(), "[BTengine]: Failed to parse json: %s", errors.c_str());
-        json_point = default_point;
         json_file.close();
         return;
     }
     json_file.close();
-
-    // Extract "sequence" array
-    if (root.isMember("sequence") && root["sequence"].isArray()) {
-        json_point.clear();
-        for (const auto& val : root["sequence"]) {
+    
+    // Extract "pantry_sequence" array for PUT action priority
+    std::vector<int> pantry_seq;
+    if (root.isMember("pantry_sequence") && root["pantry_sequence"].isArray()) {
+        for (const auto& val : root["pantry_sequence"]) {
             if (val.isInt()) {
-                json_point.push_back(val.asInt());
+                pantry_seq.push_back(val.asInt());
             }
         }
-        RCLCPP_INFO(this->get_logger(), "[BTengine]: Loaded %zu points from json sequence", json_point.size());
+        blackboard->set<std::vector<int>>("pantry_sequence", pantry_seq);
+        RCLCPP_INFO(this->get_logger(), "[BTengine]: Loaded pantry_sequence with %zu items", pantry_seq.size());
     } else {
-        RCLCPP_WARN(this->get_logger(), "[BTengine]: No 'sequence' array found in json, using default");
-        json_point = default_point;
+        blackboard->set<std::vector<int>>("pantry_sequence", std::vector<int>());
+        RCLCPP_WARN(this->get_logger(), "[BTengine]: No 'pantry_sequence' found, will use reward system");
     }
-
-    auto msg = std_msgs::msg::Int32MultiArray();
-    msg.data = json_point;
-    json_point_pub->publish(msg);
+    
+    // Extract "collection_sequence" array for TAKE action priority
+    std::vector<int> collection_seq;
+    if (root.isMember("collection_sequence") && root["collection_sequence"].isArray()) {
+        for (const auto& val : root["collection_sequence"]) {
+            if (val.isInt()) {
+                collection_seq.push_back(val.asInt());
+            }
+        }
+        blackboard->set<std::vector<int>>("collection_sequence", collection_seq);
+        RCLCPP_INFO(this->get_logger(), "[BTengine]: Loaded collection_sequence with %zu items", collection_seq.size());
+    } else {
+        blackboard->set<std::vector<int>>("collection_sequence", std::vector<int>());
+        RCLCPP_WARN(this->get_logger(), "[BTengine]: No 'collection_sequence' found, will use reward system");
+    }
 }
 
 void BTengine::createTreeNodes() {
@@ -165,16 +171,33 @@ void BTengine::createTreeNodes() {
     
     // sensors / receivers
     factory.registerNodeType<CamReceiver>("CamReceiver", params, blackboard);
+    factory.registerNodeType<LocReceiver>("LocReceiver", params, blackboard);
 
     // decision core
     factory.registerNodeType<DecisionCore>("DecisionCore", params, blackboard);
     
+    // mission publisher
+    factory.registerNodeType<MissionPublisher>("MissionPublisher", params, blackboard);
+
+    // mission checker
+    factory.registerNodeType<MissionChecker>("MissionChecker", params, blackboard);
+
+    // firmware receiver
+    factory.registerNodeType<FirmwareReceiver>("FirmwareReceiver", params, blackboard);
+
+    // field updater
+    factory.registerNodeType<FieldUpdater>("FieldUpdater", params, blackboard);
+
+    // flip publisher
+    factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
+    
     params.default_port_value = "dock_robot";
     // navigation
-    factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);
-    factory.registerNodeType<Docking>("Docking", params, blackboard);
-    factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
-    factory.registerNodeType<RotateActionNode>("RotateActionNode", params);
+    // factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);  // Source commented out
+    // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
+    factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
+    // factory.registerNodeType<StopRobotNode>("StopRobotNode", params);  // Source commented out
+    // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
 
     // utils
 
@@ -254,11 +277,11 @@ void BTengine::runTree() {
 }
 
 void BTengine::setBlackboard() {
-    blackboard->set<int>("team", static_cast<int>(team));
-    blackboard->set<int>("robot", static_cast<int>(robot));
+    blackboard->set<std::string>("team", teamToString(team));
+    blackboard->set<std::string>("robot", robotToString(robot));
     blackboard->set<int>("selected_plan", selected_plan);
     blackboard->set<double>("game_time", game_time);
-    blackboard->set<std::vector<int>>("json_point", json_point);
+    // json_point is loaded separately via loadSequenceFromJson in DecisionCore
     
     RCLCPP_INFO(this->get_logger(), "[BTengine]: Blackboard initialized");
 }

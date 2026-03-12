@@ -1,190 +1,592 @@
 #include "decision_core.hpp"
 
-// ============ Constructor ============
+// CYAN colored logs for DecisionCore testing
+#define DC_COLOR "\033[36m"  // Cyan
+#define DC_RESET "\033[0m"
+#define DC_INFO(node, fmt, ...) RCLCPP_INFO(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
+#define DC_WARN(node, fmt, ...) RCLCPP_WARN(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
+#define DC_ERROR(node, fmt, ...) RCLCPP_ERROR(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
 
-DecisionCore::DecisionCore(const std::string& name, const BT::NodeConfig& config, 
-                           const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
-    : BT::SyncActionNode(name, config), 
-      node_(params.nh.lock()), 
-      blackboard_(blackboard),
-      current_sequence_index_(0) {
+DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, const RosNodeParams& params, BT::Blackboard::Ptr blackboard) : SyncActionNode(name, config)
+{
+    node_ptr = params.nh.lock();
+    blackboard_ptr = blackboard;
+
+    // Initialize field status
+    collection_info = std::vector<FieldStatus>(COLLECTION_LENGTH, FieldStatus::OCCUPIED);
+    pantry_info = std::vector<FieldStatus>(PANTRY_LENGTH, FieldStatus::EMPTY);
+    robot_side_status = std::vector<FieldStatus>(4, FieldStatus::EMPTY);
+    hazelnut_status = std::vector<vector<FlipStatus>>(4, vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
+    pantry_priority = std::priority_queue<PointScore>();
+    collection_priority = std::priority_queue<PointScore>();
+    robot_pose = geometry_msgs::msg::PoseStamped();
+    map_points = std::vector<double>();
     
+    // Sequence priority initialization
+    pantry_sequence = std::vector<int>();
+    collection_sequence = std::vector<int>();
+    use_pantry_sequence = false;
+    use_collection_sequence = false;
+    
+    // map point
     loadMapPoints();
+    loadSequenceFromJson();
+    readBlackboard();
+    writeBlackboard();
 }
 
-// ============ Static Methods ============
+void DecisionCore::loadMapPoints() {
+    if(!node_ptr->has_parameter("map_points")) node_ptr->declare_parameter("map_points", std::vector<double>());
+    if(node_ptr->get_parameter("map_points", map_points)) {
+        RCLCPP_INFO(node_ptr->get_logger(), "map_points loaded");
+    } else {
+        RCLCPP_ERROR(node_ptr->get_logger(), "map_points not found");
+        throw std::runtime_error("map_points not found");
+    }
+}
 
-BT::PortsList DecisionCore::providedPorts() {
+void DecisionCore::loadSequenceFromJson() {
+    // Try to get sequences from blackboard (loaded by bt_engine from JSON)
+    if (blackboard_ptr->get<vector<int>>("pantry_sequence", pantry_sequence)) {
+        use_pantry_sequence = !pantry_sequence.empty();
+        RCLCPP_INFO(node_ptr->get_logger(), "Loaded pantry_sequence with %zu items, use_sequence=%s",
+                    pantry_sequence.size(), use_pantry_sequence ? "true" : "false");
+    } else {
+        use_pantry_sequence = false;
+        RCLCPP_WARN(node_ptr->get_logger(), "pantry_sequence not found in blackboard");
+    }
+    
+    if (blackboard_ptr->get<vector<int>>("collection_sequence", collection_sequence)) {
+        use_collection_sequence = !collection_sequence.empty();
+        RCLCPP_INFO(node_ptr->get_logger(), "Loaded collection_sequence with %zu items, use_sequence=%s",
+                    collection_sequence.size(), use_collection_sequence ? "true" : "false");
+    } else {
+        use_collection_sequence = false;
+        RCLCPP_WARN(node_ptr->get_logger(), "collection_sequence not found in blackboard");
+    }
+}
+
+void DecisionCore::writeBlackboard() {
+    // NOTE: Do NOT write robot_side_status here - it's managed by CamReceiver::onTakeFeedback
+    // NOTE: Do NOT write hazelnut_status here - it's managed by CamReceiver and MissionPublisher
+    // Writing them here would overwrite CamReceiver's vision updates
+    blackboard_ptr->set<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
+}
+
+void DecisionCore::readBlackboard() {
+    // 1. Robot Side Status
+    if (!blackboard_ptr->get<vector<FieldStatus>>("robot_side_status", robot_side_status)) {
+        RCLCPP_WARN(node_ptr->get_logger(), "robot_side_status not found in blackboard");
+    }
+    
+    // NOTE: Sequences are loaded ONCE in loadSequenceFromJson, not updated here
+    // to avoid resetting path progress from JSON.
+
+    // 3. Poses
+    if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
+        // Optional warning or debug
+    }
+    blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose);
+
+    // 4. Field Info
+    if (!blackboard_ptr->get<vector<FieldStatus>>("collection_info", collection_info)) {
+         RCLCPP_WARN(node_ptr->get_logger(), "collection_info not found in blackboard");
+    }
+    if (!blackboard_ptr->get<vector<FieldStatus>>("pantry_info", pantry_info)) {
+         RCLCPP_WARN(node_ptr->get_logger(), "pantry_info not found in blackboard");
+    }
+    
+    // 5. Hazelnut status
+    if (!blackboard_ptr->get<vector<vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
+        RCLCPP_WARN(node_ptr->get_logger(), "hazelnut_status not found in blackboard");
+    }
+}
+
+BT::PortsList DecisionCore::providedPorts()
+{
     return {
-        BT::OutputPort<int>("next_target_index"),
-        BT::OutputPort<geometry_msgs::msg::PoseStamped>("next_target_pose"),
-        BT::OutputPort<std::string>("action_type")
+        InputPort<string>("ActionType"),
+        InputPort<int>("RobotSideIdx"),
+        OutputPort<string>("nextActionType"),
+        OutputPort<int>("targetPoseIdx"),
+        OutputPort<int>("targetPoseSideIdx"),
+        OutputPort<int>("targetDirection")
     };
 }
 
-// ============ Main Tick ============
+void DecisionCore::getInputPort() {
+    auto action_type_opt = getInput<string>("ActionType");
+    if (action_type_opt) {
+        decided_action_type = stringToActionType(action_type_opt.value());
+    } else {
+        RCLCPP_ERROR(node_ptr->get_logger(), "ActionType input not found");
+        decided_action_type = ActionType::TAKE; // default
+    }
+    
+    auto side_idx_opt = getInput<int>("RobotSideIdx");
+    if (side_idx_opt) {
+        default_robot_side = static_cast<RobotSide>(side_idx_opt.value());
+    } else {
+        default_robot_side = RobotSide::FRONT; // default
+    }
+}
+
+void DecisionCore::writeOutputPort() {
+    setOutput<string>("nextActionType", actionTypeToString(decided_action_type));
+    setOutput<int>("targetPoseIdx", static_cast<int>(target_goal_pose_idx));
+    setOutput<int>("targetPoseSideIdx", static_cast<int>(target_pose_side_idx));
+    setOutput<int>("targetDirection", static_cast<int>(target_direction));
+}
 
 BT::NodeStatus DecisionCore::tick() {
-    RCLCPP_INFO(node_->get_logger(), "[DecisionCore] Evaluating next action...");
-
-    // Get mission sequence
-    std::vector<int> sequence = getMissionSequence();
-
-    // Get sensor data for future decision-making
-    std_msgs::msg::Int32MultiArray collection_info, pantry_info;
-    getSensorData(collection_info, pantry_info);
-
-    // Check if sequence complete
-    if (isSequenceComplete(sequence.size())) {
-        RCLCPP_INFO(node_->get_logger(), "[DecisionCore] All sequence points completed");
-        resetSequence();
-        return BT::NodeStatus::SUCCESS;
+    readBlackboard();
+    getInputPort();
+    DC_INFO(node_ptr, "Processing action: %s", actionTypeToString(decided_action_type).c_str());
+    switch(decided_action_type) {
+        case ActionType::TAKE:
+            doTake();
+            break;
+        case ActionType::PUT:
+            doPut();
+            break;
+        case ActionType::FLIP:
+            doFlip();
+            break;
+        case ActionType::DOCK:
+            doDock();
+            break;
+        default:
+            DC_ERROR(node_ptr, "Invalid action type");
+            throw std::runtime_error("Invalid action type");
     }
-
-    // Get current target
-    int target_index = sequence[current_sequence_index_];
-    RCLCPP_INFO(node_->get_logger(), "[DecisionCore] Sequence[%d] -> Point %d", 
-                current_sequence_index_, target_index);
-
-    // Convert to pose
-    geometry_msgs::msg::PoseStamped target_pose = indexToPose(target_index);
-    if (target_pose.header.frame_id.empty()) {
-        RCLCPP_ERROR(node_->get_logger(), "[DecisionCore] Invalid target_index %d", target_index);
-        return BT::NodeStatus::FAILURE;
-    }
-
-    // Determine action type
-    std::string action_type = determineActionType(target_index);
-
-    // Write outputs
-    writeOutputs(target_index, target_pose, action_type);
-
-    // Advance sequence for next tick
-    advanceSequence();
-
+    writeBlackboard();
     return BT::NodeStatus::SUCCESS;
 }
 
-// ============ Private Helper Methods ============
+void DecisionCore::doTake() {
+    pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::TAKE);
+    target_goal_pose_idx = target_point_info.first;
+    target_pose_side_idx = target_point_info.second;
+    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
+    decided_action_type = ActionType::DOCK;
+    writeOutputPort();
+}
 
-void DecisionCore::loadMapPoints() {
-    // Declare parameter if not already declared
-    if (!node_->has_parameter("map_points")) {
-        node_->declare_parameter("map_points", std::vector<double>{});
+void DecisionCore::doPut() {
+    pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::PUT);
+    target_goal_pose_idx = target_point_info.first;
+    target_pose_side_idx = target_point_info.second;
+    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
+    decided_action_type = ActionType::DOCK;
+    writeOutputPort();
+}
+
+void DecisionCore::doFlip() {
+    decided_action_type = ActionType::FLIP;
+    // TODO: more action inside Flip
+    target_pose_side_idx = getTargetSideIndex(ActionType::FLIP);
+    writeOutputPort();
+}
+
+pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_type) {
+    RobotSide selected_side = getTargetSideIndex(action_type);
+    
+    if (action_type == ActionType::PUT) {
+        // Fetch current sequence from blackboard to ensure we have the latest state
+        if (blackboard_ptr->get<vector<int>>("pantry_sequence", pantry_sequence)) {
+             use_pantry_sequence = !pantry_sequence.empty();
+        }
+
+        // PRIORITY 1: Use pantry_sequence if available
+        while (use_pantry_sequence && !pantry_sequence.empty()) {
+            int next_pantry = pantry_sequence.front();
+            pantry_sequence.erase(pantry_sequence.begin());  // Pop from front
+            
+            // Check if pantry is already full (OCCUPIED)
+            if (pantry_info[next_pantry] == FieldStatus::OCCUPIED) {
+                DC_WARN(node_ptr, "[PUT->PANTRY] Skipping pantry %s (ALREADY OCCUPIED)", goalPoseToString(static_cast<GoalPose>(next_pantry)).c_str());
+                // Update blackboard with modified sequence even if skipping
+                blackboard_ptr->set<vector<int>>("pantry_sequence", pantry_sequence);
+                continue; // Try next in sequence
+            }
+            
+            // Update blackboard with modified sequence
+            blackboard_ptr->set<vector<int>>("pantry_sequence", pantry_sequence);
+            use_pantry_sequence = !pantry_sequence.empty();  // Update flag
+            
+            GoalPose pose = static_cast<GoalPose>(next_pantry);
+            DC_INFO(node_ptr, 
+                    "[PUT->PANTRY] Selected pantry %s from sequence, remaining: %zu",
+                    goalPoseToString(pose).c_str(), pantry_sequence.size());
+            return {pose, selected_side};
+        }
+        
+        // PRIORITY 2: Fallback to reward system
+        sortPantryPriority();
+        
+        if (pantry_priority.empty()) {
+            RCLCPP_WARN(node_ptr->get_logger(), "No available pantry points");
+            return {GoalPose::A, selected_side}; // fallback
+        }
+        
+        GoalPose best_pantry = pantry_priority.top().pose;
+        DC_INFO(node_ptr, "[PUT->PANTRY] Selected pantry %s with score: %d", 
+                goalPoseToString(best_pantry).c_str(), pantry_priority.top().score);
+        return {best_pantry, selected_side};
+        
+    } else if (action_type == ActionType::TAKE) {
+        // Fetch current sequence from blackboard to ensure we have the latest state
+        if (blackboard_ptr->get<vector<int>>("collection_sequence", collection_sequence)) {
+            use_collection_sequence = !collection_sequence.empty();
+        }
+
+        // PRIORITY 1: Use collection_sequence if available
+        while (use_collection_sequence && !collection_sequence.empty()) {
+            int next_collection = collection_sequence.front();
+            collection_sequence.erase(collection_sequence.begin());  // Pop from front
+            
+            // Check if collection is already empty (EMPTY)
+            // Collection poses start at PANTRY_LENGTH (10) in GoalPose enum
+            // But collection_info vector is 0-indexed relative to collections
+            int collection_local_idx = next_collection - PANTRY_LENGTH;
+            
+            if (collection_local_idx >= 0 && collection_local_idx < static_cast<int>(collection_info.size())) {
+                if (collection_info[collection_local_idx] == FieldStatus::EMPTY) {
+                   DC_WARN(node_ptr, "[TAKE->COLLECTION] Skipping collection %s (ALREADY EMPTY)", goalPoseToString(static_cast<GoalPose>(next_collection)).c_str());
+                   // Update blackboard with modified sequence even if skipping
+                   blackboard_ptr->set<vector<int>>("collection_sequence_current", collection_sequence);
+                   continue; // Try next in sequence
+                }
+            } else {
+                DC_WARN(node_ptr, "[TAKE->COLLECTION] Index out of bounds: %d (local: %d)", next_collection, collection_local_idx);
+            }
+            
+            // Update blackboard with modified sequence
+            blackboard_ptr->set<vector<int>>("collection_sequence", collection_sequence);
+            use_collection_sequence = !collection_sequence.empty();  // Update flag
+            
+            GoalPose pose = static_cast<GoalPose>(next_collection);
+            DC_INFO(node_ptr, 
+                    "[TAKE->COLLECTION] Selected collection %s from sequence, remaining: %zu",
+                    goalPoseToString(pose).c_str(), collection_sequence.size());
+            return {pose, selected_side};
+        }
+        
+        // PRIORITY 2: Fallback to reward system
+        sortCollectionPriority();
+        
+        if (collection_priority.empty()) {
+            RCLCPP_WARN(node_ptr->get_logger(), "No available collection points");
+            return {GoalPose::K, selected_side}; // fallback
+        }
+        
+        GoalPose best_collection = collection_priority.top().pose;
+        DC_INFO(node_ptr, "[TAKE->COLLECTION] Selected collection %s with score: %d",
+                goalPoseToString(best_collection).c_str(), collection_priority.top().score);
+        return {best_collection, selected_side};
     }
+    
+    RCLCPP_ERROR(node_ptr->get_logger(), "getTargetPointInfo called with invalid action");
+    return {GoalPose::A, RobotSide::FRONT};
+}
 
-    // Get parameter
-    if (node_->get_parameter("map_points", map_points_)) {
-        RCLCPP_INFO(node_->get_logger(), "[DecisionCore] Loaded %zu map point values", 
-                    map_points_.size());
+RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
+    int default_idx = static_cast<int>(default_robot_side);
+    
+    if (action_type == ActionType::TAKE) {
+        // For TAKE: Need an EMPTY side to hold hazelnuts
+        DC_INFO(node_ptr, "[TAKE]: robot_side_status: %d, %d, %d, %d ", robot_side_status[0], robot_side_status[1], robot_side_status[2], robot_side_status[3]);
+        // Priority 1: Use default_robot_side if it's EMPTY
+        if (default_idx >= 0 && default_idx < ROBOT_SIDES && 
+            robot_side_status[default_idx] == FieldStatus::EMPTY) {
+            DC_INFO(node_ptr, "Using default_robot_side %d (EMPTY) for TAKE", default_idx);
+            return default_robot_side;
+        }
+        // Priority 2: Find first EMPTY side
+        for (int i = 0; i < ROBOT_SIDES; ++i) {
+            if (robot_side_status[i] == FieldStatus::EMPTY) {
+                DC_INFO(node_ptr, "Using side %d (EMPTY) for TAKE", i);
+                return static_cast<RobotSide>(i);
+            }
+        }
+    } else if (action_type == ActionType::PUT) {
+        // For PUT: Need an OCCUPIED side that has hazelnuts to put
+        DC_INFO(node_ptr, "[PUT]: robot_side_status: %d, %d, %d, %d ", robot_side_status[0], robot_side_status[1], robot_side_status[2], robot_side_status[3]);
+        // Priority 1: Use default_robot_side if it's OCCUPIED
+        if (default_idx >= 0 && default_idx < ROBOT_SIDES && 
+            robot_side_status[default_idx] == FieldStatus::OCCUPIED) {
+            DC_INFO(node_ptr, "Using default_robot_side %d (OCCUPIED) for PUT", default_idx);
+            return default_robot_side;
+        }
+        // Priority 2: Find first OCCUPIED side
+        for (int i = 0; i < ROBOT_SIDES; ++i) {
+            if (robot_side_status[i] == FieldStatus::OCCUPIED) {
+                DC_INFO(node_ptr, "Using side %d (OCCUPIED) for PUT", i);
+                return static_cast<RobotSide>(i);
+            }
+        }
+    }
+    else return default_robot_side; // For FLIP and DOCK, just return default side without checks
+    
+    // Fallback: return default_robot_side
+    DC_WARN(node_ptr, "No suitable side found, using default_robot_side %d", default_idx);
+    return default_robot_side;
+}
+
+// ============ Pose Data Update ============
+void DecisionCore::updatePoseData() {
+    // Get robot pose from blackboard
+    if (blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
+        RCLCPP_DEBUG(node_ptr->get_logger(), "Robot pose: (%.2f, %.2f)", 
+                     robot_pose.pose.position.x, robot_pose.pose.position.y);
+    }
+    
+    // Get rival pose from blackboard
+    if (blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose)) {
+        RCLCPP_DEBUG(node_ptr->get_logger(), "Rival pose: (%.2f, %.2f)", 
+                     rival_pose.pose.position.x, rival_pose.pose.position.y);
+    }
+    
+    // Get team from blackboard
+    string team_str;
+    if (blackboard_ptr->get<string>("team", team_str)) {
+        current_team = stringToTeam(team_str);
     } else {
-        RCLCPP_WARN(node_->get_logger(), "[DecisionCore] Failed to load map_points param");
+        current_team = Team::YELLOW; // default
+        RCLCPP_WARN(node_ptr->get_logger(), "Team not found in blackboard, defaulting to YELLOW");
     }
 }
 
-std::vector<int> DecisionCore::getMissionSequence() {
-    std::vector<int> sequence;
-    if (blackboard_->get<std::vector<int>>("json_point", sequence)) {
-        RCLCPP_DEBUG(node_->get_logger(), "[DecisionCore] Found json_point with %zu entries", 
-                     sequence.size());
-    } else {
-        RCLCPP_WARN(node_->get_logger(), "[DecisionCore] No json_point, using default sequence");
-        sequence = DEFAULT_SEQUENCE;
+// ============ Position Helpers ============
+geometry_msgs::msg::Point DecisionCore::getPointPosition(GoalPose pose) {
+    geometry_msgs::msg::Point point;
+    int idx = static_cast<int>(pose);
+    
+    // 5 values per point: x, y, stage_dist, sign, dock_type
+    constexpr int VALUES_PER_POINT = 5;
+    int data_idx = idx * VALUES_PER_POINT;
+    
+    if (data_idx + 1 < static_cast<int>(map_points.size())) {
+        point.x = map_points[data_idx];
+        point.y = map_points[data_idx + 1];
+        point.z = 0.0;
     }
-    return sequence;
+    return point;
 }
 
-void DecisionCore::getSensorData(std_msgs::msg::Int32MultiArray& collection_info,
-                                  std_msgs::msg::Int32MultiArray& pantry_info) {
-    if (!blackboard_->get<std_msgs::msg::Int32MultiArray>("collection_info", collection_info)) {
-        RCLCPP_DEBUG(node_->get_logger(), "[DecisionCore] Failed to get collection_info from blackboard");
+double DecisionCore::calculateDistance(GoalPose pose) {
+    geometry_msgs::msg::Point target = getPointPosition(pose);
+    double dx = target.x - robot_pose.pose.position.x;
+    double dy = target.y - robot_pose.pose.position.y;
+    return sqrt(dx * dx + dy * dy);
+}
+
+double DecisionCore::calculateRivalDistance(GoalPose pose) {
+    geometry_msgs::msg::Point target = getPointPosition(pose);
+    double dx = target.x - rival_pose.pose.position.x;
+    double dy = target.y - rival_pose.pose.position.y;
+    return sqrt(dx * dx + dy * dy);
+}
+
+// ============ Team-Side Classification ============
+// Pantry layout:
+//   YELLOW side: A, B, C, D (idx 0-3)
+//   Middle (contested): E, F (idx 4-5)
+//   BLUE side: G, H, I, J (idx 6-9)
+bool DecisionCore::isOwnSidePantry(GoalPose pose) {
+    if (current_team == Team::YELLOW) {
+        return pose == GoalPose::A || pose == GoalPose::B || 
+               pose == GoalPose::C || pose == GoalPose::D;
+    } else { // BLUE
+        return pose == GoalPose::G || pose == GoalPose::H || 
+               pose == GoalPose::I || pose == GoalPose::J;
     }
-    if (!blackboard_->get<std_msgs::msg::Int32MultiArray>("pantry_info", pantry_info)) {
-        RCLCPP_DEBUG(node_->get_logger(), "[DecisionCore] Failed to get pantry_info from blackboard");
+}
+
+bool DecisionCore::isMiddlePantry(GoalPose pose) {
+    return pose == GoalPose::E || pose == GoalPose::F;
+}
+
+// Collection layout:
+//   YELLOW side: L, K, N, M (idx 1, 0, 3, 2 in collection array)
+//   BLUE side: P, O, K, Q (idx 5, 4, 0, 6 in collection array)
+//   Note: K is shared/middle
+bool DecisionCore::isOwnSideCollection(GoalPose pose) {
+    if (current_team == Team::YELLOW) {
+        return pose == GoalPose::L || pose == GoalPose::M || pose == GoalPose::N;
+    } else { // BLUE
+        return pose == GoalPose::O || pose == GoalPose::P || pose == GoalPose::Q;
+    }
+}
+
+bool DecisionCore::isMiddleCollection(GoalPose pose) {
+    // K is in the middle, contested by both teams
+    return pose == GoalPose::K;
+}
+
+// ============ Advanced Reward System ============
+// Pantry reward rules (for PUT):
+//   +100 if EMPTY (available)
+//   +80 for middle spots (E, F) - contested, get there first
+//   +40 for own side spots
+//   -20 for opponent side spots
+//   +10 per meter closer (distance bonus)
+//   -200 if rival is within 0.3m (give up)
+int DecisionCore::calculatePantryScore(int pantry_idx) {
+    int score = 0;
+    GoalPose pose = static_cast<GoalPose>(pantry_idx);
+    
+    // Base: availability check
+    if (pantry_info[pantry_idx] == FieldStatus::EMPTY) {
+        score += SCORE_BASE_AVAILABLE;
+    } else if (pantry_info[pantry_idx] == FieldStatus::OCCUPIED) {
+        return -1000; // Cannot put if occupied, skip entirely
     }
     
-    // Log sensor data for debugging
-    if (!collection_info.data.empty()) {
-        RCLCPP_DEBUG(node_->get_logger(), "[DecisionCore] Collection data size: %zu", 
-                     collection_info.data.size());
+    // Middle bonus: E, F are contested, prioritize
+    if (isMiddlePantry(pose)) {
+        score += SCORE_MIDDLE_BONUS;
+    }
+    // Own side bonus
+    else if (isOwnSidePantry(pose)) {
+        score += SCORE_OWN_SIDE_BONUS;
+    }
+    // Opponent side penalty
+    else {
+        score += SCORE_OPPONENT_SIDE_PENALTY;
+    }
+    
+    // Distance bonus: closer = better
+    double distance = calculateDistance(pose);
+    score += static_cast<int>((3.0 - distance) * SCORE_DISTANCE_FACTOR); // Assume max field ~3m
+    
+    // Rival proximity penalty
+    double rival_dist = calculateRivalDistance(pose);
+    if (rival_dist < RIVAL_PROXIMITY_THRESHOLD) {
+        score += SCORE_RIVAL_NEARBY_PENALTY;
+        RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %s: rival too close (%.2fm), penalizing", 
+                     goalPoseToString(pose).c_str(), rival_dist);
+    }
+    
+    return score;
+}
+
+// Collection reward rules (for TAKE):
+//   +100 if OCCUPIED (has hazelnuts)
+//   +80 for middle/contested spots (K, and team-specific contested)
+//   +40 for own side spots
+//   -20 for opponent side spots
+//   +10 per meter closer
+//   -200 if rival is within 0.3m
+int DecisionCore::calculateCollectionScore(int collection_idx) {
+    int score = 0;
+    GoalPose pose = static_cast<GoalPose>(PANTRY_LENGTH + collection_idx);
+    
+    // Base: availability check
+    if (collection_info[collection_idx] == FieldStatus::OCCUPIED) {
+        score += SCORE_BASE_AVAILABLE;
+    } else if (collection_info[collection_idx] == FieldStatus::EMPTY) {
+        return -1000; // Nothing to collect, skip entirely
+    }
+    
+    // Middle bonus: K is contested by both
+    if (isMiddleCollection(pose)) {
+        score += SCORE_MIDDLE_BONUS;
+    }
+    // Own side bonus
+    else if (isOwnSideCollection(pose)) {
+        score += SCORE_OWN_SIDE_BONUS;
+    }
+    // Opponent side penalty
+    else {
+        score += SCORE_OPPONENT_SIDE_PENALTY;
+    }
+    
+    // Distance bonus: closer = better
+    double distance = calculateDistance(pose);
+    score += static_cast<int>((3.0 - distance) * SCORE_DISTANCE_FACTOR);
+    
+    // Rival proximity penalty
+    double rival_dist = calculateRivalDistance(pose);
+    if (rival_dist < RIVAL_PROXIMITY_THRESHOLD) {
+        score += SCORE_RIVAL_NEARBY_PENALTY;
+        RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %s: rival too close (%.2fm), penalizing", 
+                     goalPoseToString(pose).c_str(), rival_dist);
+    }
+    
+    return score;
+}
+
+void DecisionCore::sortPantryPriority() {
+    // Update pose data before scoring
+    updatePoseData();
+    
+    // Clear and rebuild priority queue
+    pantry_priority = priority_queue<PointScore>();
+    
+    for (int i = 0; i < PANTRY_LENGTH; ++i) {
+        int score = calculatePantryScore(i);
+        if (score > 0) { // Only add viable options
+            GoalPose pose = static_cast<GoalPose>(i);
+            pantry_priority.push(PointScore(pose, score));
+            RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %s score: %d", goalPoseToString(pose).c_str(), score);
+        }
     }
 }
 
-geometry_msgs::msg::PoseStamped DecisionCore::indexToPose(int point_index) {
-    geometry_msgs::msg::PoseStamped pose;
+void DecisionCore::sortCollectionPriority() {
+    // Update pose data before scoring
+    updatePoseData();
     
-    int data_index = point_index * VALUES_PER_POINT;
+    // Clear and rebuild priority queue
+    collection_priority = priority_queue<PointScore>();
     
-    // Validate index
-    if (map_points_.empty() || data_index + 2 >= static_cast<int>(map_points_.size())) {
-        RCLCPP_ERROR(node_->get_logger(), "[DecisionCore] Point index %d out of range", point_index);
-        return pose;  // Return empty pose (frame_id will be empty)
+    for (int i = 0; i < COLLECTION_LENGTH; ++i) {
+        int score = calculateCollectionScore(i);
+        if (score > 0) { // Only add viable options
+            GoalPose pose = static_cast<GoalPose>(PANTRY_LENGTH + i);
+            collection_priority.push(PointScore(pose, score));
+            RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %s score: %d", goalPoseToString(pose).c_str(), score);
+        }
+    }
+}
+
+void DecisionCore::doDock() {
+    // Dock action - just pass through the current target
+    writeOutputPort();
+}
+
+Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
+    // Direction determined from map_points sign parameter
+    int idx = static_cast<int>(goal_pose);
+    constexpr int VALUES_PER_POINT = 5;
+    int data_idx = idx * VALUES_PER_POINT;
+    
+    if (data_idx + 4 >= static_cast<int>(map_points.size())) {
+        DC_ERROR(node_ptr, "Invalid goal_pose index %d for decideDirection", idx);
+        return Direction::EAST;
     }
     
-    // Set header
-    pose.header.frame_id = "map";
-    pose.header.stamp = node_->get_clock()->now();
+    // map_points indices: [x, y, stage_dist, sign, dock_type]
+    double sign = map_points[data_idx + 3];
+    int dock_type = static_cast<int>(map_points[data_idx + 4]);
     
-    // Set position
-    pose.pose.position.x = map_points_[data_index];
-    pose.pose.position.y = map_points_[data_index + 1];
-    pose.pose.position.z = 0.0;
+    // sign indicates which direction the target is (where selected side should face):
+    //   dock_x, sign=1.0  -> target at WEST
+    //   dock_x, sign=-1.0 -> target at EAST
+    //   dock_y, sign=1.0  -> target at SOUTH
+    //   dock_y, sign=-1.0 -> target at NORTH
     
-    // Set orientation from direction
-    double direction = map_points_[data_index + 2];
-    pose.pose.orientation = directionToQuaternion(direction);
+    Direction result;
+    if (dock_type == 0 || dock_type == 2) {  // DOCK_Y types
+        result = (sign > 0) ? Direction::SOUTH : Direction::NORTH;
+        DC_INFO(node_ptr, "Dock direction for pose %d DOCK_Y (sign=%.1f): %s", 
+                idx, sign, result == Direction::SOUTH ? "SOUTH" : "NORTH");
+    } else {  // DOCK_X types
+        result = (sign > 0) ? Direction::WEST : Direction::EAST;
+        DC_INFO(node_ptr, "Dock direction for pose %d DOCK_X (sign=%.1f): %s", 
+                idx, sign, result == Direction::WEST ? "WEST" : "EAST");
+    }
     
-    RCLCPP_INFO(node_->get_logger(), "[DecisionCore] Target: (%.2f, %.2f) dir=%.0f",
-                pose.pose.position.x, pose.pose.position.y, direction);
-    
-    return pose;
-}
-
-geometry_msgs::msg::Quaternion DecisionCore::directionToQuaternion(double direction) {
-    // Direction encoding: 0=East (+X), 1=North (+Y), 2=West (-X), 3=South (-Y)
-    double yaw = direction * M_PI / 2.0;
-    
-    geometry_msgs::msg::Quaternion q;
-    q.x = 0.0;
-    q.y = 0.0;
-    q.z = sin(yaw / 2.0);
-    q.w = cos(yaw / 2.0);
-    
-    return q;
-}
-
-std::string DecisionCore::determineActionType([[maybe_unused]] int point_index) {
-    // TODO: Implement smarter action selection based on:
-    // - Point type (collection vs pantry vs other)
-    // - Current robot state
-    // - Sensor data
-    
-    // For now, default to navigate
-    return "navigate";
-}
-
-bool DecisionCore::isSequenceComplete(size_t sequence_size) {
-    return current_sequence_index_ >= static_cast<int>(sequence_size);
-}
-
-void DecisionCore::resetSequence() {
-    current_sequence_index_ = 0;
-}
-
-void DecisionCore::advanceSequence() {
-    current_sequence_index_++;
-}
-
-void DecisionCore::writeOutputs(int target_index, 
-                                 const geometry_msgs::msg::PoseStamped& target_pose,
-                                 const std::string& action_type) {
-    // Set BT output ports
-    setOutput("next_target_index", target_index);
-    setOutput("next_target_pose", target_pose);
-    setOutput("action_type", action_type);
-
-    // Also write to blackboard for other nodes to access
-    blackboard_->set<int>("current_target_index", target_index);
-    blackboard_->set<geometry_msgs::msg::PoseStamped>("current_target_pose", target_pose);
-    blackboard_->set<std::string>("current_action_type", action_type);
+    return result;
 }

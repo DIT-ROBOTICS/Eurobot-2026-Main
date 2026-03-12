@@ -32,7 +32,7 @@
 #include "btcpp_ros2_interfaces/msg/circle_obstacle.hpp"
 #include "btcpp_ros2_interfaces/msg/segment_obstacle.hpp"
 
-#include "../../bt_core/include/bt_config.hpp"
+#include "bt_config.hpp"
 
 #define PI 3.1415926
 
@@ -65,7 +65,8 @@ public:
     void publishInitialPose();
 
     // start phase
-    void tickSima(double game_time);
+    void tickLittleSima(double game_time);
+    void tickNinjaSima();
     void publishTime();
     bool gameOver(double game_time);
 

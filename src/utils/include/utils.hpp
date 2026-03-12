@@ -40,8 +40,6 @@
 #include <tf2_ros/buffer.h>
 #include <tf2/exceptions.h>
 
-#include "receiver_util.hpp"
-
 using namespace BT;
 using namespace std;
 

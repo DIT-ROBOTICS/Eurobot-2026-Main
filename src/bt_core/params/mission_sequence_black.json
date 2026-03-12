@@ -1,0 +1,68 @@
+{
+    "states": {
+        "0": true, 
+        "1": true,
+        "2": true,
+        "3": true,
+        "4": false,
+        "5": false,
+        "6": false,
+        "7": false,
+        "8": false,
+        "9": false,
+        "10": false,
+        "11": false,
+        "12": false,
+        "13": false,
+        "14": false,
+        "15": false,
+        "16": false,
+        "17": false,
+        "18": false,
+        "19": false
+    },
+    // "pantry_sequence": [
+    //     6,
+    //     8,
+    //     9,
+    //     7,
+    //     3,
+    //     0,
+    //     1,
+    //     2
+    // ],
+    // "collection_sequence": [
+    //     15,
+    //     14,
+    //     17,
+    //     16,
+    //     13,
+    //     12,
+    //     10,
+    //     11
+    // ]
+     "pantry_sequence": [
+        9,
+        4,
+        5,
+        7
+    ],
+    "collection_sequence": [
+        15,
+        14,
+        17,
+        16
+    ]
+    //  "pantry_sequence": [
+    //     6,
+    //     3,
+    //     7,
+    //     9
+    // ],
+    // "collection_sequence": [
+    //     15,
+    //     17,
+    //     16,
+    //     14
+    // ]
+}

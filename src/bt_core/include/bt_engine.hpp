@@ -25,18 +25,33 @@
 // navigation nodes
 #include "nav_action_node.hpp"
 #include "dock_action_node.hpp"
+#include "onDock.hpp"
 #include "stop_robot_node.hpp"
 #include "rotate_action_node.hpp"
 
 // receiver nodes
 #include "CamReceiver.hpp"
+#include "LocReceiver.hpp"
 
 // decision core
 #include "decision_core.hpp"
 
+// mission publisher
+#include "MissionPublisher.hpp"
+
+// mission checker
+#include "MissionChecker.hpp"
+
+// field updater
+#include "FieldUpdater.hpp"
+
+// flip publisher
+#include "FlipPublisher.hpp"
+
 // utils nodes
 
 // firmware nodes
+#include "FirmwareReceiver.hpp"
 
 // C++
 #include <memory>
@@ -106,8 +121,6 @@ private:
     double game_time;
     BT::Blackboard::Ptr blackboard;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr game_time_sub;
-    rclcpp::Publisher<std_msgs::msg::Int32MultiArray>::SharedPtr json_point_pub;
-    std::vector<int> json_point;
     
     // Tree creation state
     bool readySent;         // Flag to prevent sending ready signal multiple times
