@@ -43,15 +43,19 @@
     // ]
      "pantry_sequence": [
         9,
+        7,
         4,
         5,
-        7
+        2,
+        1
     ],
     "collection_sequence": [
         15,
         14,
         17,
-        16
+        16,
+        12,
+        13
     ]
     //  "pantry_sequence": [
     //     6,
