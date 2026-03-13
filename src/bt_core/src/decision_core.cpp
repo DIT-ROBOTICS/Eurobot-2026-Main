@@ -551,6 +551,17 @@ void DecisionCore::sortCollectionPriority() {
     }
 }
 
+void DecisionCore::printFieldInfo() {
+    DC_INFO(node_ptr, "[FIELD INFO] Collection Info:");
+    for (int i = 0; i < COLLECTION_LENGTH; ++i) {
+        DC_INFO(node_ptr, "  Collection %d: %s", i, fieldStatusToString(collection_info[i]).c_str());
+    }
+    DC_INFO(node_ptr, "[FIELD INFO] Pantry Info:");
+    for (int i = 0; i < PANTRY_LENGTH; ++i) {
+        DC_INFO(node_ptr, "  Pantry %d: %s", i, fieldStatusToString(pantry_info[i]).c_str());
+    }
+}
+
 void DecisionCore::doDock() {
     // Dock action - just pass through the current target
     writeOutputPort();
