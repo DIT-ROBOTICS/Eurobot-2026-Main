@@ -13,6 +13,7 @@ StartUp::StartUp() : Node("startup_node"){
 
     game_time_pub = this->create_publisher<std_msgs::msg::Float32>("/robot/startup/game_time", 2);
     rate = std::make_shared<rclcpp::Rate>(time_rate);
+    sima_game_over_pub = this->create_publisher<std_msgs::msg::Bool>("/robot/startup/sima_game_over", 1);
 
     // State checker for other groups
     are_you_ready_pub = this->create_publisher<std_msgs::msg::Bool>("/robot/startup/are_you_ready", 2);
@@ -50,6 +51,7 @@ StartUp::StartUp() : Node("startup_node"){
     is_plugged = false;
     end_logged = false;
     game_time = 0;
+    sima_game_over_sent = false;
 }
 
 void StartUp::initParam() {
@@ -57,6 +59,7 @@ void StartUp::initParam() {
     this->declare_parameter<int>("time_rate", 100);
     this->declare_parameter<int>("game_time", 100);
     this->declare_parameter<int>("sima_tick_threshold", 85);
+    this->declare_parameter<int>("sima_game_over_trigger_sec", 99);
     this->declare_parameter<int>("group_num", 5);
     
     // Robot parameters
@@ -69,6 +72,7 @@ void StartUp::initParam() {
     this->get_parameter("time_rate", time_rate);
     this->get_parameter("game_time", game_time_limit);
     this->get_parameter("sima_tick_threshold", sima_tick_threshold);
+    this->get_parameter("sima_game_over_trigger_sec", sima_game_over_trigger_sec);
     this->get_parameter("group_num", group_num);
     
     // Get robot parameters
@@ -288,6 +292,15 @@ void StartUp::publishTime() {
     cur_time_msg.data = cur_time - start_time;
     game_time = cur_time_msg.data;
     game_time_pub->publish(cur_time_msg);
+
+    if (!sima_game_over_sent && game_time >= sima_game_over_trigger_sec) {
+        std_msgs::msg::Bool msg;
+        msg.data = true;
+        sima_game_over_pub->publish(msg);
+        sima_game_over_sent = true;
+        RCLCPP_INFO(this->get_logger(), "[StartUp]: Sima game over signal sent at game time %f", game_time);
+    }
+
     tickLittleSima(game_time);
 }
 
