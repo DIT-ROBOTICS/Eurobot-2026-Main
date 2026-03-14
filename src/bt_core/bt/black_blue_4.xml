@@ -9,7 +9,7 @@
     <!-- ============================================= -->
     <BehaviorTree ID="TakeSubTree">
         <Sequence>
-            <!-- Dock to collection pdoint -->
+            <!-- Dock to collection point -->
             <OnDockAction
                 targetPoseIdx="{target_idx}"
                 targetPoseSideIdx="{target_side}"
@@ -18,17 +18,10 @@
                 isPureDocking="false"
                 finish_pose="{dock_result}"/>
             
-            <!-- Publish TAKE command to firmware -->
-            <MissionPublisher
-                ActionType="take"
+            <!-- Publish TAKE command and wait for completion -->
+            <TakePublisher
                 targetPoseSideIdx="{target_side}"
-                targetPoseIdx="{target_idx}"/>
-            <FieldUpdater/>
-
-            <!-- Wait for vision to confirm take, or timeout -->
-            <MissionChecker
-                ActionType="take"
-                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"
                 timeout_ms="3000"/>
             <!-- <Sleep msec="2000"/> -->
         </Sequence>
@@ -39,15 +32,8 @@
     <!-- ============================================= -->
     <BehaviorTree ID="FlipSubTree">
         <Sequence>
-            <!-- Publish FLIP command to firmware -->
-            <MissionPublisher
-                ActionType="flip"
-                targetPoseSideIdx="{target_side}"
-                targetPoseIdx="{target_idx}"/>
-
-            <!-- Wait for flip to complete (pure timeout, no vision feedback) -->
-            <MissionChecker
-                ActionType="flip"
+            <!-- Publish FLIP command and wait for completion -->
+            <FlipPublisher
                 targetPoseSideIdx="{target_side}"
                 timeout_ms="1000"/>
         </Sequence>
@@ -72,17 +58,10 @@
                     timeout_ms="1000"/>
             </Parallel>
             
-            <!-- Publish PUT command to firmware -->
-            <MissionPublisher
-                ActionType="put"
+            <!-- Publish PUT command and wait for completion -->
+            <PutPublisher
                 targetPoseSideIdx="{target_side}"
-                targetPoseIdx="{target_idx}"/>
-            <FieldUpdater/>
-
-            <!-- Wait for vision to confirm put, or timeout -->
-            <MissionChecker
-                ActionType="put"
-                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"
                 timeout_ms="1500"/>
             <Sleep msec="1500"/>
         </Sequence>

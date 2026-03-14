@@ -48,6 +48,10 @@
 // flip publisher
 #include "FlipPublisher.hpp"
 
+// take/put publishers (action nodes)
+#include "TakePublisher.hpp"
+#include "PutPublisher.hpp"
+
 // utils nodes
 
 // firmware nodes
