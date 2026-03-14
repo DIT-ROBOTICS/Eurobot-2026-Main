@@ -64,7 +64,7 @@ BT::NodeStatus MissionChecker::onRunning() {
     if (checkCondition()) {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start_time_).count();
-        MC_INFO(node_, "%s confirmed by vision on side %d (took %ld ms)",
+        MC_INFO(node_, "[MissionChecker]: %s confirmed by vision on side %d (took %ld ms)",
                 actionTypeToString(action_).c_str(), side_idx_, elapsed);
         return BT::NodeStatus::SUCCESS;
     }
@@ -81,10 +81,12 @@ BT::NodeStatus MissionChecker::onRunning() {
         if(action_ == ActionType::TAKE){
             robot_side_status[side_idx_] = FieldStatus::OCCUPIED;
             blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            MC_INFO(node_, "[MissionChecker]: Marking side %d as OCCUPIED due to TAKE timeout", side_idx_);
         }
         else if(action_ == ActionType::PUT){
             robot_side_status[side_idx_] = FieldStatus::EMPTY;
             blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            MC_INFO(node_, "[MissionChecker]: Marking side %d as EMPTY due to PUT timeout", side_idx_);
         }
         return BT::NodeStatus::SUCCESS;  // Don't block the game
     }
