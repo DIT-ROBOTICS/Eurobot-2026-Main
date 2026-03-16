@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-  # represent `x position`, `y position`, `z_north`, `z_east`, `z_south`, `z_west`, `sign`, `DockType` in order
+  # represent `x position`, `y position`, `stage point dist`, `sign`, `DockType`  in order
   # docktype: 0 - mission dock y, 1 - mission dock x, 2 - cam dock y, 3 - cam dock x
     map_points: [
       0.35, 0.8, 0.0,  1.0, 1.0, # A 0

@@ -158,15 +158,12 @@ double OnDockAction::getSideYaw(RobotSide side, double base_direction) {
 /**
  * @brief Calculate dock pose from map_points index and robot side
  * 
- * map_points layout per point (8 values):
+ * map_points layout per point (5 values):
  *   [0] x position (final dock pose x)
  *   [1] y position (final dock pose y)
- *   [2] z_north (staging distance if target at map north)
- *   [3] z_east (staging distance if target at map east)
- *   [4] z_south (staging distance if target at map south)
- *   [5] z_west (staging distance if target at map west)
- *   [6] sign (1 or -1)
- *   [7] dock_type (0=dock_y, 1=dock_x, 2=cam_dock_y, 3=cam_dock_x)
+ *   [2] stage_dist (staging distance)
+ *   [3] sign (1 or -1)
+ *   [4] dock_type (0=dock_y, 1=dock_x, 2=cam_dock_y, 3=cam_dock_x)
  * 
  * Position z = stage_dist * sign (nav system uses this for staging)
  * Orientation: chosen side faces the target point
@@ -187,19 +184,7 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     // Get position and staging info from map_points
     double x = map_points[data_idx + IDX_X];
     double y = map_points[data_idx + IDX_Y];
-    double stage_dist = 0.0;
-    if ( target_direction == Direction::NORTH ) {
-        stage_dist = map_points[data_idx + IDX_Z_NORTH];
-    }
-    else if ( target_direction == Direction::EAST ) {
-        stage_dist = map_points[data_idx + IDX_Z_EAST];
-    }
-    else if ( target_direction == Direction::SOUTH ) {
-        stage_dist = map_points[data_idx + IDX_Z_SOUTH];
-    }
-    else if ( target_direction == Direction::WEST ) {
-        stage_dist = map_points[data_idx + IDX_Z_WEST];
-    }
+    double stage_dist = map_points[data_idx + IDX_STAGE_DIST];
     double sign = map_points[data_idx + IDX_SIGN];
     
     // Set position: x, y are final dock pose, z = stage_dist * sign for nav system
