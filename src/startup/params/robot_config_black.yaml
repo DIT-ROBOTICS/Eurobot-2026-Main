@@ -23,6 +23,7 @@
     normal_dock_type_x: "mission_dock_x_rush"  # Dock type for MISSION_DOCK_X (case 1)
     cam_dock_type_y: "mission_dock_cam_y"         # Dock type for CAM_DOCK_Y (case 2)
     cam_dock_type_x: "mission_dock_cam_x"         # Dock type for CAM_DOCK_X (case 3)
+    flip_distance_threshold: 0.25                 # Distance to target to trigger flip
     
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]
