@@ -41,9 +41,9 @@ private:
     
     // Node references
     std::shared_ptr<rclcpp::Node> node;
-    BT::Blackboard::Ptr blackboard;
     tf2_ros::Buffer tf_buffer;
     tf2_ros::TransformListener listener;
+    BT::Blackboard::Ptr blackboard;
     
     // Publisher to notify camera team which side is docking
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr dock_side_pub;
