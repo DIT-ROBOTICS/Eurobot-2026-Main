@@ -218,6 +218,7 @@ void DecisionCore::doTake() {
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
     updateVisitedPoints();
+    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
 }
@@ -531,14 +532,17 @@ void DecisionCore::sortCollectionPriority() {
 }
 
 void DecisionCore::printFieldInfo() {
-    DC_INFO(node_ptr, "[FIELD INFO] Collection Info:");
+    std::string coll_str = "";
     for (int i = 0; i < COLLECTION_LENGTH; ++i) {
-        DC_INFO(node_ptr, "  Collection %d: %s", i+10, fieldStatusToString(collection_info[i]).c_str());
+        coll_str += "[" + std::to_string(i + PANTRY_LENGTH) + "]" + fieldStatusToString(collection_info[i]).substr(0, 1) + " ";
     }
-    DC_INFO(node_ptr, "[FIELD INFO] Pantry Info:");
+    DC_INFO(node_ptr, "[FIELD INFO] Collection: %s", coll_str.c_str());
+
+    std::string pan_str = "";
     for (int i = 0; i < PANTRY_LENGTH; ++i) {
-        DC_INFO(node_ptr, "  Pantry %d: %s", i, fieldStatusToString(pantry_info[i]).c_str());
+        pan_str += "[" + std::to_string(i) + "]" + fieldStatusToString(pantry_info[i]).substr(0, 1) + " ";
     }
+    DC_INFO(node_ptr, "[FIELD INFO] Pantry: %s", pan_str.c_str());
 }
 
 void DecisionCore::doDock() {
@@ -549,7 +553,7 @@ void DecisionCore::doDock() {
 Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
     (void)robot_side; // Suppress unused parameter warning
     int idx = static_cast<int>(goal_pose);
-    
+    DC_INFO(node_ptr, "[DecisionCore] decideDirection for goal_pose index %d", idx);
     if (idx >= static_cast<int>(map_point_list.size())) {
         DC_ERROR(node_ptr, "Invalid goal_pose index %d for decideDirection", idx);
         return Direction::EAST;
