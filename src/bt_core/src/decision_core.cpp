@@ -32,7 +32,6 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     loadMapPoints();
     loadSequenceFromJson();
     readBlackboard();
-    writeBlackboard();
 }
 
 void DecisionCore::loadMapPoints() {
@@ -66,31 +65,18 @@ void DecisionCore::loadSequenceFromJson() {
     }
 }
 
-void DecisionCore::writeBlackboard() {
-    // NOTE: Do NOT write robot_side_status here - it's managed by CamReceiver::onTakeFeedback
-    // NOTE: Do NOT write hazelnut_status here - it's managed by CamReceiver and MissionPublisher
-    // Writing them here would overwrite CamReceiver's vision updates
-    blackboard_ptr->set<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
-}
-
 void DecisionCore::readBlackboard() {
-    // 1. Robot Side Status
     if (!blackboard_ptr->get<vector<FieldStatus>>("robot_side_status", robot_side_status)) {
         RCLCPP_WARN(node_ptr->get_logger(), "robot_side_status not found in blackboard");
     }
-    
-    // NOTE: Sequences are loaded ONCE in loadSequenceFromJson, not updated here
-    // to avoid resetting path progress from JSON.
 
-    // 3. Poses
     if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
-        // Optional warning or debug
+        RCLCPP_WARN(node_ptr->get_logger(), "robot_pose not found in blackboard");
     }
     if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose)) {
-        // Optional warning or debug
+        RCLCPP_WARN(node_ptr->get_logger(), "rival_pose not found in blackboard");
     }
 
-    // 4. Field Info
     if (!blackboard_ptr->get<vector<FieldStatus>>("collection_info", collection_info)) {
          RCLCPP_WARN(node_ptr->get_logger(), "collection_info not found in blackboard");
     }
@@ -98,7 +84,6 @@ void DecisionCore::readBlackboard() {
          RCLCPP_WARN(node_ptr->get_logger(), "pantry_info not found in blackboard");
     }
     
-    // 5. Hazelnut status
     if (!blackboard_ptr->get<vector<vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
         RCLCPP_WARN(node_ptr->get_logger(), "hazelnut_status not found in blackboard");
     }
@@ -140,6 +125,37 @@ void DecisionCore::writeOutputPort() {
     setOutput<int>("targetDirection", static_cast<int>(target_direction));
 }
 
+void DecisionCore::updateVisitedPoints() {
+    // Add to visited_collections
+    if(decided_action_type == ActionType::TAKE) {
+        std::vector<int> visited_collections;
+        if (!blackboard_ptr->get<std::vector<int>>("visited_collections", visited_collections)) {
+            DC_WARN(node_ptr, "Failed to get visited_collections from blackboard (might be empty/first time)");
+        }
+        
+        int local_idx = static_cast<int>(target_goal_pose_idx) - PANTRY_LENGTH;
+        if (std::find(visited_collections.begin(), visited_collections.end(), local_idx) == visited_collections.end()) {
+            visited_collections.push_back(local_idx);
+            blackboard_ptr->set<std::vector<int>>("visited_collections", visited_collections);
+            DC_INFO(node_ptr, "Added collection field %d (Pose %d) to visited_collections", local_idx, static_cast<int>(target_goal_pose_idx));
+        }
+    }
+    else if (decided_action_type == ActionType::PUT) {
+        // Add to visited_pantries
+        std::vector<int> visited_pantries;
+        if (!blackboard_ptr->get<std::vector<int>>("visited_pantries", visited_pantries)) {
+            DC_WARN(node_ptr, "Failed to get visited_pantries from blackboard (might be empty/first time)");
+        }
+        
+        int local_idx = static_cast<int>(target_goal_pose_idx) - COLLECTION_LENGTH;
+        if (std::find(visited_pantries.begin(), visited_pantries.end(), local_idx) == visited_pantries.end()) {
+            visited_pantries.push_back(local_idx);
+            blackboard_ptr->set<std::vector<int>>("visited_pantries", visited_pantries);
+            DC_INFO(node_ptr, "Added pantry field %d (Pose %d) to visited_pantries", local_idx, static_cast<int>(target_goal_pose_idx));
+        }
+    }
+}
+
 BT::NodeStatus DecisionCore::tick() {
     readBlackboard();
     getInputPort();
@@ -161,7 +177,6 @@ BT::NodeStatus DecisionCore::tick() {
             DC_ERROR(node_ptr, "Invalid action type");
             throw std::runtime_error("Invalid action type");
     }
-    writeBlackboard();
     return BT::NodeStatus::SUCCESS;
 }
 
@@ -169,21 +184,7 @@ void DecisionCore::doTake() {
     pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::TAKE);
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
-    
-    // Add to visited_collections
-    std::vector<int> visited_collections;
-    if (!blackboard_ptr->get<std::vector<int>>("visited_collections", visited_collections)) {
-        DC_WARN(node_ptr, "Failed to get visited_collections from blackboard (might be empty/first time)");
-    }
-    
-    int local_idx = static_cast<int>(target_goal_pose_idx) - PANTRY_LENGTH;
-    if (std::find(visited_collections.begin(), visited_collections.end(), local_idx) == visited_collections.end()) {
-        visited_collections.push_back(local_idx);
-        blackboard_ptr->set<std::vector<int>>("visited_collections", visited_collections);
-        DC_INFO(node_ptr, "Added collection field %d (Pose %d) to visited_collections", local_idx, static_cast<int>(target_goal_pose_idx));
-    }
-
-    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
+    updateVisitedPoints();
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
 }
@@ -192,20 +193,7 @@ void DecisionCore::doPut() {
     pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::PUT);
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
-    
-    // Add to visited_pantries
-    std::vector<int> visited_pantries;
-    if (!blackboard_ptr->get<std::vector<int>>("visited_pantries", visited_pantries)) {
-        DC_WARN(node_ptr, "Failed to get visited_pantries from blackboard (might be empty/first time)");
-    }
-    
-    int local_idx = static_cast<int>(target_goal_pose_idx);
-    if (std::find(visited_pantries.begin(), visited_pantries.end(), local_idx) == visited_pantries.end()) {
-        visited_pantries.push_back(local_idx);
-        blackboard_ptr->set<std::vector<int>>("visited_pantries", visited_pantries);
-        DC_INFO(node_ptr, "Added pantry %d to visited_pantries", local_idx);
-    }
-    
+    updateVisitedPoints();
     target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
     decided_action_type = ActionType::DOCK;
     writeOutputPort();

@@ -70,7 +70,6 @@ private:
     Direction decideDirection(GoalPose goal_pose, RobotSide robot_side);
     ActionType decideNextActionType(ActionType action_type);
     void writeOutputPort();
-    void writeBlackboard();
     
     // Reward calculation helpers
     int calculatePantryScore(int pantry_idx);
@@ -85,6 +84,7 @@ private:
     bool isMiddlePantry(GoalPose pose);
     bool isMiddleCollection(GoalPose pose);
     void updatePoseData();
+    void updateVisitedPoints();
     void printFieldInfo();
 
     // blackboard variable
