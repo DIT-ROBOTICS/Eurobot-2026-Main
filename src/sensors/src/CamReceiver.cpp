@@ -98,10 +98,31 @@ void CamReceiver::collection_info_callback(const std_msgs::msg::Int32MultiArray:
     collection_info = *msg;
     
     if (!collection_info.data.empty()) {
+        std::vector<FieldStatus> existing_status;
+        if (!blackboard_->get<std::vector<FieldStatus>>("collection_info", existing_status)) {
+            RCLCPP_WARN(node_->get_logger(), "CamReceiver: collection_info not found in blackboard");
+        }
+        
+        std::vector<int> visited_collections;
+        if (!blackboard_->get<std::vector<int>>("visited_collections", visited_collections)) {
+            RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: visited_collections not found in blackboard");
+        }
+
         // Convert Int32MultiArray to vector<FieldStatus> for blackboard
         std::vector<FieldStatus> collection_status;
-        for (const auto& val : collection_info.data) {
-            collection_status.push_back(static_cast<FieldStatus>(val));
+        for (size_t i = 0; i < collection_info.data.size(); ++i) {
+            int val = collection_info.data[i];
+            
+            // Force close if this collection has already been visited
+            if (std::find(visited_collections.begin(), visited_collections.end(), i) != visited_collections.end()) {
+                val = static_cast<int>(FieldStatus::EMPTY);
+            }
+
+            if (val == -1 && i < existing_status.size()) {
+                collection_status.push_back(existing_status[i]);
+            } else {
+                collection_status.push_back(static_cast<FieldStatus>(val));
+            }
         }
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("collection_info_raw", collection_info);
@@ -113,10 +134,35 @@ void CamReceiver::pantry_info_callback(const std_msgs::msg::Int32MultiArray::Sha
     pantry_info = *msg;
     
     if (!pantry_info.data.empty()) {
+        std::vector<FieldStatus> existing_status;
+        if (!blackboard_->get<std::vector<FieldStatus>>("pantry_info", existing_status)) {
+            RCLCPP_WARN(node_->get_logger(), "CamReceiver: pantry_info not found in blackboard");
+        }
+        
+        std::vector<int> visited_pantries;
+        if (!blackboard_->get<std::vector<int>>("visited_pantries", visited_pantries)) {
+            RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: visited_pantries not found in blackboard");
+        }
+
         // Convert Int32MultiArray to vector<FieldStatus> for blackboard
         std::vector<FieldStatus> pantry_status;
-        for (const auto& val : pantry_info.data) {
-            pantry_status.push_back(static_cast<FieldStatus>(val));
+        for (size_t i = 0; i < pantry_info.data.size(); ++i) {
+            int val = pantry_info.data[i];
+            
+            // Force close if this pantry has already been visited
+            if (std::find(visited_pantries.begin(), visited_pantries.end(), i) != visited_pantries.end()) {
+                val = static_cast<int>(FieldStatus::OCCUPIED);
+            }
+
+            if (val == -1 && i < existing_status.size()) {
+                pantry_status.push_back(existing_status[i]);
+            }
+            else if (val == 2 || val == 3) {
+                pantry_status.push_back(FieldStatus::OCCUPIED);
+            }
+            else {
+                pantry_status.push_back(static_cast<FieldStatus>(val));
+            }
         }
         blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info_raw", pantry_info);

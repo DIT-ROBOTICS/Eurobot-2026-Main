@@ -85,6 +85,7 @@ private:
     bool isMiddlePantry(GoalPose pose);
     bool isMiddleCollection(GoalPose pose);
     void updatePoseData();
+    void printFieldInfo();
 
     // blackboard variable
     vector<FieldStatus> collection_info;

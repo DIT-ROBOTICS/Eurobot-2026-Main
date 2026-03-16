@@ -142,6 +142,15 @@ inline std::string actionTypeToString(ActionType action_type) {
     }
 }
 
+inline std::string fieldStatusToString(FieldStatus status) {
+    switch (status) {
+        case FieldStatus::EMPTY: return "EMPTY";
+        case FieldStatus::OCCUPIED: return "OCCUPIED";
+        case FieldStatus::UNKNOWN: return "UNKNOWN";
+        default: return "unknown";
+    }
+}
+
 inline std::string goalPoseToString(GoalPose goal_pose) {
     switch (goal_pose) {
         case GoalPose::A: return "A";

@@ -333,7 +333,9 @@ NodeStatus OnDockAction::onResultReceived(const WrappedResult& wr) {
         }
         
         blackboard->set<bool>("enable_vision_check", true);
-        blackboard->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
+        if (!blackboard->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
+            RCLCPP_WARN(node->get_logger(), "[OnDockAction] Failed to get robot_pose from blackboard");
+        }
         RCLCPP_ERROR(node->get_logger(), 
                      "[OnDockAction] Dock failed with error_code=%d, robot at (%.2f, %.2f)",
                      wr.result->error_code, robot_pose.pose.position.x, robot_pose.pose.position.y);
@@ -358,7 +360,9 @@ NodeStatus OnDockAction::goalErrorDetect() {
     
     blackboard->set<bool>("enable_vision_check", true);    
     // Check pose accuracy
-    blackboard->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose);
+    if (!blackboard->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
+        RCLCPP_WARN(node->get_logger(), "[OnDockAction] Failed to get robot_pose from blackboard");
+    }
     double dist_error = calculateDistance(robot_pose.pose, goal_pose.pose);
     double ang_error = calculateAngleDifference(robot_pose.pose, goal_pose.pose);
     

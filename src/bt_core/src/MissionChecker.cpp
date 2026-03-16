@@ -77,7 +77,9 @@ BT::NodeStatus MissionChecker::onRunning() {
         MC_WARN(node_, "%s on side %d timed out after %ld ms — proceeding anyway",
                 actionTypeToString(action_).c_str(), side_idx_, elapsed);
         std::vector<FieldStatus> robot_side_status;
-        blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+        if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status)) {
+            MC_WARN(node_, "Failed to get robot_side_status from blackboard during timeout override");
+        }
         if(action_ == ActionType::TAKE){
             robot_side_status[side_idx_] = FieldStatus::OCCUPIED;
             blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
