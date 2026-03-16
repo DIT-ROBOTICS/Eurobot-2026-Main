@@ -400,8 +400,8 @@ geometry_msgs::msg::Point DecisionCore::getPointPosition(GoalPose pose) {
     geometry_msgs::msg::Point point;
     int idx = static_cast<int>(pose);
     
-    // 5 values per point: x, y, stage_dist, sign, dock_type
-    constexpr int VALUES_PER_POINT = 5;
+    // 8 values per point: x, y, z_north, z_east, z_south, z_west, sign, dock_type
+    constexpr int VALUES_PER_POINT = 8;
     int data_idx = idx * VALUES_PER_POINT;
     
     if (data_idx + 1 < static_cast<int>(map_points.size())) {
@@ -608,21 +608,22 @@ void DecisionCore::doDock() {
 Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
     (void)robot_side; // Suppress unused parameter warning
     // Direction determined from map_points sign parameter
+    // 8 values per point: x, y, z_north, z_east, z_south, z_west, sign, dock_type
     int idx = static_cast<int>(goal_pose);
-    constexpr int VALUES_PER_POINT = 5;
+    constexpr int VALUES_PER_POINT = 8;
     int data_idx = idx * VALUES_PER_POINT;
     
-    if (data_idx + 4 >= static_cast<int>(map_points.size())) {
+    if (data_idx + VALUES_PER_POINT > static_cast<int>(map_points.size())) {
         DC_ERROR(node_ptr, "Invalid goal_pose index %d for decideDirection", idx);
         return Direction::EAST;
     }
     
-    // map_points indices: [x, y, stage_dist, sign, dock_type]
-    double sign = map_points[data_idx + 3];
-    int dock_type = static_cast<int>(map_points[data_idx + 4]);
+    double sign = map_points[data_idx + 6];
+    int dock_type = static_cast<int>(map_points[data_idx + 7]);
     
     // sign indicates which direction the target is (where selected side should face):
     //   dock_x, sign=1.0  -> target at WEST
+    // chuang: why +x is west
     //   dock_x, sign=-1.0 -> target at EAST
     //   dock_y, sign=1.0  -> target at SOUTH
     //   dock_y, sign=-1.0 -> target at NORTH
