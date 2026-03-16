@@ -86,7 +86,9 @@ void DecisionCore::readBlackboard() {
     if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
         // Optional warning or debug
     }
-    blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose);
+    if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose)) {
+        // Optional warning or debug
+    }
 
     // 4. Field Info
     if (!blackboard_ptr->get<vector<FieldStatus>>("collection_info", collection_info)) {
@@ -167,6 +169,20 @@ void DecisionCore::doTake() {
     pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::TAKE);
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
+    
+    // Add to visited_collections
+    std::vector<int> visited_collections;
+    if (!blackboard_ptr->get<std::vector<int>>("visited_collections", visited_collections)) {
+        DC_WARN(node_ptr, "Failed to get visited_collections from blackboard (might be empty/first time)");
+    }
+    
+    int local_idx = static_cast<int>(target_goal_pose_idx) - PANTRY_LENGTH;
+    if (std::find(visited_collections.begin(), visited_collections.end(), local_idx) == visited_collections.end()) {
+        visited_collections.push_back(local_idx);
+        blackboard_ptr->set<std::vector<int>>("visited_collections", visited_collections);
+        DC_INFO(node_ptr, "Added collection field %d (Pose %d) to visited_collections", local_idx, static_cast<int>(target_goal_pose_idx));
+    }
+
     target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
@@ -176,6 +192,20 @@ void DecisionCore::doPut() {
     pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::PUT);
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
+    
+    // Add to visited_pantries
+    std::vector<int> visited_pantries;
+    if (!blackboard_ptr->get<std::vector<int>>("visited_pantries", visited_pantries)) {
+        DC_WARN(node_ptr, "Failed to get visited_pantries from blackboard (might be empty/first time)");
+    }
+    
+    int local_idx = static_cast<int>(target_goal_pose_idx);
+    if (std::find(visited_pantries.begin(), visited_pantries.end(), local_idx) == visited_pantries.end()) {
+        visited_pantries.push_back(local_idx);
+        blackboard_ptr->set<std::vector<int>>("visited_pantries", visited_pantries);
+        DC_INFO(node_ptr, "Added pantry %d to visited_pantries", local_idx);
+    }
+    
     target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
@@ -190,7 +220,7 @@ void DecisionCore::doFlip() {
 
 pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_type) {
     RobotSide selected_side = getTargetSideIndex(action_type);
-    
+    printFieldInfo();
     if (action_type == ActionType::PUT) {
         // Fetch current sequence from blackboard to ensure we have the latest state
         if (blackboard_ptr->get<vector<int>>("pantry_sequence", pantry_sequence)) {
@@ -295,7 +325,11 @@ RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
     
     if (action_type == ActionType::TAKE) {
         // For TAKE: Need an EMPTY side to hold hazelnuts
-        DC_INFO(node_ptr, "[TAKE]: robot_side_status: %d, %d, %d, %d ", robot_side_status[0], robot_side_status[1], robot_side_status[2], robot_side_status[3]);
+        DC_INFO(node_ptr, "[TAKE]: robot_side_status: %d, %d, %d, %d ", 
+            static_cast<int>(robot_side_status[0]), 
+            static_cast<int>(robot_side_status[1]), 
+            static_cast<int>(robot_side_status[2]), 
+            static_cast<int>(robot_side_status[3]));
         // Priority 1: Use default_robot_side if it's EMPTY
         if (default_idx >= 0 && default_idx < ROBOT_SIDES && 
             robot_side_status[default_idx] == FieldStatus::EMPTY) {
@@ -311,7 +345,11 @@ RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
         }
     } else if (action_type == ActionType::PUT) {
         // For PUT: Need an OCCUPIED side that has hazelnuts to put
-        DC_INFO(node_ptr, "[PUT]: robot_side_status: %d, %d, %d, %d ", robot_side_status[0], robot_side_status[1], robot_side_status[2], robot_side_status[3]);
+        DC_INFO(node_ptr, "[PUT]: robot_side_status: %d, %d, %d, %d ", 
+            static_cast<int>(robot_side_status[0]), 
+            static_cast<int>(robot_side_status[1]), 
+            static_cast<int>(robot_side_status[2]), 
+            static_cast<int>(robot_side_status[3]));
         // Priority 1: Use default_robot_side if it's OCCUPIED
         if (default_idx >= 0 && default_idx < ROBOT_SIDES && 
             robot_side_status[default_idx] == FieldStatus::OCCUPIED) {
@@ -554,7 +592,7 @@ void DecisionCore::sortCollectionPriority() {
 void DecisionCore::printFieldInfo() {
     DC_INFO(node_ptr, "[FIELD INFO] Collection Info:");
     for (int i = 0; i < COLLECTION_LENGTH; ++i) {
-        DC_INFO(node_ptr, "  Collection %d: %s", i, fieldStatusToString(collection_info[i]).c_str());
+        DC_INFO(node_ptr, "  Collection %d: %s", i+10, fieldStatusToString(collection_info[i]).c_str());
     }
     DC_INFO(node_ptr, "[FIELD INFO] Pantry Info:");
     for (int i = 0; i < PANTRY_LENGTH; ++i) {
@@ -568,6 +606,7 @@ void DecisionCore::doDock() {
 }
 
 Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
+    (void)robot_side; // Suppress unused parameter warning
     // Direction determined from map_points sign parameter
     int idx = static_cast<int>(goal_pose);
     constexpr int VALUES_PER_POINT = 5;
