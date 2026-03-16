@@ -28,6 +28,9 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     use_pantry_sequence = false;
     use_collection_sequence = false;
     
+    // Publishers
+    score_marker_pub_ = node_ptr->create_publisher<visualization_msgs::msg::MarkerArray>("spectral_scores", 10);
+    
     // load variables
     loadSequenceFromJson();
     readBlackboard();
@@ -186,6 +189,9 @@ void DecisionCore::updateVisitedPoints() {
 BT::NodeStatus DecisionCore::tick() {
     readBlackboard();
     getInputPort();
+    updatePoseData(); // Ensure pose data is current before visualization
+    publishScoreMarkers();
+    
     DC_INFO(node_ptr, "Processing action: %s", actionTypeToString(decided_action_type).c_str());
     switch(decided_action_type) {
         case ActionType::TAKE:
@@ -571,4 +577,74 @@ Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side
     }
     
     return result;
+}
+
+void DecisionCore::publishScoreMarkers() {
+    if (!score_marker_pub_ || map_point_list.empty()) return;
+
+    visualization_msgs::msg::MarkerArray marker_array;
+    rclcpp::Time now = node_ptr->now();
+
+    auto add_score_marker = [&](GoalPose pose, int score, int id) {
+        geometry_msgs::msg::Point pt = getPointPosition(pose);
+        
+        // Use cylindrical marker to indicate score via height and color
+        visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = "map"; // Assuming map frame
+        marker.header.stamp = now;
+        marker.ns = "decision_scores";
+        marker.id = id;
+        marker.type = visualization_msgs::msg::Marker::CYLINDER;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        
+        marker.pose.position.x = pt.x;
+        marker.pose.position.y = pt.y;
+        
+        // Scale height somewhat proportionally to score (max score around ~100)
+        double height = std::max(0.01, std::min(1.0, (score + 200.0) / 300.0)); // Rough normalization
+        marker.pose.position.z = height / 2.0;
+
+        marker.scale.x = 0.1;
+        marker.scale.y = 0.1;
+        marker.scale.z = height;
+
+        // Color mapping based on score
+        if (score < -500) {
+            marker.color.r = 1.0; marker.color.g = 0.0; marker.color.b = 0.0; // Red (Unavailable)
+            marker.color.a = 0.5;
+        } else if (score < 50) {
+            marker.color.r = 1.0; marker.color.g = 1.0; marker.color.b = 0.0; // Yellow (Low score)
+            marker.color.a = 0.8;
+        } else {
+            marker.color.r = 0.0; marker.color.g = 1.0; marker.color.b = 0.0; // Green (High score)
+            marker.color.a = 1.0;
+        }
+        
+        // Text marker for exact score
+        visualization_msgs::msg::Marker text_marker = marker;
+        text_marker.id = id + 100; // Offset ID for text
+        text_marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+        text_marker.pose.position.z = height + 0.1; // Float above cylinder
+        text_marker.scale.z = 0.1; // Text size
+        text_marker.text = std::to_string(score);
+        text_marker.color.r = 1.0; text_marker.color.g = 1.0; text_marker.color.b = 1.0; // White text
+        text_marker.color.a = 1.0;
+
+        marker_array.markers.push_back(marker);
+        marker_array.markers.push_back(text_marker);
+    };
+
+    // Pantry score markers
+    for (int i = 0; i < PANTRY_LENGTH; ++i) {
+        int score = calculatePantryScore(i);
+        add_score_marker(static_cast<GoalPose>(i), score, i);
+    }
+
+    // Collection score markers
+    for (int i = 0; i < COLLECTION_LENGTH; ++i) {
+        int score = calculateCollectionScore(i);
+        add_score_marker(static_cast<GoalPose>(PANTRY_LENGTH + i), score, PANTRY_LENGTH + i);
+    }
+
+    score_marker_pub_->publish(marker_array);
 }

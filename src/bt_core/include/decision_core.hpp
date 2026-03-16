@@ -9,6 +9,7 @@
 #include <vector>
 #include <cmath>
 #include <queue>
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "bt_config.hpp"
 
 using namespace BT;
@@ -72,6 +73,7 @@ private:
     void getInputPort();
     void sortPantryPriority();
     void sortCollectionPriority();
+    void publishScoreMarkers();
     pair<GoalPose, RobotSide> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
     RobotSide getTargetSideIndex(ActionType action_type);
     Direction decideDirection(GoalPose goal_pose, RobotSide robot_side);
@@ -112,6 +114,7 @@ private:
     // system variable
     shared_ptr<rclcpp::Node> node_ptr;
     BT::Blackboard::Ptr blackboard_ptr;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr score_marker_pub_;
     
     // Sequence priority (from mission_sequence.json)
     vector<int> pantry_sequence;      // Priority order for PUT action
