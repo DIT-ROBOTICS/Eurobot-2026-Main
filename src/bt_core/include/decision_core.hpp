@@ -29,6 +29,14 @@ struct PointScore {
         return score < other.score;
     }
 };
+
+struct SpectrumParams {
+    double aggressiveness; // P: -1.0 ~ 1.0
+    double sensitivity;    // k
+    double rival_sigma;    // Rival repulsion range
+    double rival_distance_threshold; // Hard cutoff distance (meters)
+};
+
 /**
  * @brief DecisionCore - A BT SyncActionNode that decides the next target
  * 
@@ -71,6 +79,8 @@ private:
     void writeOutputPort();
     
     // Reward calculation helpers
+    void loadSpectrumParams();
+    double calculateSpectralScore(GoalPose pose, SpectrumParams params);
     int calculatePantryScore(int pantry_idx);
     int calculateCollectionScore(int collection_idx);
     
@@ -78,10 +88,6 @@ private:
     double calculateDistance(GoalPose pose);
     double calculateRivalDistance(GoalPose pose);
     geometry_msgs::msg::Point getPointPosition(GoalPose pose);
-    bool isOwnSidePantry(GoalPose pose);
-    bool isOwnSideCollection(GoalPose pose);
-    bool isMiddlePantry(GoalPose pose);
-    bool isMiddleCollection(GoalPose pose);
     void updatePoseData();
     void updateVisitedPoints();
     void printFieldInfo();
@@ -98,14 +104,9 @@ private:
     vector<MapPoint> map_point_list;
     Team current_team;
     
-    // Reward constants
-    static constexpr int SCORE_BASE_AVAILABLE = 100;
-    static constexpr int SCORE_MIDDLE_BONUS = 80;       // E,F for pantry; middle collection
-    static constexpr int SCORE_OWN_SIDE_BONUS = 40;
-    static constexpr int SCORE_OPPONENT_SIDE_PENALTY = -20;
-    static constexpr int SCORE_DISTANCE_FACTOR = 10;    // Points per meter closer
-    static constexpr double RIVAL_PROXIMITY_THRESHOLD = 0.3; // meters
-    static constexpr int SCORE_RIVAL_NEARBY_PENALTY = -200;
+    // Spectrum Parameters
+    SpectrumParams pantry_params;
+    SpectrumParams collection_params;
 
 
     // system variable

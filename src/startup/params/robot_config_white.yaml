@@ -25,6 +25,17 @@
     cam_dock_type_x: "mission_dock_cam_x"         # Dock type for CAM_DOCK_X (case 3)
     flip_distance_threshold: 0.25                 # Distance to target to trigger flip
     
+    # Spectrum Scoring Configuration
+    pantry_aggressiveness: 0.0
+    pantry_sensitivity: 2.0
+    pantry_rival_sigma: 0.3
+    pantry_rival_distance_threshold: 0.25
+    
+    collection_aggressiveness: 0.5
+    collection_sensitivity: 2.0
+    collection_rival_sigma: 0.3
+    collection_rival_distance_threshold: 0.25
+    
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]
     

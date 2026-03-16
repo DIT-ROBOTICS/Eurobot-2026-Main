@@ -31,6 +31,40 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     // load variables
     loadSequenceFromJson();
     readBlackboard();
+    loadSpectrumParams();
+}
+
+void DecisionCore::loadSpectrumParams() {
+    // defaults
+    pantry_params.aggressiveness = 0.0;
+    pantry_params.sensitivity = 2.0;
+    pantry_params.rival_sigma = 0.3;
+    pantry_params.rival_distance_threshold = 0.25;
+
+    collection_params.aggressiveness = 0.0;
+    collection_params.sensitivity = 2.0;
+    collection_params.rival_sigma = 0.3;
+    collection_params.rival_distance_threshold = 0.25;
+
+    if (!node_ptr->has_parameter("pantry_aggressiveness")) node_ptr->declare_parameter("pantry_aggressiveness", 0.0);
+    if (!node_ptr->has_parameter("pantry_sensitivity")) node_ptr->declare_parameter("pantry_sensitivity", 2.0);
+    if (!node_ptr->has_parameter("pantry_rival_sigma")) node_ptr->declare_parameter("pantry_rival_sigma", 0.3);
+    if (!node_ptr->has_parameter("pantry_rival_distance_threshold")) node_ptr->declare_parameter("pantry_rival_distance_threshold", 0.25);
+
+    if (!node_ptr->has_parameter("collection_aggressiveness")) node_ptr->declare_parameter("collection_aggressiveness", 0.0);
+    if (!node_ptr->has_parameter("collection_sensitivity")) node_ptr->declare_parameter("collection_sensitivity", 2.0);
+    if (!node_ptr->has_parameter("collection_rival_sigma")) node_ptr->declare_parameter("collection_rival_sigma", 0.3);
+    if (!node_ptr->has_parameter("collection_rival_distance_threshold")) node_ptr->declare_parameter("collection_rival_distance_threshold", 0.25);
+
+    node_ptr->get_parameter("pantry_aggressiveness", pantry_params.aggressiveness);
+    node_ptr->get_parameter("pantry_sensitivity", pantry_params.sensitivity);
+    node_ptr->get_parameter("pantry_rival_sigma", pantry_params.rival_sigma);
+    node_ptr->get_parameter("pantry_rival_distance_threshold", pantry_params.rival_distance_threshold);
+
+    node_ptr->get_parameter("collection_aggressiveness", collection_params.aggressiveness);
+    node_ptr->get_parameter("collection_sensitivity", collection_params.sensitivity);
+    node_ptr->get_parameter("collection_rival_sigma", collection_params.rival_sigma);
+    node_ptr->get_parameter("collection_rival_distance_threshold", collection_params.rival_distance_threshold);
 }
 
 void DecisionCore::loadSequenceFromJson() {
@@ -403,133 +437,57 @@ double DecisionCore::calculateRivalDistance(GoalPose pose) {
     return sqrt(dx * dx + dy * dy);
 }
 
-// ============ Team-Side Classification ============
-// Pantry layout:
-//   YELLOW side: A, B, C, D (idx 0-3)
-//   Middle (contested): E, F (idx 4-5)
-//   BLUE side: G, H, I, J (idx 6-9)
-bool DecisionCore::isOwnSidePantry(GoalPose pose) {
-    if (current_team == Team::YELLOW) {
-        return pose == GoalPose::A || pose == GoalPose::B || 
-               pose == GoalPose::C || pose == GoalPose::D;
-    } else { // BLUE
-        return pose == GoalPose::G || pose == GoalPose::H || 
-               pose == GoalPose::I || pose == GoalPose::J;
-    }
+double DecisionCore::calculateSpectralScore(GoalPose pose, SpectrumParams params) {
+    geometry_msgs::msg::Point pt = getPointPosition(pose);
+    
+    // 1. 座標歸一化 (自動切換黃藍方)
+    double x_rel = (current_team == Team::YELLOW) ? (pt.x / 3.0) : ((3.0 - pt.x) / 3.0);
+    
+    // 2. 計算位置光譜分 (Exponential Spectrum)
+    double pos_score = std::exp(params.aggressiveness * params.sensitivity * x_rel);
+    
+    // 3. 計算距離代價 (越高越近越好)
+    double d_robot = calculateDistance(pose);
+    double dist_factor = std::max(0.0, 1.0 - (d_robot / 3.5));
+    
+    // 4. 計算敵人斥力場
+    double d_rival = calculateRivalDistance(pose);
+    double rival_factor = 1.0 - std::exp(-std::pow(d_rival / params.rival_sigma, 2));
+    
+    // 如果敵人已經非常靠近，直接視為不可用
+    if (d_rival < params.rival_distance_threshold) return -1000.0; 
+
+    // 綜合評分 (乘法能確保任一項為0則總分為0)
+    // Scale up the score so it acts nicely when casted to int in the priority queue
+    return pos_score * dist_factor * rival_factor * 100.0;
 }
 
-bool DecisionCore::isMiddlePantry(GoalPose pose) {
-    return pose == GoalPose::E || pose == GoalPose::F;
-}
-
-// Collection layout:
-//   YELLOW side: L, K, N, M (idx 1, 0, 3, 2 in collection array)
-//   BLUE side: P, O, K, Q (idx 5, 4, 0, 6 in collection array)
-//   Note: K is shared/middle
-bool DecisionCore::isOwnSideCollection(GoalPose pose) {
-    if (current_team == Team::YELLOW) {
-        return pose == GoalPose::L || pose == GoalPose::M || pose == GoalPose::N;
-    } else { // BLUE
-        return pose == GoalPose::O || pose == GoalPose::P || pose == GoalPose::Q;
-    }
-}
-
-bool DecisionCore::isMiddleCollection(GoalPose pose) {
-    // K is in the middle, contested by both teams
-    return pose == GoalPose::K;
-}
-
-// ============ Advanced Reward System ============
-// Pantry reward rules (for PUT):
-//   +100 if EMPTY (available)
-//   +80 for middle spots (E, F) - contested, get there first
-//   +40 for own side spots
-//   -20 for opponent side spots
-//   +10 per meter closer (distance bonus)
-//   -200 if rival is within 0.3m (give up)
 int DecisionCore::calculatePantryScore(int pantry_idx) {
-    int score = 0;
     GoalPose pose = static_cast<GoalPose>(pantry_idx);
     
     // Base: availability check
-    if (pantry_info[pantry_idx] == FieldStatus::EMPTY) {
-        score += SCORE_BASE_AVAILABLE;
-    } else if (pantry_info[pantry_idx] == FieldStatus::OCCUPIED) {
+    if (pantry_info[pantry_idx] == FieldStatus::OCCUPIED) {
         return -1000; // Cannot put if occupied, skip entirely
     }
     
-    // Middle bonus: E, F are contested, prioritize
-    if (isMiddlePantry(pose)) {
-        score += SCORE_MIDDLE_BONUS;
+    if (pantry_info[pantry_idx] == FieldStatus::UNKNOWN) {
+        // Handle UNKNOWN if necessary (for now treat as EMPTY but maybe lower score)
     }
-    // Own side bonus
-    else if (isOwnSidePantry(pose)) {
-        score += SCORE_OWN_SIDE_BONUS;
-    }
-    // Opponent side penalty
-    else {
-        score += SCORE_OPPONENT_SIDE_PENALTY;
-    }
-    
-    // Distance bonus: closer = better
-    double distance = calculateDistance(pose);
-    score += static_cast<int>((3.0 - distance) * SCORE_DISTANCE_FACTOR); // Assume max field ~3m
-    
-    // Rival proximity penalty
-    double rival_dist = calculateRivalDistance(pose);
-    if (rival_dist < RIVAL_PROXIMITY_THRESHOLD) {
-        score += SCORE_RIVAL_NEARBY_PENALTY;
-        RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %s: rival too close (%.2fm), penalizing", 
-                     goalPoseToString(pose).c_str(), rival_dist);
-    }
-    
-    return score;
+
+    double score = calculateSpectralScore(pose, pantry_params);
+    return static_cast<int>(score);
 }
 
-// Collection reward rules (for TAKE):
-//   +100 if OCCUPIED (has hazelnuts)
-//   +80 for middle/contested spots (K, and team-specific contested)
-//   +40 for own side spots
-//   -20 for opponent side spots
-//   +10 per meter closer
-//   -200 if rival is within 0.3m
 int DecisionCore::calculateCollectionScore(int collection_idx) {
-    int score = 0;
     GoalPose pose = static_cast<GoalPose>(PANTRY_LENGTH + collection_idx);
     
     // Base: availability check
-    if (collection_info[collection_idx] == FieldStatus::OCCUPIED) {
-        score += SCORE_BASE_AVAILABLE;
-    } else if (collection_info[collection_idx] == FieldStatus::EMPTY) {
+    if (collection_info[collection_idx] == FieldStatus::EMPTY) {
         return -1000; // Nothing to collect, skip entirely
     }
     
-    // Middle bonus: K is contested by both
-    if (isMiddleCollection(pose)) {
-        score += SCORE_MIDDLE_BONUS;
-    }
-    // Own side bonus
-    else if (isOwnSideCollection(pose)) {
-        score += SCORE_OWN_SIDE_BONUS;
-    }
-    // Opponent side penalty
-    else {
-        score += SCORE_OPPONENT_SIDE_PENALTY;
-    }
-    
-    // Distance bonus: closer = better
-    double distance = calculateDistance(pose);
-    score += static_cast<int>((3.0 - distance) * SCORE_DISTANCE_FACTOR);
-    
-    // Rival proximity penalty
-    double rival_dist = calculateRivalDistance(pose);
-    if (rival_dist < RIVAL_PROXIMITY_THRESHOLD) {
-        score += SCORE_RIVAL_NEARBY_PENALTY;
-        RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %s: rival too close (%.2fm), penalizing", 
-                     goalPoseToString(pose).c_str(), rival_dist);
-    }
-    
-    return score;
+    double score = calculateSpectralScore(pose, collection_params);
+    return static_cast<int>(score);
 }
 
 void DecisionCore::sortPantryPriority() {

@@ -120,6 +120,16 @@ ros2 run <package_name> <node_name>
 - **main-develop** - Interactive dev container (host network)
 - **main-vnc** - VNC with XFCE desktop (bridge network, port 5902)
 
+## Spectral Decision Scoring Configuration
+
+The configuration for autonomous target decision logic uses an adjustable spectrum format defined under `src/startup/params/robot_config_*.yaml`. Parameters affect scoring logic across the field:
+- `aggressiveness`: Ranges from -1.0 (conservative, focus on own side) to 1.0 (highly aggressive, push into opponent territory).
+- `sensitivity`: Exponent multiplier (e.g. 2.0) that determines the impact of the distance relative to aggressiveness.
+- `rival_sigma`: Distance scale for opponent repulsion field (impact slope).
+- `rival_distance_threshold`: Hard cutoff distance (e.g. 0.25 m). Below this value, the goal is immediately discarded.
+
+These values can be configured per robot independently for `pantry` and `collection` components.
+
 ## Environment Variables
 
 Auto-set by `main` script or add to `~/.bashrc`:
