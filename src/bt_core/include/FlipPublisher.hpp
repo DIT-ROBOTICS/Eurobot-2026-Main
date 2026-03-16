@@ -57,13 +57,8 @@ private:
     int timeout_ms_;
     int target_pose_idx_;
     double flip_distance_threshold_;
-    std::vector<double> map_points_;
+    std::vector<MapPoint> map_point_list_;
     bool flip_published_;
-
-    // Constants for map_points array mapping
-    static constexpr int VALUES_PER_POINT = 5;
-    static constexpr int IDX_X = 0;
-    static constexpr int IDX_Y = 1;
 };
 
 #endif // FLIP_PUBLISHER_HPP

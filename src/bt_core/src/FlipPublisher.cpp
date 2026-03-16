@@ -25,16 +25,7 @@ FlipPublisher::FlipPublisher(const std::string& name, const BT::NodeConfig& conf
     }
     flip_distance_threshold_ = node_->get_parameter("flip_distance_threshold").as_double();
     
-    // Load map_points parameter
-    if (!node_->has_parameter("map_points")) {
-        node_->declare_parameter("map_points", std::vector<double>{});
-    }
-    if (node_->get_parameter("map_points", map_points_)) {
-        FP_INFO(node_, "Loaded %zu map point values", map_points_.size());
-    } else {
-        FP_WARN(node_, "Failed to load map_points! Using empty vector.");
-    }
-    
+
     // Initialize hazelnut status
     hazelnut_status_ = std::vector<std::vector<FlipStatus>>(
         ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
@@ -88,10 +79,9 @@ BT::NodeStatus FlipPublisher::onRunning() {
         FP_WARN(node_, "Failed to get robot_pose from blackboard, will rely on timeout.");
     } else {
         // Calculate data index into map_points
-        int data_idx = target_pose_idx_ * VALUES_PER_POINT;
-        if (data_idx + VALUES_PER_POINT <= static_cast<int>(map_points_.size())) {
-            double target_x = map_points_[data_idx + IDX_X];
-            double target_y = map_points_[data_idx + IDX_Y];
+        if (target_pose_idx_ < static_cast<int>(map_point_list_.size())) {
+            double target_x = map_point_list_[target_pose_idx_].x;
+            double target_y = map_point_list_[target_pose_idx_].y;
             
             // Note: Since OnDockAction adjusts positioning somewhat for staging, 
             // Euclidean distance to final target pose is compared to threshold.
@@ -113,8 +103,8 @@ BT::NodeStatus FlipPublisher::onRunning() {
             }
         } else {
             // Should only log once if needed, but for now rely on timeout
-            FP_WARN(node_, "Invalid map_points index %d or array length %zu (need %d)", 
-                    target_pose_idx_, map_points_.size(), data_idx + VALUES_PER_POINT);
+            FP_WARN(node_, "Invalid map_points index %d or array length %zu", 
+                    target_pose_idx_, map_point_list_.size());
         }
     }
     
@@ -142,6 +132,9 @@ void FlipPublisher::onHalted() {
 void FlipPublisher::readBlackboard() {
     if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_)) {
         FP_WARN(node_, "hazelnut_status not in blackboard, using defaults");
+    }
+    if (!blackboard_->get<std::vector<MapPoint>>("MapPointList", map_point_list_)) {
+        FP_WARN(node_, "MapPointList not in blackboard");
     }
     
     // Print hazelnut status for debugging

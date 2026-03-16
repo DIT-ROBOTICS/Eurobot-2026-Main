@@ -33,6 +33,7 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     canStart = false;  // Will be set to true when start signal is received
     group = 1;  // Main BT group
     file_logged = false;
+    map_point_list = std::vector<MapPoint>();
 }
 
 void BTengine::init() {
@@ -281,6 +282,33 @@ void BTengine::setBlackboard() {
     blackboard->set<std::string>("robot", robotToString(robot));
     blackboard->set<int>("selected_plan", selected_plan);
     blackboard->set<double>("game_time", game_time);
+    
+    // Read map_points parameter and populate map_point_list
+    std::vector<double> map_points_raw;
+    if (!this->has_parameter("map_points")) {
+        this->declare_parameter("map_points", std::vector<double>());
+    }
+    
+    if (this->get_parameter("map_points", map_points_raw)) {
+        constexpr int VALUES_PER_POINT = 8;
+            for (size_t i = 0; i + VALUES_PER_POINT <= map_points_raw.size(); i += VALUES_PER_POINT) {
+                MapPoint pt;
+                pt.x = map_points_raw[i];
+                pt.y = map_points_raw[i + 1];
+                pt.z_north = map_points_raw[i + 2];
+                pt.z_east = map_points_raw[i + 3];
+                pt.z_south = map_points_raw[i + 4];
+                pt.z_west = map_points_raw[i + 5];
+                pt.sign = map_points_raw[i + 6];
+                pt.dock_type = static_cast<DockType>(static_cast<int>(map_points_raw[i + 7]));
+                map_point_list.push_back(pt);
+            }
+            RCLCPP_INFO(this->get_logger(), "[BTengine]: Loaded %zu MapPoints from parameters", map_point_list.size());
+            blackboard->set<std::vector<MapPoint>>("MapPointList", map_point_list);
+    } else {
+        RCLCPP_ERROR(this->get_logger(), "[BTengine]: Failed to get map_points parameter");
+    }
+
     // json_point is loaded separately via loadSequenceFromJson in DecisionCore
     
     RCLCPP_INFO(this->get_logger(), "[BTengine]: Blackboard initialized");

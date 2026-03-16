@@ -33,7 +33,6 @@ public:
 
 private:
     // Helper methods
-    void loadMapPoints();
     geometry_msgs::msg::PoseStamped calculateDockPose(int pose_idx, RobotSide robot_side, DockType chosen_dock_type);
     double getSideYaw(RobotSide side, double base_direction);
     
@@ -49,18 +48,8 @@ private:
     // Publisher to notify camera team which side is docking
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr dock_side_pub;
     
-    // Map points data (8 values per point)
-    std::vector<double> map_points;
-    static constexpr int VALUES_PER_POINT = 8;
-    // Indices: x, y, z_north, z_east, z_south, z_west, sign, dock_type
-    static constexpr int IDX_X = 0;
-    static constexpr int IDX_Y = 1;
-    static constexpr int IDX_Z_NORTH = 2;
-    static constexpr int IDX_Z_EAST = 3;
-    static constexpr int IDX_Z_SOUTH = 4;
-    static constexpr int IDX_Z_WEST = 5;
-    static constexpr int IDX_SIGN = 6;
-    static constexpr int IDX_DOCK_TYPE = 7;
+    // Map points data
+    std::vector<MapPoint> map_point_list;
     
     // Dock state
     bool dock_finished;

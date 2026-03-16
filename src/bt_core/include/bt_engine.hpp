@@ -144,5 +144,8 @@ private:
 
     // ros variables
     std::shared_ptr<rclcpp::Node> node;
+    
+    // map points
+    std::vector<MapPoint> map_point_list;
 };
 

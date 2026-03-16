@@ -8,10 +8,21 @@
 #include <algorithm>
 
 enum class DockType {
-    MISSION_DOCK_Y,
-    MISSION_DOCK_X,
-    CAM_DOCK_Y,
-    CAM_DOCK_X
+    MISSION_DOCK_Y = 0,
+    MISSION_DOCK_X = 1,
+    CAM_DOCK_Y = 2,
+    CAM_DOCK_X = 3
+};
+
+struct MapPoint {
+    double x;
+    double y;
+    double z_north;
+    double z_east;
+    double z_south;
+    double z_west;
+    double sign;
+    DockType dock_type;
 };
 
 enum class StartUpState {

@@ -20,7 +20,7 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     pantry_priority = std::priority_queue<PointScore>();
     collection_priority = std::priority_queue<PointScore>();
     robot_pose = geometry_msgs::msg::PoseStamped();
-    map_points = std::vector<double>();
+    map_point_list = std::vector<MapPoint>();
     
     // Sequence priority initialization
     pantry_sequence = std::vector<int>();
@@ -28,20 +28,9 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     use_pantry_sequence = false;
     use_collection_sequence = false;
     
-    // map point
-    loadMapPoints();
+    // load variables
     loadSequenceFromJson();
     readBlackboard();
-}
-
-void DecisionCore::loadMapPoints() {
-    if(!node_ptr->has_parameter("map_points")) node_ptr->declare_parameter("map_points", std::vector<double>());
-    if(node_ptr->get_parameter("map_points", map_points)) {
-        RCLCPP_INFO(node_ptr->get_logger(), "map_points loaded");
-    } else {
-        RCLCPP_ERROR(node_ptr->get_logger(), "map_points not found");
-        throw std::runtime_error("map_points not found");
-    }
 }
 
 void DecisionCore::loadSequenceFromJson() {
@@ -86,6 +75,10 @@ void DecisionCore::readBlackboard() {
     
     if (!blackboard_ptr->get<vector<vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
         RCLCPP_WARN(node_ptr->get_logger(), "hazelnut_status not found in blackboard");
+    }
+
+    if (!blackboard_ptr->get<vector<MapPoint>>("MapPointList", map_point_list)) {
+        RCLCPP_ERROR(node_ptr->get_logger(), "MapPointList not found in blackboard");
     }
 }
 
@@ -388,13 +381,9 @@ geometry_msgs::msg::Point DecisionCore::getPointPosition(GoalPose pose) {
     geometry_msgs::msg::Point point;
     int idx = static_cast<int>(pose);
     
-    // 8 values per point: x, y, z_north, z_east, z_south, z_west, sign, dock_type
-    constexpr int VALUES_PER_POINT = 8;
-    int data_idx = idx * VALUES_PER_POINT;
-    
-    if (data_idx + 1 < static_cast<int>(map_points.size())) {
-        point.x = map_points[data_idx];
-        point.y = map_points[data_idx + 1];
+    if (idx < static_cast<int>(map_point_list.size())) {
+        point.x = map_point_list[idx].x;
+        point.y = map_point_list[idx].y;
         point.z = 0.0;
     }
     return point;
@@ -595,19 +584,15 @@ void DecisionCore::doDock() {
 
 Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
     (void)robot_side; // Suppress unused parameter warning
-    // Direction determined from map_points sign parameter
-    // 8 values per point: x, y, z_north, z_east, z_south, z_west, sign, dock_type
     int idx = static_cast<int>(goal_pose);
-    constexpr int VALUES_PER_POINT = 8;
-    int data_idx = idx * VALUES_PER_POINT;
     
-    if (data_idx + VALUES_PER_POINT > static_cast<int>(map_points.size())) {
+    if (idx >= static_cast<int>(map_point_list.size())) {
         DC_ERROR(node_ptr, "Invalid goal_pose index %d for decideDirection", idx);
         return Direction::EAST;
     }
     
-    double sign = map_points[data_idx + 6];
-    int dock_type = static_cast<int>(map_points[data_idx + 7]);
+    double sign = map_point_list[idx].sign;
+    int dock_type = static_cast<int>(map_point_list[idx].dock_type);
     
     // sign indicates which direction the target is (where selected side should face):
     //   dock_x, sign=1.0  -> target at WEST

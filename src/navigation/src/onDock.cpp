@@ -24,10 +24,7 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     
     // Create publisher to notify camera team which side is docking
     dock_side_pub = node->create_publisher<std_msgs::msg::Int16>("/robot/dock_side", 10);
-    
-    // Load map points from parameter
-    loadMapPoints();
-    
+        
     // Load dock type parameters
     if (!node->has_parameter("normal_dock_type_y")) {
         node->declare_parameter("normal_dock_type_y", std::string("mission_dock_y_gentle"));
@@ -46,24 +43,12 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     cam_dock_type_y_param = node->get_parameter("cam_dock_type_y").as_string();
     cam_dock_type_x_param = node->get_parameter("cam_dock_type_x").as_string();
     
-    RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized with %zu map points, dock types: ny=%s, nx=%s, cy=%s, cx=%s", 
-                map_points.size() / VALUES_PER_POINT,
+    RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized dock types: ny=%s, nx=%s, cy=%s, cx=%s", 
                 normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
                 cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
 }
 
-void OnDockAction::loadMapPoints() {
-    if (!node->has_parameter("map_points")) {
-        node->declare_parameter("map_points", std::vector<double>{});
-    }
-    
-    if (node->get_parameter("map_points", map_points)) {
-        RCLCPP_DEBUG(node->get_logger(), "[OnDockAction] Loaded %zu map point values", 
-                     map_points.size());
-    } else {
-        RCLCPP_ERROR(node->get_logger(), "[OnDockAction] Failed to load map_points!");
-    }
-}
+
 
 BT::PortsList OnDockAction::providedPorts() {
     return {
@@ -176,31 +161,28 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     dock_pose.header.frame_id = "map";
     dock_pose.header.stamp = node->now();
     
-    // Calculate data index
-    int data_idx = pose_idx * VALUES_PER_POINT;
-    
-    if (data_idx + VALUES_PER_POINT > static_cast<int>(map_points.size())) {
+    if (pose_idx >= static_cast<int>(map_point_list.size())) {
         RCLCPP_ERROR(node->get_logger(), "[OnDockAction] Invalid pose index %d", pose_idx);
         return dock_pose;
     }
     
     // Get position and staging info from map_points
-    double x = map_points[data_idx + IDX_X];
-    double y = map_points[data_idx + IDX_Y];
+    double x = map_point_list[pose_idx].x;
+    double y = map_point_list[pose_idx].y;
     double stage_dist = 0.0;
     if ( target_direction == Direction::NORTH ) {
-        stage_dist = map_points[data_idx + IDX_Z_NORTH];
+        stage_dist = map_point_list[pose_idx].z_north;
     }
     else if ( target_direction == Direction::EAST ) {
-        stage_dist = map_points[data_idx + IDX_Z_EAST];
+        stage_dist = map_point_list[pose_idx].z_east;
     }
     else if ( target_direction == Direction::SOUTH ) {
-        stage_dist = map_points[data_idx + IDX_Z_SOUTH];
+        stage_dist = map_point_list[pose_idx].z_south;
     }
     else if ( target_direction == Direction::WEST ) {
-        stage_dist = map_points[data_idx + IDX_Z_WEST];
+        stage_dist = map_point_list[pose_idx].z_west;
     }
-    double sign = map_points[data_idx + IDX_SIGN];
+    double sign = map_point_list[pose_idx].sign;
     
     // Set position: x, y are final dock pose, z = stage_dist * sign for nav system
     if(chosen_dock_type == DockType::MISSION_DOCK_Y || chosen_dock_type == DockType::CAM_DOCK_Y) {
@@ -249,10 +231,14 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     target_side = side_idx_opt ? static_cast<RobotSide>(side_idx_opt.value()) : RobotSide::FRONT;
     target_direction = dir_opt ? static_cast<Direction>(dir_opt.value()) : Direction::NORTH;
     
+    if (!blackboard->get<std::vector<MapPoint>>("MapPointList", map_point_list)) {
+        RCLCPP_ERROR(node->get_logger(), "[OnDockAction] Failed to get MapPointList from blackboard");
+        return false;
+    }
+    
     // Get dock_type from map_points based on DockType value
-    int data_idx = target_pose_idx * VALUES_PER_POINT;
-    if (data_idx + VALUES_PER_POINT <= static_cast<int>(map_points.size())) {
-        int dock_type_val = static_cast<int>(map_points[data_idx + IDX_DOCK_TYPE]);
+    if (target_pose_idx < static_cast<int>(map_point_list.size())) {
+        int dock_type_val = static_cast<int>(map_point_list[target_pose_idx].dock_type);
         switch (dock_type_val) {
             case 0: // MISSION_DOCK_Y
                 dock_type = normal_dock_type_y_param;
@@ -281,8 +267,8 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     // Calculate dock pose from map_points
     DOCK_INFO(node, "Calculating dock pose for pose_idx=%s, side=%d, direction=%d, dock_type=%d",
               goalPoseToString(static_cast<GoalPose>(target_pose_idx)).c_str(), static_cast<int>(target_side), static_cast<int>(target_direction), 
-              static_cast<int>(map_points[data_idx + IDX_DOCK_TYPE]));
-    goal_pose = calculateDockPose(target_pose_idx, target_side, static_cast<DockType>(map_points[data_idx + IDX_DOCK_TYPE]));
+              static_cast<int>(map_point_list[target_pose_idx].dock_type));
+    goal_pose = calculateDockPose(target_pose_idx, target_side, static_cast<DockType>(map_point_list[target_pose_idx].dock_type));
     
     // Set up dock goal
     dock_goal.use_dock_id = false;

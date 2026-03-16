@@ -57,7 +57,6 @@ public:
 
 private:
     // init
-    void loadMapPoints();
     void readBlackboard();        // Read current state from blackboard
     void loadSequenceFromJson();
     void getFieldInfo();
@@ -96,7 +95,7 @@ private:
     priority_queue<PointScore> collection_priority;
     geometry_msgs::msg::PoseStamped robot_pose;
     geometry_msgs::msg::PoseStamped rival_pose;
-    vector<double> map_points;
+    vector<MapPoint> map_point_list;
     Team current_team;
     
     // Reward constants
