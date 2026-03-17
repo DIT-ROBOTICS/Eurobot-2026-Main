@@ -39,7 +39,7 @@ include_directories(
 add_library(navigation_nodes SHARED
     # src/dock_action_node.cpp
     # src/rotate_action_node.cpp
-    # src/stop_robot_node.cpp
+    src/stop_robot_node.cpp
     # src/nav_action_node.cpp
     src/onDock.cpp
 )

@@ -23,29 +23,30 @@ BT::NodeStatus FieldUpdater::tick() {
 }
 
 void FieldUpdater::readBlackboard() {
-    if (!blackboard_ptr->get<vector<FieldStatus>>("collection_info", collection_info)) {
-        RCLCPP_WARN(node_->get_logger(), "[FieldUpdater] collection_info not found in blackboard");
+    if (!blackboard_ptr->get<std_msgs::msg::Int32MultiArray>("collection_info_raw", collection_info_raw)) {
+        RCLCPP_WARN(node_->get_logger(), "[FieldUpdater] collection_info_raw not found in blackboard");
     }
-    if (!blackboard_ptr->get<vector<FieldStatus>>("pantry_info", pantry_info)) {
-        RCLCPP_WARN(node_->get_logger(), "[FieldUpdater] pantry_info not found in blackboard");
+    if (!blackboard_ptr->get<std_msgs::msg::Int32MultiArray>("pantry_info_raw", pantry_info_raw)) {
+        RCLCPP_WARN(node_->get_logger(), "[FieldUpdater] pantry_info_raw not found in blackboard");
     }
 }
 
 void FieldUpdater::updateFieldStatus() {
-    // TODO: implement field status update logic
     std::string keepout_zone_msg = "";
-    for(size_t i = 0; i < collection_info.size(); i++) {
-        if (collection_info[i] == FieldStatus::OCCUPIED) {
+    for(size_t i = 0; i < collection_info_raw.data.size(); i++) {
+        int val = collection_info_raw.data[i];
+        if (val != 0) { // -1 (blocked), 1, 2, 3 (occupied) -> add to keepout
             keepout_zone_msg += goalPoseToString(static_cast<GoalPose>(static_cast<int>(GoalPose::K) + i));
         }
     }
 
-    for(size_t i = 0; i < pantry_info.size(); i++) {
-        if (pantry_info[i] == FieldStatus::OCCUPIED) {
+    for(size_t i = 0; i < pantry_info_raw.data.size(); i++) {
+        int val = pantry_info_raw.data[i];
+        if (val != 0) { // -1 (blocked), 1, 2, 3 (occupied) -> add to keepout
             keepout_zone_msg += goalPoseToString(static_cast<GoalPose>(static_cast<int>(GoalPose::A) + i));
         }
     }
-    RCLCPP_INFO(node_->get_logger(), "[FieldUpdater] Keepout zone: %s", keepout_zone_msg.c_str());
+    RCLCPP_DEBUG(node_->get_logger(), "[FieldUpdater] Keepout zone: %s", keepout_zone_msg.c_str());
     
     auto msg = std_msgs::msg::String();
     msg.data = keepout_zone_msg;

@@ -17,8 +17,9 @@ using namespace BT;
  * 
  * Uses map_points to:
  *   1. Get target position (x, y)
- *   2. Get pre-configured offsets (back_offset, shift, front_offset, dock_dist)
- *   3. Calculate staging pose based on robot side
+ *   2. Get direction-specific staging distances (north, east, south, west)
+ *   3. Get sign and dock type for docking logic
+ *   4. Calculate staging pose based on robot side
  */
 class OnDockAction : public RosActionNode<opennav_docking_msgs::action::DockRobot> {
 public:
@@ -32,7 +33,6 @@ public:
 
 private:
     // Helper methods
-    void loadMapPoints();
     geometry_msgs::msg::PoseStamped calculateDockPose(int pose_idx, RobotSide robot_side, DockType chosen_dock_type);
     double getSideYaw(RobotSide side, double base_direction);
     
@@ -41,22 +41,15 @@ private:
     
     // Node references
     std::shared_ptr<rclcpp::Node> node;
-    BT::Blackboard::Ptr blackboard;
     tf2_ros::Buffer tf_buffer;
     tf2_ros::TransformListener listener;
+    BT::Blackboard::Ptr blackboard;
     
     // Publisher to notify camera team which side is docking
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr dock_side_pub;
     
-    // Map points data (5 values per point)
-    std::vector<double> map_points;
-    static constexpr int VALUES_PER_POINT = 5;
-    // Indices: x, y, stage_dist, sign, dock_type
-    static constexpr int IDX_X = 0;
-    static constexpr int IDX_Y = 1;
-    static constexpr int IDX_STAGE_DIST = 2;
-    static constexpr int IDX_SIGN = 3;
-    static constexpr int IDX_DOCK_TYPE = 4;
+    // Map points data
+    std::vector<MapPoint> map_point_list;
     
     // Dock state
     bool dock_finished;

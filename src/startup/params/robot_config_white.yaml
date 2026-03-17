@@ -7,6 +7,8 @@
     game_time: 100          # Total game time in seconds
     sima_tick_threshold: 85 # Seconds before sima starts
     group_num: 5            # Total number of groups (including index 0)
+    stop_time: 98           # Hard stop time limit in seconds
+    go_home_time: 90        # Time in seconds to trigger go home logic
     
     # Plan Configuration
     default_plan: 10        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
@@ -19,10 +21,22 @@
     bt_tree_node_model: "bt/tree_node_model.xml"   # Relative path from pkg_share_dir
     
     # Dock Type Configuration
-    normal_dock_type_y: "mission_dock_y_gentle"  # Dock type for MISSION_DOCK_Y (case 0)
-    normal_dock_type_x: "mission_dock_x_gentle"  # Dock type for MISSION_DOCK_X (case 1)
+    normal_dock_type_y: "mission_dock_y_rush"  # Dock type for MISSION_DOCK_Y (case 0)
+    normal_dock_type_x: "mission_dock_x_rush"  # Dock type for MISSION_DOCK_X (case 1)
     cam_dock_type_y: "mission_dock_cam_y"         # Dock type for CAM_DOCK_Y (case 2)
     cam_dock_type_x: "mission_dock_cam_x"         # Dock type for CAM_DOCK_X (case 3)
+    flip_distance_threshold: 0.25                 # Distance to target to trigger flip
+    
+    # Spectrum Scoring Configuration
+    pantry_aggressiveness: 0.0
+    pantry_sensitivity: 2.0
+    pantry_rival_sigma: 0.3
+    pantry_rival_distance_threshold: 0.25
+    
+    collection_aggressiveness: 0.5
+    collection_sensitivity: 2.0
+    collection_rival_sigma: 0.3
+    collection_rival_distance_threshold: 0.25
     
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]

@@ -6,6 +6,7 @@
 #include "behaviortree_cpp/bt_factory.h"
 #include "rclcpp/rclcpp.hpp"
 #include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/int32_multi_array.hpp>
 
 using namespace BT;
 using namespace std;
@@ -25,8 +26,8 @@ private:
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr keepout_zone_pub;
     std::shared_ptr<rclcpp::Node> node_;
     BT::Blackboard::Ptr blackboard_ptr;
-    vector<FieldStatus> collection_info;
-    vector<FieldStatus> pantry_info;
+    std_msgs::msg::Int32MultiArray collection_info_raw;
+    std_msgs::msg::Int32MultiArray pantry_info_raw;
 };
 
 #endif // FIELD_UPDATER_HPP
