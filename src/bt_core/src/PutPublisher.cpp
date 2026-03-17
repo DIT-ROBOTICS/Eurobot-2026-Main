@@ -68,8 +68,9 @@ BT::NodeStatus PutPublisher::onRunning() {
         if (pantry_idx >= 0 && pantry_idx < static_cast<int>(pantry_info_.size())) {
             pantry_info_[pantry_idx] = FieldStatus::OCCUPIED;
         }
-
-        blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
+        
+        // Only write back robot_side_status and pantry_info for PUT
+        // blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
         blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_info_);
 
         return BT::NodeStatus::SUCCESS;
@@ -91,7 +92,8 @@ BT::NodeStatus PutPublisher::onRunning() {
             pantry_info_[pantry_idx] = FieldStatus::OCCUPIED;
         }
 
-        blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
+        // Only write back robot_side_status and pantry_info for PUT
+        // blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
         blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_info_);
         return BT::NodeStatus::SUCCESS;
     }

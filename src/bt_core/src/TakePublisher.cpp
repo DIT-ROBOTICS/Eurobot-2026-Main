@@ -70,7 +70,8 @@ BT::NodeStatus TakePublisher::onRunning() {
             collection_info_[collection_idx] = FieldStatus::EMPTY;
         }
 
-        blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
+        // Only write back robot_side_status and collection_info for TAKE
+        // blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info_);
 
         return BT::NodeStatus::SUCCESS;
@@ -92,7 +93,8 @@ BT::NodeStatus TakePublisher::onRunning() {
             collection_info_[collection_idx] = FieldStatus::EMPTY;
         }
 
-        blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
+        // Only write back robot_side_status and collection_info for TAKE
+        // blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status_);
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info_);
         return BT::NodeStatus::SUCCESS;
     }
