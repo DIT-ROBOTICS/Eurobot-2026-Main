@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- ============================================= -->
-<!-- two robot battle: Black -->
+<!-- test for TAKE/PUT publisher -->
 <!-- ============================================= -->
 <root BTCPP_format="4">
     
@@ -22,7 +22,8 @@
             <TakePublisher
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"
-                timeout_ms="3000"/>
+                timeout_ms="10000"/>   <!-- test for callback -->
+            <FieldUpdater/>
             <!-- <Sleep msec="2000"/> -->
         </Sequence>
     </BehaviorTree>
@@ -62,8 +63,9 @@
             <PutPublisher
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"
-                timeout_ms="1500"/>
-            <Sleep msec="1500"/>
+                timeout_ms="10000"/>   <!-- test for callback -->
+            <FieldUpdater/>
+            <Sleep msec="500"/>
         </Sequence>
     </BehaviorTree>
     
@@ -80,6 +82,34 @@
             <FieldUpdater/>         
             <Repeat num_cycles="1">
                 <Sequence>
+
+                    <DecisionCore 
+                        ActionType="take"
+                        RobotSideIdx="2"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
+
+                    <DecisionCore 
+                        ActionType="put"
+                        RobotSideIdx="2"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
+
+                    <DecisionCore 
+                        ActionType="take"
+                        RobotSideIdx="2"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
+                    
                     <DecisionCore 
                         ActionType="take"
                         RobotSideIdx="3"
@@ -98,26 +128,16 @@
                     <SubTree ID="TakeSubTree" _autoremap="true"/>
 
                     <DecisionCore 
-                        ActionType="take"
-                        RobotSideIdx="2"
+                        ActionType="put"
+                        RobotSideIdx="1"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
-                    <SubTree ID="TakeSubTree" _autoremap="true"/>
-
-                    <DecisionCore 
-                        ActionType="take"
-                        RobotSideIdx="0"
-                        nextActionType="{next_action}"
-                        targetPoseIdx="{target_idx}"
-                        targetPoseSideIdx="{target_side}"
-                        targetDirection="{target_dir}"/>
-                    <SubTree ID="TakeSubTree" _autoremap="true"/>
-
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="0"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -125,13 +145,21 @@
                     <SubTree ID="PutSubTree" _autoremap="true"/>
 
                     <DecisionCore 
-                        ActionType="put"
-                        RobotSideIdx="2"
+                        ActionType="take"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
-                    <SubTree ID="PutSubTree" _autoremap="true"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
+                    <DecisionCore 
+                        ActionType="take"
+                        RobotSideIdx="1"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
 
                     <DecisionCore 
                         ActionType="put"
@@ -144,6 +172,15 @@
                     <DecisionCore 
                         ActionType="put"
                         RobotSideIdx="3"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
+
+                    <DecisionCore 
+                        ActionType="put"
+                        RobotSideIdx="2"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
