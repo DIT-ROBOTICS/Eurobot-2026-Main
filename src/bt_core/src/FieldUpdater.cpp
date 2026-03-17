@@ -46,7 +46,7 @@ void FieldUpdater::updateFieldStatus() {
             keepout_zone_msg += goalPoseToString(static_cast<GoalPose>(static_cast<int>(GoalPose::A) + i));
         }
     }
-    RCLCPP_INFO(node_->get_logger(), "[FieldUpdater] Keepout zone: %s", keepout_zone_msg.c_str());
+    RCLCPP_DEBUG(node_->get_logger(), "[FieldUpdater] Keepout zone: %s", keepout_zone_msg.c_str());
     
     auto msg = std_msgs::msg::String();
     msg.data = keepout_zone_msg;
