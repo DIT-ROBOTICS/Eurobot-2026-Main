@@ -46,6 +46,8 @@ void BTengine::initParam() {
     // Declare parameters with defaults
     this->declare_parameter<int>("time_rate", 100);
     this->declare_parameter<int>("game_time", 100);
+    this->declare_parameter<int>("stop_time", 98);
+    this->declare_parameter<int>("go_home_time", 90);
     this->declare_parameter<std::string>("pkg_share_dir", "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core");
     this->declare_parameter<std::string>("tree_name", "MainTree");
     this->declare_parameter<std::string>("json_file_path", "params/mission_sequence.json");
@@ -55,6 +57,8 @@ void BTengine::initParam() {
     // Get parameters
     this->get_parameter("time_rate", time_rate);
     this->get_parameter("game_time", terminate_time);
+    this->get_parameter("stop_time", stop_time);
+    this->get_parameter("go_home_time", go_home_time);
     this->get_parameter("pkg_share_dir", pkg_share_dir);
     this->get_parameter("tree_name", tree_name);
     
@@ -70,7 +74,7 @@ void BTengine::initParam() {
     
     RCLCPP_INFO(this->get_logger(), "[BTengine] JSON path: %s", json_file_path.c_str());
     RCLCPP_INFO(this->get_logger(), "[BTengine] BT XML dir: %s", bt_xml_directory.c_str());
-    RCLCPP_INFO(this->get_logger(), "[BTengine] Time rate: %d, Terminate time: %d", time_rate, terminate_time);
+    RCLCPP_INFO(this->get_logger(), "[BTengine] Time rate: %d, Terminate time: %d, Stop time: %d, Go home time: %d", time_rate, terminate_time, stop_time, go_home_time);
 }
 
 void BTengine::readyCallback(const std_msgs::msg::Bool::SharedPtr msg) {
@@ -282,6 +286,8 @@ void BTengine::setBlackboard() {
     blackboard->set<std::string>("robot", robotToString(robot));
     blackboard->set<int>("selected_plan", selected_plan);
     blackboard->set<double>("game_time", game_time);
+    blackboard->set<double>("stop_time", static_cast<double>(stop_time));
+    blackboard->set<double>("go_home_time", static_cast<double>(go_home_time));
     
     // Read map_points parameter and populate map_point_list
     std::vector<double> map_points_raw;
