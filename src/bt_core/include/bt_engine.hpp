@@ -53,6 +53,12 @@
 // firmware nodes
 #include "FirmwareReceiver.hpp"
 
+// game info nodes
+#include "GameInfoReceiver.hpp"
+
+// stop robot
+#include "stop_robot_node.hpp"
+
 // C++
 #include <memory>
 #include <string>

@@ -114,6 +114,11 @@ void BTengine::planFileCallback(const std_msgs::msg::String::SharedPtr msg) {
     team = stringToTeam(plan_file_name_split[1]);
     selected_plan = std::stoi(plan_file_name_split[2]);
 
+    // Update blackboard with newly parsed values
+    blackboard->set<std::string>("team", teamToString(team));
+    blackboard->set<std::string>("robot", robotToString(robot));
+    blackboard->set<int>("selected_plan", selected_plan);
+
     if (!file_logged) {
         RCLCPP_INFO(this->get_logger(), "[BTengine]: Received plan file for robot %s, team %s, plan %d", robotToString(robot).c_str(), teamToString(team).c_str(), selected_plan);
         file_logged = true;
@@ -195,13 +200,16 @@ void BTengine::createTreeNodes() {
 
     // flip publisher
     factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
+
+    // game info receiver
+    factory.registerNodeType<GameInfoReceiver>("GameInfoReceiver", params, blackboard);
     
     params.default_port_value = "dock_robot";
     // navigation
     // factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);  // Source commented out
     // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
-    // factory.registerNodeType<StopRobotNode>("StopRobotNode", params);  // Source commented out
+    factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
     // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
 
     // utils
