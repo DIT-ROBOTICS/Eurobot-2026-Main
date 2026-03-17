@@ -11,7 +11,7 @@
     go_home_time: 90        # Time in seconds to trigger go home logic
     
     # Plan Configuration
-    default_plan: 31        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
+    default_plan: 51        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
     
     # BT Engine Configuration
     pkg_share_dir: "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core"
@@ -28,7 +28,7 @@
     flip_distance_threshold: 0.1                 # Distance to target to trigger flip
     
     # Spectrum Scoring Configuration
-    pantry_aggressiveness: 0.0
+    pantry_aggressiveness: -1.0
     pantry_sensitivity: 2.0
     pantry_rival_sigma: 0.3
     pantry_rival_distance_threshold: 0.25
