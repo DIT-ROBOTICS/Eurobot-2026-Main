@@ -88,6 +88,44 @@
             <Sleep msec="200"/>
         </Sequence>
     </BehaviorTree>
+
+    <BehaviorTree ID="GoHomeSubTree">
+        <Sequence>
+            <DecisionCore 
+                ActionType="go_home"
+                RobotSideIdx=""
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <OnDockAction
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"
+                dock_type="dock_y_loose_linearBoost"
+                isPureDocking="false"
+                finish_pose="{dock_result}"/>
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="CursorSubTree">
+        <Sequence>
+            <DecisionCore 
+                ActionType="cursor"
+                RobotSideIdx=""
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <OnDockAction
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"
+                dock_type="dock_y_loose_linearBoost"
+                isPureDocking="false"
+                finish_pose="{dock_result}"/>
+        </Sequence>
+    </BehaviorTree>
     
     <!-- ============================================= -->
     <!-- Main Tree: Complete collection cycle -->

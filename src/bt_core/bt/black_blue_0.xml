@@ -26,8 +26,8 @@
             <MissionChecker
                 ActionType="take"
                 targetPoseSideIdx="{target_side}"
-                timeout_ms="3000"/>
-            <!-- <Sleep msec="2000"/> -->
+                timeout_ms="1000"/>
+            <Sleep msec="200"/>
         </Sequence>
     </BehaviorTree>
 
@@ -67,7 +67,7 @@
                 <FlipPublisher
                     targetPoseIdx="{target_idx}"
                     targetPoseSideIdx="{target_side}"
-                    timeout_ms="1000"/>
+                    timeout_ms="5000"/>
             </Parallel>
             
             <!-- Publish PUT command to firmware -->
@@ -81,8 +81,46 @@
             <MissionChecker
                 ActionType="put"
                 targetPoseSideIdx="{target_side}"
-                timeout_ms="1500"/>
-            <Sleep msec="1000"/>
+                timeout_ms="800"/>
+            <Sleep msec="200"/>
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="GoHomeSubTree">
+        <Sequence>
+            <DecisionCore 
+                ActionType="go_home"
+                RobotSideIdx=""
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <OnDockAction
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"
+                dock_type="dock_y_loose_linearBoost"
+                isPureDocking="false"
+                finish_pose="{dock_result}"/>
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="CursorSubTree">
+        <Sequence>
+            <DecisionCore 
+                ActionType="cursor"
+                RobotSideIdx=""
+                nextActionType="{next_action}"
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"/>
+            <OnDockAction
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"
+                dock_type="dock_y_loose_linearBoost"
+                isPureDocking="false"
+                finish_pose="{dock_result}"/>
         </Sequence>
     </BehaviorTree>
     

@@ -63,6 +63,8 @@ public:
     void doPut();
     void doFlip();
     void doDock();
+    void doGoHome();
+    void doCursor();
 
 private:
     // init
@@ -105,6 +107,7 @@ private:
     geometry_msgs::msg::PoseStamped rival_pose;
     vector<MapPoint> map_point_list;
     Team current_team;
+    Robot current_robot;
     
     // Spectrum Parameters
     SpectrumParams pantry_params;

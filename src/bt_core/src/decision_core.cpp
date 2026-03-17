@@ -34,6 +34,7 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     // load variables
     loadSequenceFromJson();
     readBlackboard();
+    updatePoseData();
     loadSpectrumParams();
 }
 
@@ -92,30 +93,43 @@ void DecisionCore::loadSequenceFromJson() {
 }
 
 void DecisionCore::readBlackboard() {
-    if (!blackboard_ptr->get<vector<FieldStatus>>("robot_side_status", robot_side_status)) {
+    if (!blackboard_ptr->get<vector<FieldStatus>>("robot_side_status", robot_side_status)) 
         RCLCPP_WARN(node_ptr->get_logger(), "robot_side_status not found in blackboard");
-    }
 
-    if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
+    if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) 
         RCLCPP_WARN(node_ptr->get_logger(), "robot_pose not found in blackboard");
-    }
-    if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose)) {
+
+    if (!blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose)) 
         RCLCPP_WARN(node_ptr->get_logger(), "rival_pose not found in blackboard");
-    }
 
-    if (!blackboard_ptr->get<vector<FieldStatus>>("collection_info", collection_info)) {
-         RCLCPP_WARN(node_ptr->get_logger(), "collection_info not found in blackboard");
-    }
-    if (!blackboard_ptr->get<vector<FieldStatus>>("pantry_info", pantry_info)) {
-         RCLCPP_WARN(node_ptr->get_logger(), "pantry_info not found in blackboard");
-    }
+    if (!blackboard_ptr->get<vector<FieldStatus>>("collection_info", collection_info)) 
+        RCLCPP_WARN(node_ptr->get_logger(), "collection_info not found in blackboard");
     
-    if (!blackboard_ptr->get<vector<vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
+    if (!blackboard_ptr->get<vector<FieldStatus>>("pantry_info", pantry_info)) 
+        RCLCPP_WARN(node_ptr->get_logger(), "pantry_info not found in blackboard");
+    
+    if (!blackboard_ptr->get<vector<vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) 
         RCLCPP_WARN(node_ptr->get_logger(), "hazelnut_status not found in blackboard");
+
+    if (!blackboard_ptr->get<vector<MapPoint>>("MapPointList", map_point_list)) 
+        RCLCPP_ERROR(node_ptr->get_logger(), "MapPointList not found in blackboard");
+
+    // Get team from blackboard
+    string team_str;
+    if (blackboard_ptr->get<string>("team", team_str)) 
+        current_team = stringToTeam(team_str);
+    else {
+        current_team = Team::YELLOW; // default
+        RCLCPP_WARN(node_ptr->get_logger(), "Team not found in blackboard, defaulting to YELLOW");
     }
 
-    if (!blackboard_ptr->get<vector<MapPoint>>("MapPointList", map_point_list)) {
-        RCLCPP_ERROR(node_ptr->get_logger(), "MapPointList not found in blackboard");
+    // Get robot from blackboard
+    string robot_str;
+    if (blackboard_ptr->get<string>("robot", robot_str)) 
+        current_robot = stringToRobot(robot_str);
+    else {
+        current_robot = Robot::WHITE; // default
+        RCLCPP_WARN(node_ptr->get_logger(), "Robot not found in blackboard, defaulting to WHITE");
     }
 }
 
@@ -189,7 +203,7 @@ void DecisionCore::updateVisitedPoints() {
 BT::NodeStatus DecisionCore::tick() {
     readBlackboard();
     getInputPort();
-    updatePoseData(); // Ensure pose data is current before visualization
+    updatePoseData();
     publishScoreMarkers();
     
     DC_INFO(node_ptr, "Processing action: %s", actionTypeToString(decided_action_type).c_str());
@@ -205,6 +219,12 @@ BT::NodeStatus DecisionCore::tick() {
             break;
         case ActionType::DOCK:
             doDock();
+            break;
+        case ActionType::GO_HOME:
+            doGoHome();
+            break;
+        case ActionType::CURSOR:
+            doCursor();
             break;
         default:
             DC_ERROR(node_ptr, "Invalid action type");
@@ -237,6 +257,30 @@ void DecisionCore::doFlip() {
     decided_action_type = ActionType::FLIP;
     // TODO: more action inside Flip
     target_pose_side_idx = getTargetSideIndex(ActionType::FLIP);
+    writeOutputPort();
+}
+
+void DecisionCore::doGoHome() {    
+    if(current_team == Team::YELLOW) target_goal_pose_idx = GoalPose::YellowHome;
+    else if(current_team == Team::BLUE) target_goal_pose_idx = GoalPose::BlueHome;
+
+    if(current_robot == Robot::WHITE) target_pose_side_idx = RobotSide::FRONT;
+    else if(current_robot == Robot::BLACK) target_pose_side_idx = RobotSide::BACK;
+    
+    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
+    decided_action_type = ActionType::DOCK;
+    writeOutputPort();
+}
+
+void DecisionCore::doCursor() {
+    if(current_team == Team::YELLOW) target_goal_pose_idx = GoalPose::YellowCursor;
+    else if(current_team == Team::BLUE) target_goal_pose_idx = GoalPose::BlueCursor;
+
+    if(current_robot == Robot::WHITE) target_pose_side_idx = RobotSide::FRONT;
+    else if(current_robot == Robot::BLACK) target_pose_side_idx = RobotSide::BACK;
+    
+    target_direction = Direction::SOUTH;
+    decided_action_type = ActionType::DOCK;
     writeOutputPort();
 }
 
@@ -405,15 +449,6 @@ void DecisionCore::updatePoseData() {
     if (blackboard_ptr->get<geometry_msgs::msg::PoseStamped>("rival_pose", rival_pose)) {
         RCLCPP_DEBUG(node_ptr->get_logger(), "Rival pose: (%.2f, %.2f)", 
                      rival_pose.pose.position.x, rival_pose.pose.position.y);
-    }
-    
-    // Get team from blackboard
-    string team_str;
-    if (blackboard_ptr->get<string>("team", team_str)) {
-        current_team = stringToTeam(team_str);
-    } else {
-        current_team = Team::YELLOW; // default
-        RCLCPP_WARN(node_ptr->get_logger(), "Team not found in blackboard, defaulting to YELLOW");
     }
 }
 

@@ -48,6 +48,8 @@ enum class ActionType {
     PUT,
     FLIP,
     DOCK,
+    GO_HOME,
+    CURSOR,
     NAV,
     ROTATE
 };
@@ -136,6 +138,8 @@ inline ActionType stringToActionType(const std::string& str) {
     if (lower_str == "put") return ActionType::PUT;
     if (lower_str == "flip") return ActionType::FLIP;
     if (lower_str == "dock") return ActionType::DOCK;
+    if (lower_str == "go_home") return ActionType::GO_HOME;
+    if (lower_str == "cursor") return ActionType::CURSOR;
     if (lower_str == "nav") return ActionType::NAV;
     if (lower_str == "rotate") return ActionType::ROTATE;
     throw std::runtime_error("Invalid action type string: " + str);
