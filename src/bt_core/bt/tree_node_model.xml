@@ -18,16 +18,6 @@
         </Action>
         <Action ID="GameInfoReceiver"/>
         <Action ID="LocReceiver"/>
-        <Action ID="MissionChecker">
-            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
-            <input_port name="targetPoseSideIdx" type="int"/>
-            <input_port name="ActionType" type="std::string"/>
-        </Action>
-        <Action ID="MissionPublisher">
-            <input_port name="targetPoseIdx" type="int"/>
-            <input_port name="targetPoseSideIdx" type="int"/>
-            <input_port name="ActionType" type="std::string"/>
-        </Action>
         <Action ID="OnDockAction">
             <output_port name="finish_pose" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">Final robot pose after docking</output_port>
             <input_port name="isPureDocking" type="bool" default="false">Whether to skip navigation to staging pose</input_port>
@@ -35,6 +25,16 @@
             <input_port name="dock_type" type="std::string" default="dock_y_loose_linearBoost">Dock type</input_port>
             <input_port name="targetPoseSideIdx" type="int">Robot side index to face target</input_port>
             <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
+        </Action>
+        <Action ID="PutPublisher">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for pantry update)</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
+        <Action ID="TakePublisher">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
         </Action>
         <Action ID="StopRobotNode"/>
     </TreeNodesModel>

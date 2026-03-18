@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- ============================================= -->
-<!-- two robot battle: Black -->
+<!-- test for TAKE/PUT publisher -->
 <!-- ============================================= -->
 <root BTCPP_format="4">
     
@@ -9,7 +9,7 @@
     <!-- ============================================= -->
     <BehaviorTree ID="TakeSubTree">
         <Sequence>
-            <!-- Dock to collection pdoint -->
+            <!-- Dock to collection point -->
             <OnDockAction
                 targetPoseIdx="{target_idx}"
                 targetPoseSideIdx="{target_side}"
@@ -18,18 +18,12 @@
                 isPureDocking="false"
                 finish_pose="{dock_result}"/>
             
-            <!-- Publish TAKE command to firmware -->
-            <MissionPublisher
-                ActionType="take"
+            <!-- Publish TAKE command and wait for completion -->
+            <TakePublisher
                 targetPoseSideIdx="{target_side}"
-                targetPoseIdx="{target_idx}"/>
+                targetPoseIdx="{target_idx}"
+                timeout_ms="10000"/>   <!-- test for callback -->
             <FieldUpdater/>
-
-            <!-- Wait for vision to confirm take, or timeout -->
-            <MissionChecker
-                ActionType="take"
-                targetPoseSideIdx="{target_side}"
-                timeout_ms="3000"/>
             <!-- <Sleep msec="2000"/> -->
         </Sequence>
     </BehaviorTree>
@@ -39,15 +33,8 @@
     <!-- ============================================= -->
     <BehaviorTree ID="FlipSubTree">
         <Sequence>
-            <!-- Publish FLIP command to firmware -->
-            <MissionPublisher
-                ActionType="flip"
-                targetPoseSideIdx="{target_side}"
-                targetPoseIdx="{target_idx}"/>
-
-            <!-- Wait for flip to complete (pure timeout, no vision feedback) -->
-            <MissionChecker
-                ActionType="flip"
+            <!-- Publish FLIP command and wait for completion -->
+            <FlipPublisher
                 targetPoseSideIdx="{target_side}"
                 timeout_ms="1000"/>
         </Sequence>
@@ -73,19 +60,13 @@
                     timeout_ms="1000"/>
             </Parallel>
             
-            <!-- Publish PUT command to firmware -->
-            <MissionPublisher
-                ActionType="put"
+            <!-- Publish PUT command and wait for completion -->
+            <PutPublisher
                 targetPoseSideIdx="{target_side}"
-                targetPoseIdx="{target_idx}"/>
+                targetPoseIdx="{target_idx}"
+                timeout_ms="10000"/>   <!-- test for callback -->
             <FieldUpdater/>
-
-            <!-- Wait for vision to confirm put, or timeout -->
-            <MissionChecker
-                ActionType="put"
-                targetPoseSideIdx="{target_side}"
-                timeout_ms="1500"/>
-            <Sleep msec="1500"/>
+            <Sleep msec="500"/>
         </Sequence>
     </BehaviorTree>
     
@@ -102,6 +83,34 @@
             <FieldUpdater/>         
             <Repeat num_cycles="1">
                 <Sequence>
+
+                    <DecisionCore 
+                        ActionType="take"
+                        RobotSideIdx="2"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
+
+                    <DecisionCore 
+                        ActionType="put"
+                        RobotSideIdx="2"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
+
+                    <DecisionCore 
+                        ActionType="take"
+                        RobotSideIdx="2"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
+                    
                     <DecisionCore 
                         ActionType="take"
                         RobotSideIdx="3"
@@ -120,26 +129,16 @@
                     <SubTree ID="TakeSubTree" _autoremap="true"/>
 
                     <DecisionCore 
-                        ActionType="take"
-                        RobotSideIdx="2"
+                        ActionType="put"
+                        RobotSideIdx="1"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
-                    <SubTree ID="TakeSubTree" _autoremap="true"/>
-
-                    <DecisionCore 
-                        ActionType="take"
-                        RobotSideIdx="0"
-                        nextActionType="{next_action}"
-                        targetPoseIdx="{target_idx}"
-                        targetPoseSideIdx="{target_side}"
-                        targetDirection="{target_dir}"/>
-                    <SubTree ID="TakeSubTree" _autoremap="true"/>
-
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="0"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -147,13 +146,21 @@
                     <SubTree ID="PutSubTree" _autoremap="true"/>
 
                     <DecisionCore 
-                        ActionType="put"
-                        RobotSideIdx="2"
+                        ActionType="take"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
-                    <SubTree ID="PutSubTree" _autoremap="true"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
+                    <DecisionCore 
+                        ActionType="take"
+                        RobotSideIdx="1"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="TakeSubTree" _autoremap="true"/>
 
                     <DecisionCore 
                         ActionType="put"
@@ -166,6 +173,15 @@
                     <DecisionCore 
                         ActionType="put"
                         RobotSideIdx="3"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"/>
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
+
+                    <DecisionCore 
+                        ActionType="put"
+                        RobotSideIdx="2"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"

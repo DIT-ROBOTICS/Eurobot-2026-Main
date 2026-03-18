@@ -187,10 +187,10 @@ void BTengine::createTreeNodes() {
     factory.registerNodeType<DecisionCore>("DecisionCore", params, blackboard);
     
     // mission publisher
-    factory.registerNodeType<MissionPublisher>("MissionPublisher", params, blackboard);
+    // factory.registerNodeType<MissionPublisher>("MissionPublisher", params, blackboard);
 
     // mission checker
-    factory.registerNodeType<MissionChecker>("MissionChecker", params, blackboard);
+    // factory.registerNodeType<MissionChecker>("MissionChecker", params, blackboard);
 
     // firmware receiver
     factory.registerNodeType<FirmwareReceiver>("FirmwareReceiver", params, blackboard);
@@ -201,6 +201,9 @@ void BTengine::createTreeNodes() {
     // flip publisher
     factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
 
+    // take/put publishers (new separate nodes)
+    factory.registerNodeType<TakePublisher>("TakePublisher", params, blackboard);
+    factory.registerNodeType<PutPublisher>("PutPublisher", params, blackboard);
     // game info receiver
     factory.registerNodeType<GameInfoReceiver>("GameInfoReceiver", params, blackboard);
     
