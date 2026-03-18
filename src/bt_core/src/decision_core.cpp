@@ -261,6 +261,7 @@ void DecisionCore::doFlip() {
 }
 
 void DecisionCore::doGoHome() {    
+    printFieldInfo();
     if(current_team == Team::YELLOW) target_goal_pose_idx = GoalPose::YellowHome;
     else if(current_team == Team::BLUE) target_goal_pose_idx = GoalPose::BlueHome;
 
@@ -569,13 +570,13 @@ void DecisionCore::sortCollectionPriority() {
 void DecisionCore::printFieldInfo() {
     std::string coll_str = "";
     for (int i = 0; i < COLLECTION_LENGTH; ++i) {
-        coll_str += "[" + std::to_string(i + PANTRY_LENGTH) + "]" + fieldStatusToString(collection_info[i]).substr(0, 1) + " ";
+        coll_str += "[" + std::to_string(i + PANTRY_LENGTH) + "]" + fieldStatusToString(collection_info[i]).c_str() + " ";
     }
     DC_INFO(node_ptr, "[FIELD INFO] Collection: %s", coll_str.c_str());
 
     std::string pan_str = "";
     for (int i = 0; i < PANTRY_LENGTH; ++i) {
-        pan_str += "[" + std::to_string(i) + "]" + fieldStatusToString(pantry_info[i]).substr(0, 1) + " ";
+        pan_str += "[" + std::to_string(i) + "]" + fieldStatusToString(pantry_info[i]).c_str() + " ";
     }
     DC_INFO(node_ptr, "[FIELD INFO] Pantry: %s", pan_str.c_str());
 }
