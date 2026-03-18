@@ -57,6 +57,12 @@
 // firmware nodes
 #include "FirmwareReceiver.hpp"
 
+// game info nodes
+#include "GameInfoReceiver.hpp"
+
+// stop robot
+#include "stop_robot_node.hpp"
+
 // C++
 #include <memory>
 #include <string>
@@ -137,6 +143,8 @@ private:
     // Configuration parameters
     int time_rate;          // Timer rate in microseconds
     int terminate_time;     // Game time limit in seconds (when to stop tree execution)
+    int stop_time;          // Hard stop time limit in seconds
+    int go_home_time;       // Time in seconds to trigger go home logic
     std::string pkg_share_dir;      // Package share directory path
     std::string json_file_path;     // Full path to mission sequence JSON
     std::string bt_xml_directory;   // Full path to BT XML directory
@@ -148,5 +156,8 @@ private:
 
     // ros variables
     std::shared_ptr<rclcpp::Node> node;
+    
+    // map points
+    std::vector<MapPoint> map_point_list;
 };
 

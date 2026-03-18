@@ -279,7 +279,7 @@ void StartUp::tickNinjaSima() {
     auto msg = std_msgs::msg::Int16();
     msg.data = sima_selected_plan;
     start_ninja_pub->publish(msg);
-    RCLCPP_INFO(this->get_logger(), "[StartUp]: Ninja Sima started at game time %f using plan %d", game_time, sima_selected_plan);
+    RCLCPP_INFO(this->get_logger(), "[StartUp]: Ninja Sima started at game time %d using plan %d", game_time, sima_selected_plan);
 }
 
 void StartUp::publishTime() {

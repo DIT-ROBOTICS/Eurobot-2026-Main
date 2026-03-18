@@ -39,6 +39,7 @@ add_library(sensors_nodes SHARED
   src/CamReceiver.cpp
   src/LocReceiver.cpp
   src/FirmwareReceiver.cpp
+  src/GameInfoReceiver.cpp
 )
 
 ament_target_dependencies(sensors_nodes

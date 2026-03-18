@@ -55,6 +55,7 @@
                     isPureDocking="false"
                     finish_pose="{dock_result}"/>
                 <FlipPublisher
+                    targetPoseIdx="{target_idx}"
                     targetPoseSideIdx="{target_side}"
                     timeout_ms="1000"/>
             </Parallel>
