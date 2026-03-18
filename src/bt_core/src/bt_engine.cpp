@@ -33,6 +33,7 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     canStart = false;  // Will be set to true when start signal is received
     group = 1;  // Main BT group
     file_logged = false;
+    use_camera_for_planning = false;
     map_point_list = std::vector<MapPoint>();
 }
 
@@ -48,6 +49,7 @@ void BTengine::initParam() {
     this->declare_parameter<int>("game_time", 100);
     this->declare_parameter<int>("stop_time", 98);
     this->declare_parameter<int>("go_home_time", 90);
+    this->declare_parameter<bool>("use_camera_for_planning", false);
     this->declare_parameter<std::string>("pkg_share_dir", "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core");
     this->declare_parameter<std::string>("tree_name", "MainTree");
     this->declare_parameter<std::string>("json_file_path", "params/mission_sequence.json");
@@ -59,6 +61,7 @@ void BTengine::initParam() {
     this->get_parameter("game_time", terminate_time);
     this->get_parameter("stop_time", stop_time);
     this->get_parameter("go_home_time", go_home_time);
+    this->get_parameter("use_camera_for_planning", use_camera_for_planning);
     this->get_parameter("pkg_share_dir", pkg_share_dir);
     this->get_parameter("tree_name", tree_name);
     
@@ -72,6 +75,8 @@ void BTengine::initParam() {
     bt_xml_directory = pkg_share_dir + "/" + bt_xml_rel_path;
     bt_tree_node_model = pkg_share_dir + "/" + bt_model_rel_path;
     
+    RCLCPP_INFO(this->get_logger(), "[BTengine] Parameters initialized: time_rate=%d, game_time=%d, stop_time=%d, go_home_time=%d, use_camera_for_planning=%s", 
+                time_rate, terminate_time, stop_time, go_home_time, use_camera_for_planning ? "true" : "false");
     RCLCPP_INFO(this->get_logger(), "[BTengine] JSON path: %s", json_file_path.c_str());
     RCLCPP_INFO(this->get_logger(), "[BTengine] BT XML dir: %s", bt_xml_directory.c_str());
     RCLCPP_INFO(this->get_logger(), "[BTengine] Time rate: %d, Terminate time: %d, Stop time: %d, Go home time: %d", time_rate, terminate_time, stop_time, go_home_time);
@@ -187,10 +192,10 @@ void BTengine::createTreeNodes() {
     factory.registerNodeType<DecisionCore>("DecisionCore", params, blackboard);
     
     // mission publisher
-    // factory.registerNodeType<MissionPublisher>("MissionPublisher", params, blackboard);
+    factory.registerNodeType<MissionPublisher>("MissionPublisher", params, blackboard);
 
     // mission checker
-    // factory.registerNodeType<MissionChecker>("MissionChecker", params, blackboard);
+    factory.registerNodeType<MissionChecker>("MissionChecker", params, blackboard);
 
     // firmware receiver
     factory.registerNodeType<FirmwareReceiver>("FirmwareReceiver", params, blackboard);
