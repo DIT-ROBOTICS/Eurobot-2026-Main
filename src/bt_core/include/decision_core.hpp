@@ -9,6 +9,7 @@
 #include <vector>
 #include <cmath>
 #include <queue>
+#include <optional>
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "bt_config.hpp"
 
@@ -39,7 +40,7 @@ struct SpectrumParams {
 };
 
 /**
- * @brief DecisionCore - A BT SyncActionNode that decides the next target
+ * @brief DecisionCore - A BT StatefulActionNode that decides the next target
  * 
  * Reads from blackboard:
  *   - json_point: sequence of point indices from mission_sequence.json
@@ -50,21 +51,23 @@ struct SpectrumParams {
  *   - current_target_index: index of current point
  *   - current_target_pose: PoseStamped of target
  */
-class DecisionCore : public BT::SyncActionNode {
+class DecisionCore : public BT::StatefulActionNode {
 public:
     // BT function
     DecisionCore(const std::string& name, const BT::NodeConfig& config, 
                  const RosNodeParams& params, BT::Blackboard::Ptr blackboard);
     static BT::PortsList providedPorts();
-    BT::NodeStatus tick() override;
+    BT::NodeStatus onStart() override;
+    BT::NodeStatus onRunning() override;
+    void onHalted() override;
     
     // system function
-    void doTake();
-    void doPut();
-    void doFlip();
-    void doDock();
-    void doGoHome();
-    void doCursor();
+    BT::NodeStatus doTake();
+    BT::NodeStatus doPut();
+    BT::NodeStatus doFlip();
+    BT::NodeStatus doDock();
+    BT::NodeStatus doGoHome();
+    BT::NodeStatus doCursor();
 
 private:
     // init
@@ -76,7 +79,7 @@ private:
     void sortPantryPriority();
     void sortCollectionPriority();
     void publishScoreMarkers();
-    pair<GoalPose, RobotSide> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
+    std::optional<pair<GoalPose, RobotSide>> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
     RobotSide getTargetSideIndex(ActionType action_type);
     Direction decideDirection(GoalPose goal_pose, RobotSide robot_side);
     ActionType decideNextActionType(ActionType action_type);
