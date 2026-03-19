@@ -41,7 +41,7 @@ public:
 private:
     void readBlackboard();
     void publishTake(int side_idx);
-    bool checkCondition();
+    bool isTakeCompleted();
 
     // Publisher
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr take_pub_;

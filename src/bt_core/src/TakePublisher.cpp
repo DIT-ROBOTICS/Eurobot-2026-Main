@@ -56,7 +56,7 @@ BT::NodeStatus TakePublisher::onStart() {
 }
 
 BT::NodeStatus TakePublisher::onRunning() {
-    if (checkCondition()) {
+    if (isTakeCompleted()) {
         TP_INFO(node_, "TAKE confirmed on side %d", side_idx_);
 
         // Update blackboard: robot now holds hazelnuts and collection point becomes empty
@@ -130,7 +130,7 @@ void TakePublisher::publishTake(int side_idx) {
     take_pub_->publish(msg);
 }
 
-bool TakePublisher::checkCondition() {
+bool TakePublisher::isTakeCompleted() {
     std::vector<FieldStatus> current_status;
     if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", current_status)) {
         return false;

@@ -41,7 +41,7 @@ public:
 private:
     void readBlackboard();
     void publishPut(int side_idx);
-    bool checkCondition();
+    bool isPutCompleted();
 
     // Publisher
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr put_pub_;

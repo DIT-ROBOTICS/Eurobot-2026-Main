@@ -56,7 +56,7 @@ BT::NodeStatus PutPublisher::onStart() {
 }
 
 BT::NodeStatus PutPublisher::onRunning() {
-    if (checkCondition()) {
+    if (isPutCompleted()) {
         PP_INFO(node_, "PUT confirmed on side %d", side_idx_);
 
         // Update blackboard: robot side becomes EMPTY and pantry becomes OCCUPIED
@@ -129,7 +129,7 @@ void PutPublisher::publishPut(int side_idx) {
     put_pub_->publish(msg);
 }
 
-bool PutPublisher::checkCondition() {
+bool PutPublisher::isPutCompleted() {
     std::vector<FieldStatus> current_status;
     if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", current_status)) {
         return false;
