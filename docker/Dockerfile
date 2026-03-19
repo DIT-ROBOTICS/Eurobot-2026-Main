@@ -154,6 +154,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         echo "Skipping VNC installation"; \
     fi
 
+##############################################################################
+# Gemini CLI Installation
+##############################################################################
+
+COPY ./scripts/cli_tools/install_gemini_cli.sh /usr/local/bin/install_gemini_cli.sh
+RUN chmod +x /usr/local/bin/install_gemini_cli.sh
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    /usr/local/bin/install_gemini_cli.sh
+
 RUN echo "${USERNAME}:${USERNAME}" | chpasswd
 
 ##############################################################################
