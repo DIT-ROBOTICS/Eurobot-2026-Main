@@ -12,7 +12,7 @@
     
     # Plan Configuration
     default_plan: 51        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
-    
+    use_camera_for_planning: true
     # BT Engine Configuration
     pkg_share_dir: "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core"
     tree_name: "MainTree"   # Main behavior tree name
