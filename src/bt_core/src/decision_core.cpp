@@ -214,8 +214,6 @@ BT::NodeStatus DecisionCore::onStart() {
             return doPut();
         case ActionType::FLIP:
             return doFlip();
-        case ActionType::DOCK:
-            return doDock();
         case ActionType::GO_HOME:
             return doGoHome();
         case ActionType::CURSOR:
@@ -597,11 +595,6 @@ void DecisionCore::printFieldInfo() {
         pan_str += "[" + std::to_string(i) + "]" + fieldStatusToString(pantry_info[i]).c_str() + " ";
     }
     DC_INFO(node_ptr, "[FIELD INFO] Pantry: %s", pan_str.c_str());
-}
-
-void DecisionCore::doDock() {
-    // Dock action - just pass through the current target
-    writeOutputPort();
 }
 
 Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {
