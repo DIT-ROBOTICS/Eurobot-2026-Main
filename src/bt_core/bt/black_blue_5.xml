@@ -85,7 +85,7 @@
                 ActionType="put"
                 targetPoseSideIdx="{target_side}"
                 timeout_ms="800"/>
-            <Sleep msec="900"/>
+            <Sleep msec="1000"/>
         </Sequence>
     </BehaviorTree>
 
