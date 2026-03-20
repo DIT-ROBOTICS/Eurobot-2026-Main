@@ -191,7 +191,8 @@ void DecisionCore::updateVisitedPoints() {
             DC_WARN(node_ptr, "Failed to get visited_pantries from blackboard (might be empty/first time)");
         }
         
-        int local_idx = static_cast<int>(target_goal_pose_idx) - COLLECTION_LENGTH;
+        // Pantry poses are indexed directly as 0..PANTRY_LENGTH-1 in GoalPose.
+        int local_idx = static_cast<int>(target_goal_pose_idx);
         if (std::find(visited_pantries.begin(), visited_pantries.end(), local_idx) == visited_pantries.end()) {
             visited_pantries.push_back(local_idx);
             blackboard_ptr->set<std::vector<int>>("visited_pantries", visited_pantries);
