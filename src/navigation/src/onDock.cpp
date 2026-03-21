@@ -67,7 +67,7 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     staging_dist_left_ = node->get_parameter("staging_dist_left").as_double();
     
     RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized staging distances: front=%.3f, right=%.3f, back=%.3f, left=%.3f",
-                staging_dist_front, staging_dist_right, staging_dist_back, staging_dist_left);
+                staging_dist_front_, staging_dist_right_, staging_dist_back_, staging_dist_left_);
 }
 
 
@@ -194,7 +194,7 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     // Get position and staging info from map_points
     double x = map_point_list[pose_idx].x;
     double y = map_point_list[pose_idx].y;
-    double stage_dist = map_points[data_idx + IDX_STAGE_DIST];
+    double stage_dist = map_point_list[pose_idx].staging_dist;
     if ( chosen_dock_type == DockType::CAM_DOCK_X || chosen_dock_type == DockType::CAM_DOCK_Y ) {
         switch ( target_side ) {
             case RobotSide::FRONT:
