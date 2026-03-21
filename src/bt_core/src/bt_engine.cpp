@@ -312,7 +312,7 @@ void BTengine::setBlackboard() {
     }
     
     if (this->get_parameter("map_points", map_points_raw)) {
-        constexpr int VALUES_PER_POINT = 8;
+        constexpr int VALUES_PER_POINT = 5;
             for (size_t i = 0; i + VALUES_PER_POINT <= map_points_raw.size(); i += VALUES_PER_POINT) {
                 MapPoint pt;
                 pt.x = map_points_raw[i];
