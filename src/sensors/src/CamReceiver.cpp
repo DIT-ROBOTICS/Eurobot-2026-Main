@@ -87,6 +87,20 @@ void CamReceiver::initializeDefaultStatus() {
     std::vector<std::vector<FlipStatus>> default_hazelnut(
         ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
     blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", default_hazelnut);
+
+    // Initialize raw collection info for debugging/visualization
+    std_msgs::msg::Int32MultiArray default_collection_raw;
+    default_collection_raw.data = std::vector<int>(COLLECTION_LENGTH, 1); //
+    blackboard_->set<std_msgs::msg::Int32MultiArray>("collection_info_raw", default_collection_raw);
+
+    // Initialize raw pantry info with 0 (EMPTY) for debugging/visualization
+    std_msgs::msg::Int32MultiArray default_pantry_raw;
+    default_pantry_raw.data = std::vector<int>(PANTRY_LENGTH, 0);
+    blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info_raw", default_pantry_raw);
+
+    // Initialize visited lists
+    blackboard_->set<std::vector<int>>("visited_collections", std::vector<int>());
+    blackboard_->set<std::vector<int>>("visited_pantries", std::vector<int>());
 }
 
 PortsList CamReceiver::providedPorts() {
@@ -124,6 +138,7 @@ void CamReceiver::collection_info_callback(const std_msgs::msg::Int32MultiArray:
                 collection_status.push_back(static_cast<FieldStatus>(val));
             }
         }
+        // RCLCPP_INFO(node_->get_logger(), "CamReceiver: writeing updated collection_info to blackboard");
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("collection_info_raw", collection_info);
     }

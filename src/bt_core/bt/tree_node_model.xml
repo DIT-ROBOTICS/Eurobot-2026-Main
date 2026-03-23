@@ -36,6 +36,16 @@
             <input_port name="targetPoseSideIdx" type="int">Robot side index to face target</input_port>
             <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
         </Action>
+        <Action ID="PutPublisher">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for pantry update)</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
         <Action ID="StopRobotNode"/>
+        <Action ID="TakePublisher">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
     </TreeNodesModel>
 </root>

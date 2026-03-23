@@ -42,6 +42,8 @@ add_executable(bt_engine
   src/MissionChecker.cpp
   src/FieldUpdater.cpp
   src/FlipPublisher.cpp
+  src/TakePublisher.cpp
+  src/PutPublisher.cpp
 )
 ament_target_dependencies(bt_engine
   "rclcpp"
