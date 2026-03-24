@@ -151,6 +151,8 @@ inline std::string actionTypeToString(ActionType action_type) {
         case ActionType::PUT: return "put";
         case ActionType::FLIP: return "flip";
         case ActionType::DOCK: return "dock";
+        case ActionType::GO_HOME: return "go_home";
+        case ActionType::CURSOR: return "cursor";
         case ActionType::NAV: return "nav";
         case ActionType::ROTATE: return "rotate";
         default: return "unknown";

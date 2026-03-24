@@ -120,15 +120,25 @@ ros2 run <package_name> <node_name>
 - **main-develop** - Interactive dev container (host network)
 - **main-vnc** - VNC with XFCE desktop (bridge network, port 5902)
 
-## Spectral Decision Scoring Configuration
+## Target Decision Logic
 
-The configuration for autonomous target decision logic uses an adjustable spectrum format defined under `src/startup/params/robot_config_*.yaml`. Parameters affect scoring logic across the field:
-- `aggressiveness`: Ranges from -1.0 (conservative, focus on own side) to 1.0 (highly aggressive, push into opponent territory).
-- `sensitivity`: Exponent multiplier (e.g. 2.0) that determines the impact of the distance relative to aggressiveness.
-- `rival_sigma`: Distance scale for opponent repulsion field (impact slope).
-- `rival_distance_threshold`: Hard cutoff distance (e.g. 0.25 m). Below this value, the goal is immediately discarded.
+The robot decides which target (collection point or pantry) to go to next using a two-tiered priority system:
 
-These values can be configured per robot independently for `pantry` and `collection` components.
+### 1. Predefined Sequence (Priority 1)
+The robot primarily attempts to follow a predefined point sequence loaded from a JSON file (e.g., `params/mission_sequence.json`).
+- It follows `collection_sequence` for `TAKE` actions and `pantry_sequence` for `PUT` actions strictly in order.
+- Points are automatically skipped if they are no longer viable (e.g., trying to PUT into an `OCCUPIED` pantry, or TAKE from an `EMPTY` collection point).
+
+### 2. Spectral Decision Scoring (Fallback)
+If the predefined sequence is exhausted or not provided, the robot switches to an autonomous scoring fallback system. This system evaluates all viable points and selects the one with the highest "Spectral Score". 
+
+The configuration for this scoring is defined in `src/startup/params/robot_config_*.yaml` and can be adjusted independently for `pantry` and `collection`:
+- `aggressiveness`: Ranges from -1.0 (conservative, prefers points on the robot's own side) to 1.0 (highly aggressive, prefers pushing into opponent territory).
+- `sensitivity`: Exponent multiplier (e.g. 2.0) that scales the impact of the `aggressiveness` over the longitudinal X position across the field (from own side to opponent side).
+- `rival_sigma`: Distance scale (in meters) for the opponent repulsion field. Goals closer to the opponent start to lose score.
+- `rival_distance_threshold`: Hard cutoff distance (e.g. 0.25 m). Below this distance to an opponent, the goal is considered too dangerous and is immediately discarded.
+
+*Note: In addition to these configurable parameters, distance to the robot is also automatically factored in as a linear penalty, favoring closer points over farther ones.*
 
 ## Environment Variables
 

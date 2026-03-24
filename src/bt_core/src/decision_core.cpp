@@ -7,7 +7,7 @@
 #define DC_WARN(node, fmt, ...) RCLCPP_WARN(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
 #define DC_ERROR(node, fmt, ...) RCLCPP_ERROR(node->get_logger(), DC_COLOR "[DecisionCore] " fmt DC_RESET, ##__VA_ARGS__)
 
-DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, const RosNodeParams& params, BT::Blackboard::Ptr blackboard) : SyncActionNode(name, config)
+DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, const RosNodeParams& params, BT::Blackboard::Ptr blackboard) : StatefulActionNode(name, config)
 {
     node_ptr = params.nh.lock();
     blackboard_ptr = blackboard;
@@ -191,7 +191,8 @@ void DecisionCore::updateVisitedPoints() {
             DC_WARN(node_ptr, "Failed to get visited_pantries from blackboard (might be empty/first time)");
         }
         
-        int local_idx = static_cast<int>(target_goal_pose_idx) - COLLECTION_LENGTH;
+        // Pantry poses are indexed directly as 0..PANTRY_LENGTH-1 in GoalPose.
+        int local_idx = static_cast<int>(target_goal_pose_idx);
         if (std::find(visited_pantries.begin(), visited_pantries.end(), local_idx) == visited_pantries.end()) {
             visited_pantries.push_back(local_idx);
             blackboard_ptr->set<std::vector<int>>("visited_pantries", visited_pantries);
@@ -200,7 +201,7 @@ void DecisionCore::updateVisitedPoints() {
     }
 }
 
-BT::NodeStatus DecisionCore::tick() {
+BT::NodeStatus DecisionCore::onStart() {
     readBlackboard();
     getInputPort();
     updatePoseData();
@@ -209,58 +210,73 @@ BT::NodeStatus DecisionCore::tick() {
     DC_INFO(node_ptr, "Processing action: %s", actionTypeToString(decided_action_type).c_str());
     switch(decided_action_type) {
         case ActionType::TAKE:
-            doTake();
-            break;
+            return doTake();
         case ActionType::PUT:
-            doPut();
-            break;
+            return doPut();
         case ActionType::FLIP:
-            doFlip();
-            break;
-        case ActionType::DOCK:
-            doDock();
-            break;
+            return doFlip();
         case ActionType::GO_HOME:
-            doGoHome();
-            break;
+            return doGoHome();
         case ActionType::CURSOR:
-            doCursor();
-            break;
+            return doCursor();
         default:
             DC_ERROR(node_ptr, "Invalid action type");
             throw std::runtime_error("Invalid action type");
     }
+    return BT::NodeStatus::FAILURE;
+}
+
+BT::NodeStatus DecisionCore::onRunning() {
+    // Re-evaluate on every running tick
+    return onStart();
+}
+
+void DecisionCore::onHalted() {
+    // Nothing to clean up
+}
+
+BT::NodeStatus DecisionCore::doTake() {
+    auto target_point_info_opt = getTargetPointInfo(ActionType::TAKE);
+    if (!target_point_info_opt) {
+        DC_INFO(node_ptr, "No valid TAKE target found. Waiting...");
+        return BT::NodeStatus::RUNNING;
+    }
+    auto target_point_info = target_point_info_opt.value();
+    target_goal_pose_idx = target_point_info.first;
+    target_pose_side_idx = target_point_info.second;
+    updateVisitedPoints();
+    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
+    decided_action_type = ActionType::DOCK;
+    writeOutputPort();
     return BT::NodeStatus::SUCCESS;
 }
 
-void DecisionCore::doTake() {
-    pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::TAKE);
+BT::NodeStatus DecisionCore::doPut() {
+    auto target_point_info_opt = getTargetPointInfo(ActionType::PUT);
+    if (!target_point_info_opt) {
+        DC_INFO(node_ptr, "No valid PUT target found. Waiting...");
+        return BT::NodeStatus::RUNNING;
+    }
+    auto target_point_info = target_point_info_opt.value();
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
     updateVisitedPoints();
     target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
+    return BT::NodeStatus::SUCCESS;
 }
 
-void DecisionCore::doPut() {
-    pair<GoalPose, RobotSide> target_point_info = getTargetPointInfo(ActionType::PUT);
-    target_goal_pose_idx = target_point_info.first;
-    target_pose_side_idx = target_point_info.second;
-    updateVisitedPoints();
-    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
-    decided_action_type = ActionType::DOCK;
-    writeOutputPort();
-}
-
-void DecisionCore::doFlip() {
+BT::NodeStatus DecisionCore::doFlip() {
     decided_action_type = ActionType::FLIP;
     // TODO: more action inside Flip
     target_pose_side_idx = getTargetSideIndex(ActionType::FLIP);
     writeOutputPort();
+    return BT::NodeStatus::SUCCESS;
 }
 
-void DecisionCore::doGoHome() {    
+BT::NodeStatus DecisionCore::doGoHome() {    
+    printFieldInfo();
     if(current_team == Team::YELLOW) target_goal_pose_idx = GoalPose::YellowHome;
     else if(current_team == Team::BLUE) target_goal_pose_idx = GoalPose::BlueHome;
 
@@ -270,9 +286,10 @@ void DecisionCore::doGoHome() {
     target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
+    return BT::NodeStatus::SUCCESS;
 }
 
-void DecisionCore::doCursor() {
+BT::NodeStatus DecisionCore::doCursor() {
     if(current_team == Team::YELLOW) target_goal_pose_idx = GoalPose::YellowCursor;
     else if(current_team == Team::BLUE) target_goal_pose_idx = GoalPose::BlueCursor;
 
@@ -282,9 +299,10 @@ void DecisionCore::doCursor() {
     target_direction = Direction::SOUTH;
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
+    return BT::NodeStatus::SUCCESS;
 }
 
-pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_type) {
+std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(ActionType action_type) {
     RobotSide selected_side = getTargetSideIndex(action_type);
     printFieldInfo();
     if (action_type == ActionType::PUT) {
@@ -314,7 +332,7 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
             DC_INFO(node_ptr, 
                     "[PUT->PANTRY] Selected pantry %s from sequence, remaining: %zu",
                     goalPoseToString(pose).c_str(), pantry_sequence.size());
-            return {pose, selected_side};
+            return make_pair(pose, selected_side);
         }
         
         // PRIORITY 2: Fallback to reward system
@@ -322,13 +340,13 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
         
         if (pantry_priority.empty()) {
             RCLCPP_WARN(node_ptr->get_logger(), "No available pantry points");
-            return {GoalPose::A, selected_side}; // fallback
+            return std::nullopt; // fallback
         }
         
         GoalPose best_pantry = pantry_priority.top().pose;
         DC_INFO(node_ptr, "[PUT->PANTRY] Selected pantry %s with score: %d", 
                 goalPoseToString(best_pantry).c_str(), pantry_priority.top().score);
-        return {best_pantry, selected_side};
+        return make_pair(best_pantry, selected_side);
         
     } else if (action_type == ActionType::TAKE) {
         // Fetch current sequence from blackboard to ensure we have the latest state
@@ -365,7 +383,7 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
             DC_INFO(node_ptr, 
                     "[TAKE->COLLECTION] Selected collection %s from sequence, remaining: %zu",
                     goalPoseToString(pose).c_str(), collection_sequence.size());
-            return {pose, selected_side};
+            return make_pair(pose, selected_side);
         }
         
         // PRIORITY 2: Fallback to reward system
@@ -373,17 +391,17 @@ pair<GoalPose, RobotSide> DecisionCore::getTargetPointInfo(ActionType action_typ
         
         if (collection_priority.empty()) {
             RCLCPP_WARN(node_ptr->get_logger(), "No available collection points");
-            return {GoalPose::K, selected_side}; // fallback
+            return std::nullopt; // fallback
         }
         
         GoalPose best_collection = collection_priority.top().pose;
         DC_INFO(node_ptr, "[TAKE->COLLECTION] Selected collection %s with score: %d",
                 goalPoseToString(best_collection).c_str(), collection_priority.top().score);
-        return {best_collection, selected_side};
+        return make_pair(best_collection, selected_side);
     }
     
     RCLCPP_ERROR(node_ptr->get_logger(), "getTargetPointInfo called with invalid action");
-    return {GoalPose::A, RobotSide::FRONT};
+    return std::nullopt;
 }
 
 RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
@@ -569,20 +587,15 @@ void DecisionCore::sortCollectionPriority() {
 void DecisionCore::printFieldInfo() {
     std::string coll_str = "";
     for (int i = 0; i < COLLECTION_LENGTH; ++i) {
-        coll_str += "[" + std::to_string(i + PANTRY_LENGTH) + "]" + fieldStatusToString(collection_info[i]).substr(0, 1) + " ";
+        coll_str += "[" + std::to_string(i + PANTRY_LENGTH) + "]" + fieldStatusToString(collection_info[i]).c_str() + " ";
     }
     DC_INFO(node_ptr, "[FIELD INFO] Collection: %s", coll_str.c_str());
 
     std::string pan_str = "";
     for (int i = 0; i < PANTRY_LENGTH; ++i) {
-        pan_str += "[" + std::to_string(i) + "]" + fieldStatusToString(pantry_info[i]).substr(0, 1) + " ";
+        pan_str += "[" + std::to_string(i) + "]" + fieldStatusToString(pantry_info[i]).c_str() + " ";
     }
     DC_INFO(node_ptr, "[FIELD INFO] Pantry: %s", pan_str.c_str());
-}
-
-void DecisionCore::doDock() {
-    // Dock action - just pass through the current target
-    writeOutputPort();
 }
 
 Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side) {

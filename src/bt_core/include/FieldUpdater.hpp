@@ -28,6 +28,9 @@ private:
     BT::Blackboard::Ptr blackboard_ptr;
     std_msgs::msg::Int32MultiArray collection_info_raw;
     std_msgs::msg::Int32MultiArray pantry_info_raw;
+    std::vector<FieldStatus> collection_info;
+    std::vector<FieldStatus> pantry_info;
+    bool use_camera_for_planning;
 };
 
 #endif // FIELD_UPDATER_HPP

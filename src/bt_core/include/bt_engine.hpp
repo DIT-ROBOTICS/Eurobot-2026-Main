@@ -48,10 +48,20 @@
 // flip publisher
 #include "FlipPublisher.hpp"
 
+// take/put publishers (action nodes)
+#include "TakePublisher.hpp"
+#include "PutPublisher.hpp"
+
 // utils nodes
 
 // firmware nodes
 #include "FirmwareReceiver.hpp"
+
+// game info nodes
+#include "GameInfoReceiver.hpp"
+
+// stop robot
+#include "stop_robot_node.hpp"
 
 // C++
 #include <memory>
@@ -129,6 +139,7 @@ private:
     std::string tree_name;  // Name of the main tree to create (e.g., "MainTree")
     std::string bt_tree_node_model;  // Path to save tree node model XML
     int group;              // Group ID for ready signal
+    bool use_camera_for_planning; // Whether to use camera data for planning (true/false)
 
     // Configuration parameters
     int time_rate;          // Timer rate in microseconds
