@@ -1,6 +1,10 @@
 <root BTCPP_format="4">
     <TreeNodesModel>
         <Action ID="CamReceiver"/>
+        <Action ID="CursorPublisher">
+            <input_port name="value" type="bool" default="false">Bool value to publish</input_port>
+            <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
+        </Action>
         <Action ID="DecisionCore">
             <output_port name="targetDirection" type="int"/>
             <output_port name="targetPoseIdx" type="int"/>
