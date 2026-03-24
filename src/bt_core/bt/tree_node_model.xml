@@ -56,6 +56,9 @@
             <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
             <input_port name="targetPoseIdx" type="int" default="0">Target pose index in map_points</input_port>
             <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to start</input_port>
+        <Action ID="CursorPublisher">
+            <input_port name="direction" type="std::string" default="left">Direction: 'left' or 'right'</input_port>
+            <input_port name="value" type="bool" default="false">Bool value to publish</input_port>
         </Action>
     </TreeNodesModel>
 </root>

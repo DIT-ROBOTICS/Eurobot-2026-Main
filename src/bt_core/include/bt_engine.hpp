@@ -53,6 +53,7 @@
 #include "PutPublisher.hpp"
 #include "TakePublisher_white.hpp"
 #include "FlipPublisher_white.hpp"
+#include "CursorPublisher.hpp"
 
 // utils nodes
 
