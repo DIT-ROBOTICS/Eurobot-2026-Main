@@ -84,7 +84,7 @@
                     arms="left"
                     targetPoseIdx="{target_idx}"/>
             </Parallel>
-            <Sleep msec="1000"/>
+            <Sleep msec="500"/>
         </Sequence>
     </BehaviorTree>
     

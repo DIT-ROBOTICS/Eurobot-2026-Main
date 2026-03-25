@@ -47,7 +47,7 @@ BT::NodeStatus CursorPublisher::onStart() {
 
 BT::NodeStatus CursorPublisher::onRunning() {
     // Immediately succeed after publishing
-    checkPosition()
+    checkPosition();
     std_msgs::msg::Bool msg;
     switch (cursor_state_) {
         case 1:
