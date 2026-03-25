@@ -6,6 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "bt_config.hpp"
 
 #include <string>
 #include <memory>
@@ -49,15 +50,16 @@ private:
 
     // ===== Input parameters =====
     std::string arms_;
-    bool value_;
-    double target_y_;  
-    double tolerance_;  
+    int cursor_state_;  // 0 = not aligned, 1 = y aligned, 2 = fully aligned
+    int is_arm_on_;
+    bool state_changed_; // whether the state just changed to trigger publish
 
-    // ===== Internal state =====
-    bool published_; 
+    int target_pose_idx_;
+    std::vector<MapPoint> map_point_list_;
+    double tolerance_ = 0.15;  
 
-    // ===== Functions =====
-    bool isArriveGoalPose();
+    // ===== Position checking =====
+    int checkPosition();
 };
 
 #endif // CURSOR_PUBLISHER_HPP

@@ -19,7 +19,7 @@ CursorPublisher::CursorPublisher(const std::string& name, const BT::NodeConfig& 
 BT::PortsList CursorPublisher::providedPorts() {
     return {
         BT::InputPort<std::string>("arms", "left", "arms: 'left' or 'right'"),
-        BT::InputPort<bool>("value", false, "Bool value to publish"),
+        BT::InputPort<int>("targetPoseIdx", 0, "Target pose index (for collection update)"),
     };
 }
 
@@ -30,33 +30,52 @@ BT::NodeStatus CursorPublisher::onStart() {
         arms_ = "left";
     }
 
-    if (!getInput<bool>("value", value_)) {
-        CP_WARN(node_, "Missing value, defaulting to false");
-        value_ = false;
+    if (!getInput<int>("targetPoseIdx", target_pose_idx_)) {
+        CP_WARN(node_, "Missing targetPoseIdx, defaulting to 0");
+        target_pose_idx_ = 0;
     }
+
+    if (!blackboard_->get<std::vector<MapPoint>>("MapPointList", map_point_list_)) {
+        CP_WARN(node_, "[OnDockAction] Failed to get MapPointList from blackboard");
+    }
+
+    is_arm_on_ = 0;
+    cursor_state_ = 0;
     
     return BT::NodeStatus::RUNNING;
 }
 
 BT::NodeStatus CursorPublisher::onRunning() {
     // Immediately succeed after publishing
-    if(isArriveGoalPose()){
-        // Create message
-        std_msgs::msg::Bool msg;
-        msg.data = value_;
-
-        // Publish based on arms
-        if (arms_ == "left") {
-            CP_INFO(node_, "Publishing to /robot/on_cursor_left: %s", value_ ? "true" : "false");
-            left_pub_->publish(msg);
-        } else if (arms_ == "right") {
-            CP_INFO(node_, "Publishing to /robot/on_cursor_right: %s", value_ ? "true" : "false");
-            right_pub_->publish(msg);
-        } else {
-            CP_WARN(node_, "Invalid arms '%s', not publishing", arms_.c_str());
-            return BT::NodeStatus::FAILURE;
-        }
-        return BT::NodeStatus::SUCCESS;
+    checkPosition()
+    std_msgs::msg::Bool msg;
+    switch (cursor_state_) {
+        case 1:
+            if (is_arm_on_ == 1) break;
+            msg.data = true; // aligned in y, can use arm
+            if (arms_ == "left") {
+                CP_INFO(node_, "Publishing to /robot/on_cursor_left: 1");
+                left_pub_->publish(msg);
+            } else if (arms_ == "right") {
+                CP_INFO(node_, "Publishing to /robot/on_cursor_right: 1");
+                right_pub_->publish(msg);
+            }
+            is_arm_on_ = 1;
+            return BT::NodeStatus::RUNNING;
+        case 2:
+            msg.data = false; // fully aligned, finish cursor action
+            CP_INFO(node_, "Fully aligned with target pose %d", target_pose_idx_);
+            if (arms_ == "left") {
+                CP_INFO(node_, "Publishing to /robot/on_cursor_left: 0");
+                left_pub_->publish(msg);
+            } else if (arms_ == "right") {
+                CP_INFO(node_, "Publishing to /robot/on_cursor_right: 0");
+                right_pub_->publish(msg);
+            }
+            is_arm_on_ = 0;
+            return BT::NodeStatus::SUCCESS;
+        default:
+            break;
     }
     return BT::NodeStatus::RUNNING;
 }
@@ -65,7 +84,7 @@ void CursorPublisher::onHalted() {
     CP_INFO(node_, "Halted (preempted)");
 }
 
-bool CursorPublisher::isArriveGoalPose()
+int CursorPublisher::checkPosition()
 {
     geometry_msgs::msg::PoseStamped robot_pose_;
 
@@ -74,12 +93,18 @@ bool CursorPublisher::isArriveGoalPose()
         return false;
     }
 
-    double y = robot_pose_.pose.position.y;
+    double x_ = robot_pose_.pose.position.x;
+    double y_ = robot_pose_.pose.position.y;
 
-    // CP_INFO(node_, "Current y: %.3f", y);
+    double target_x = map_point_list_[target_pose_idx_].x;
+    double target_y = map_point_list_[target_pose_idx_].y;
 
-    const double target_y = 0.2;
-    const double tolerance = 0.15;
-
-    return std::abs(y - target_y) < tolerance;
+    if (std::abs(x_ - target_x) < tolerance_ && std::abs(y_ - target_y) < tolerance_) {
+        cursor_state_ = 2; // fully aligned
+        return 2;
+    } else if (std::abs(y_ - target_y) < tolerance_) {
+        cursor_state_ = 1; // y aligned
+        return 1;
+    }
+    return 0;
 }
