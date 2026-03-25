@@ -56,7 +56,7 @@ private:
 
     int target_pose_idx_;
     std::vector<MapPoint> map_point_list_;
-    double tolerance_ = 0.15;  
+    double tolerance_ = 0.2;  
 
     // ===== Position checking =====
     int checkPosition();
