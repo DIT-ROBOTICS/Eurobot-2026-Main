@@ -27,6 +27,12 @@
     cam_dock_type_x: "mission_dock_cam_x"         # Dock type for CAM_DOCK_X (case 3)
     flip_distance_threshold: 0.25                 # Distance to target to trigger flip
     
+    # Dock Staging Dist of Each Side
+    staging_dist_front: 0.205 # not used
+    staging_dist_right: 0.205
+    staging_dist_back: 0.205
+    staging_dist_left: 0.205
+    
     # Spectrum Scoring Configuration
     pantry_aggressiveness: -1.0
     pantry_sensitivity: 2.0
