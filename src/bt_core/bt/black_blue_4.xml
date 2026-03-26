@@ -22,7 +22,7 @@
             <TakePublisher_white
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"
-                timeout_ms="10000"/>   <!-- test for callback -->
+                timeout_ms="2000"/>   <!-- test for callback -->
             <FieldUpdater/>
             <!-- <Sleep msec="2000"/> -->
         </Sequence>
@@ -65,7 +65,7 @@
             <PutPublisher
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"
-                timeout_ms="10000"/>   <!-- test for callback -->
+                timeout_ms="2500"/>   <!-- test for callback -->
             <FieldUpdater/>
             <Sleep msec="500"/>
         </Sequence>
