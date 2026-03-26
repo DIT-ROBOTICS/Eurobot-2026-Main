@@ -51,7 +51,7 @@ BT::NodeStatus CursorPublisher::onRunning() {
     std_msgs::msg::Bool msg;
     switch (cursor_state_) {
         case 1:
-            if (is_arm_on_ == 1) break;
+            if (is_arm_on_) break;
             msg.data = true; // aligned in y, can use arm
             if (arms_ == "left") {
                 CP_INFO(node_, "Publishing to /robot/on_cursor_left: 1");
@@ -63,6 +63,7 @@ BT::NodeStatus CursorPublisher::onRunning() {
             is_arm_on_ = 1;
             return BT::NodeStatus::RUNNING;
         case 2:
+            if (!is_arm_on_) break;
             msg.data = false; // fully aligned, finish cursor action
             CP_INFO(node_, "Fully aligned with target pose %d", target_pose_idx_);
             if (arms_ == "left") {
@@ -99,10 +100,13 @@ int CursorPublisher::checkPosition()
     double target_x = map_point_list_[target_pose_idx_].x;
     double target_y = map_point_list_[target_pose_idx_].y;
 
+    double stage_point = map_point_list_[target_pose_idx_].z_south;
+    double docking_sign = map_point_list_[target_pose_idx_].sign;
+
     if (std::abs(x_ - target_x) < tolerance_ && std::abs(y_ - target_y) < tolerance_) {
         cursor_state_ = 2; // fully aligned
         return 2;
-    } else if (std::abs(y_ - target_y) < tolerance_) {
+    } else if (std::abs(x_ - (target_x + stage_point * docking_sign)) < tolerance_ && std::abs(y_ - target_y) < tolerance_) {
         cursor_state_ = 1; // y aligned
         return 1;
     }
