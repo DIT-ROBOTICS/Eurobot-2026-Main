@@ -1,8 +1,9 @@
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
@@ -10,6 +11,12 @@ def generate_launch_description():
     launch_dir = os.path.dirname(os.path.realpath(__file__))
     src_dir = os.path.dirname(launch_dir)  # startup package src dir
     ros_domain_id = os.getenv('ROS_DOMAIN_ID')
+
+    # robot_side_publisher include
+    robot_side_publisher_launch_file = os.path.join(launch_dir, 'robot_side_publisher_launch.py')
+    robot_side_publisher_include = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(robot_side_publisher_launch_file)
+    )
 
     # Declare launch arguments
     if ros_domain_id == '11':
@@ -43,4 +50,5 @@ def generate_launch_description():
     return LaunchDescription([
         robot_config_arg,
         startup_node,
+        robot_side_publisher_include,
     ])

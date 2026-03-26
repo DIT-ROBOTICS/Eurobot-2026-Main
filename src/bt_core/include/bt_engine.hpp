@@ -28,6 +28,7 @@
 #include "onDock.hpp"
 #include "stop_robot_node.hpp"
 #include "rotate_action_node.hpp"
+#include "relativeNav.hpp"
 
 // receiver nodes
 #include "CamReceiver.hpp"

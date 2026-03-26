@@ -31,6 +31,38 @@
         </Sequence>
     </BehaviorTree>
 
+    <BehaviorTree ID="MoveBackTakeSubTree">
+        <Sequence>
+            <!-- Dock to collection pdoint -->
+            <OnDockAction
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"
+                dock_type="dock_y_loose_linearBoost"
+                isPureDocking="false"
+                finish_pose="{dock_result}"/>
+            
+            <!-- Publish TAKE command to firmware -->
+            <MissionPublisher
+                ActionType="take"
+                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"/>
+            <FieldUpdater/>
+
+            <RelativeNavNode
+                targetPoseSideIdx="{target_side}"
+                offset="0.0"
+                finish_pose="{nav_result}"/>
+
+            <!-- Wait for vision to confirm take, or timeout -->
+            <MissionChecker
+                ActionType="take"
+                targetPoseSideIdx="{target_side}"
+                timeout_ms="1000"/>
+            <Sleep msec="200"/>
+        </Sequence>
+    </BehaviorTree>
+
     <!-- ============================================= -->
     <!-- FLIP SubTree: Flip the hazelnut               -->
     <!-- ============================================= -->

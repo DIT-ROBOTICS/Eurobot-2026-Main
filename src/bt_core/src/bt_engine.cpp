@@ -218,6 +218,7 @@ void BTengine::createTreeNodes() {
     // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
     factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
+    factory.registerNodeType<RelativeNavNode>("RelativeNavNode", params, blackboard);
     // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
 
     // utils

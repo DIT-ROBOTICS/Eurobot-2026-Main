@@ -13,7 +13,7 @@ using namespace BT;
  * Receives from DecisionCore:
  *   - targetPoseIdx: GoalPose index
  *   - targetPoseSideIdx: which robot side should face the target
- *   - targetDirection: approach direction (disabled for now)
+ *   - targetDirection: approach direction
  * 
  * Uses map_points to:
  *   1. Get target position (x, y)
