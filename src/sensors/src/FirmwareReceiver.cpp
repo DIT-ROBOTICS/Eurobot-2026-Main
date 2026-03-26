@@ -100,7 +100,7 @@ void FirmwareReceiver::putFinishCallback(const std_msgs::msg::Int16::SharedPtr m
     robot_sides[side_idx] = FieldStatus::EMPTY;
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
 
-    FR_INFO(node_, "[FirmwareReceiver]: Put finish - set robot_side_status[%d] to EMPTY", side_idx);
+    FR_INFO(node_, "Put finish - set robot_side_status[%d] to EMPTY", side_idx);
 }
 
 void FirmwareReceiver::takeFinishCallback(const std_msgs::msg::Int16::SharedPtr msg) {
@@ -120,7 +120,7 @@ void FirmwareReceiver::takeFinishCallback(const std_msgs::msg::Int16::SharedPtr 
     robot_sides[side_idx] = FieldStatus::OCCUPIED;
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
 
-    FR_INFO(node_, "[FirmwareReceiver]: Take finish - set robot_side_status[%d] to OCCUPIED", side_idx);
+    FR_INFO(node_, "Take finish - set robot_side_status[%d] to OCCUPIED", side_idx);
 }
 
 BT::NodeStatus FirmwareReceiver::tick() {
