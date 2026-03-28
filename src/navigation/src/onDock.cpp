@@ -212,15 +212,55 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
         }
     }
     double sign = map_point_list[pose_idx].sign;
+
+    // If map_point.direction is explicitly set (not -1), apply staging directly to x/y
+    // using targetDirection from DecisionCore.
+    const bool use_xy_staging = (map_point_list[pose_idx].direction != -1);
+    if (use_xy_staging) {
+        switch (target_direction) {
+            case Direction::NORTH:
+                y += stage_dist;
+                break;
+            case Direction::EAST:
+                x += stage_dist;
+                break;
+            case Direction::SOUTH:
+                y -= stage_dist;
+                break;
+            case Direction::WEST:
+                x -= stage_dist;
+                break;
+            default:
+                DOCK_ERROR(node,
+                           "Invalid target_direction=%d for pose=%s, x, y are not shifted",
+                           static_cast<int>(target_direction),
+                           goalPoseToString(static_cast<GoalPose>(pose_idx)).c_str());
+                use_xy_staging = false;
+                break;
+        }
+        DOCK_INFO(node,
+                  "Applied XY staging offset for pose=%s, dir=%d, stage_dist=%.3f -> staged_xy=(%.3f, %.3f)",
+                  goalPoseToString(static_cast<GoalPose>(pose_idx)).c_str(),
+                  static_cast<int>(target_direction), stage_dist, x, y);
+    }
+
+    // When x/y staging is explicitly applied, set z offset to 0 to avoid double staging.
+    double z_stage_for_nav = stage_dist * (-sign);
+    if (use_xy_staging) {
+        z_stage_for_nav = 0.0;
+    }
     
+    // get input of targetDirection, also load MapPointList
+    // use target_pose_idx to know which map_point
+    // if map_point.direction is other than -1, shift x and y with the staging_dist with targetDirection
     // Set position: x, y are final dock pose, z = stage_dist * sign for nav system
     if(chosen_dock_type == DockType::MISSION_DOCK_Y || chosen_dock_type == DockType::CAM_DOCK_Y) {
-        dock_pose.pose.position.z = stage_dist * (-sign);
+        dock_pose.pose.position.z = z_stage_for_nav;
         dock_pose.pose.position.y = y;  // Adjust y for staging
         dock_pose.pose.position.x = x;
     }
     else if(chosen_dock_type == DockType::MISSION_DOCK_X || chosen_dock_type == DockType::CAM_DOCK_X) {
-        dock_pose.pose.position.z = stage_dist * (-sign);
+        dock_pose.pose.position.z = z_stage_for_nav;
         dock_pose.pose.position.x = x;  // Adjust x for staging
         dock_pose.pose.position.y = y;
     }
