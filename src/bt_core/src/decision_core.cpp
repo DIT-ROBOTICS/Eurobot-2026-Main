@@ -662,13 +662,13 @@ Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side
             double sx = goal_x;
             double sy = goal_y;
             if (dir == Direction::NORTH) {
-                sy += stage_dist;
-            } else if (dir == Direction::EAST) {
-                sx += stage_dist;
-            } else if (dir == Direction::SOUTH) {
                 sy -= stage_dist;
-            } else if (dir == Direction::WEST) {
+            } else if (dir == Direction::EAST) {
                 sx -= stage_dist;
+            } else if (dir == Direction::SOUTH) {
+                sy += stage_dist;
+            } else if (dir == Direction::WEST) {
+                sx += stage_dist;
             }
             return {sx, sy};
         };
@@ -714,6 +714,7 @@ Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side
         }
 
         result = best_dir;
+        // update dock_type
         DC_INFO(node_ptr,
                 "Pose %d dynamic direction selected=%d (is_pantry=%s, stage_dist=%.3f, rival_thr=%.3f)",
                 idx, static_cast<int>(result), is_pantry ? "true" : "false", stage_dist, rival_threshold);

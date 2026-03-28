@@ -219,23 +219,22 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     if (use_xy_staging) {
         switch (target_direction) {
             case Direction::NORTH:
-                y += stage_dist;
-                break;
-            case Direction::EAST:
-                x += stage_dist;
-                break;
-            case Direction::SOUTH:
                 y -= stage_dist;
                 break;
-            case Direction::WEST:
+            case Direction::EAST:
                 x -= stage_dist;
+                break;
+            case Direction::SOUTH:
+                y += stage_dist;
+                break;
+            case Direction::WEST:
+                x += stage_dist;
                 break;
             default:
                 DOCK_ERROR(node,
                            "Invalid target_direction=%d for pose=%s, x, y are not shifted",
                            static_cast<int>(target_direction),
                            goalPoseToString(static_cast<GoalPose>(pose_idx)).c_str());
-                use_xy_staging = false;
                 break;
         }
         DOCK_INFO(node,
