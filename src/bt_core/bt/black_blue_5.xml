@@ -149,8 +149,10 @@
                     <CamReceiver/>
                     <LocReceiver/>
                     <GameInfoReceiver/>
+                    <!-- Spin the thread of ControllerTypePublisher -->
+                    <ControllerTypePublisher controller_type="Fast"/>
                     <!-- <FirmwareReceiver/> -->
-                    <FieldUpdater/>         
+                    <FieldUpdater/>
                     <Repeat num_cycles="1">
                         <Sequence>
                             <DecisionCore 
