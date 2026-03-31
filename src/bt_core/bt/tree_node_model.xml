@@ -1,6 +1,9 @@
 <root BTCPP_format="4">
     <TreeNodesModel>
         <Action ID="CamReceiver"/>
+        <Action ID="ControllerTypePublisher">
+            <input_port name="controller_type" type="std::string" default="Fast">Controller type to publish</input_port>
+        </Action>
         <Action ID="DecisionCore">
             <output_port name="targetDirection" type="int"/>
             <output_port name="targetPoseIdx" type="int"/>
