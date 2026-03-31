@@ -195,22 +195,6 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     double x = map_point_list[pose_idx].x;
     double y = map_point_list[pose_idx].y;
     double stage_dist = map_point_list[pose_idx].staging_dist;
-    if ( chosen_dock_type == DockType::CAM_DOCK_X || chosen_dock_type == DockType::CAM_DOCK_Y ) {
-        switch ( target_side ) {
-            case RobotSide::FRONT:
-                stage_dist = staging_dist_front_;
-                break;
-            case RobotSide::RIGHT:
-                stage_dist = staging_dist_right_;
-                break;
-            case RobotSide::BACK:
-                stage_dist = staging_dist_back_;
-                break;
-            case RobotSide::LEFT:
-                stage_dist = staging_dist_left_;
-                break;
-        }
-    }
     double sign = map_point_list[pose_idx].sign;
 
     // If map_point.direction is explicitly set (not -1), apply staging directly to x/y
@@ -220,15 +204,19 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
         switch (target_direction) {
             case Direction::NORTH:
                 y -= stage_dist;
+                sign = -1.0;
                 break;
             case Direction::EAST:
                 x -= stage_dist;
+                sign = -1.0;
                 break;
             case Direction::SOUTH:
                 y += stage_dist;
+                sign = 1.0;
                 break;
             case Direction::WEST:
                 x += stage_dist;
+                sign = 1.0;
                 break;
             default:
                 DOCK_ERROR(node,
@@ -245,8 +233,26 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
 
     // When x/y staging is explicitly applied, set z offset to 0 to avoid double staging.
     double z_stage_for_nav = stage_dist * (-sign);
-    if (use_xy_staging) {
-        z_stage_for_nav = 0.0;
+    if ( chosen_dock_type == DockType::CAM_DOCK_X || chosen_dock_type == DockType::CAM_DOCK_Y ) {
+        switch ( target_side ) {
+            case RobotSide::FRONT:
+                z_stage_for_nav = staging_dist_front_ * (-sign);
+                break;
+            case RobotSide::RIGHT:
+                z_stage_for_nav = staging_dist_right_ * (-sign);
+                break;
+            case RobotSide::BACK:
+                z_stage_for_nav = staging_dist_back_ * (-sign);
+                break;
+            case RobotSide::LEFT:
+                z_stage_for_nav = staging_dist_left_ * (-sign);
+                break;
+        }
+    }
+    else {
+        if ( use_xy_staging ) {
+            z_stage_for_nav = 0.0;
+        }
     }
     
     // get input of targetDirection, also load MapPointList

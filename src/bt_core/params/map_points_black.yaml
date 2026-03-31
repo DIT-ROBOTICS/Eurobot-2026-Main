@@ -2,7 +2,7 @@
   ros__parameters:
   # represent `x position`, `y position`, `stage point dist`, `sign`, `DockType`, `direction`  in order
   # docktype: 0 - mission dock y, 1 - mission dock x, 2 - cam dock y, 3 - cam dock x
-  # direction: -1=legacy mode (no XY shift); 0..3=fixed map direction(NESW); 5=dynamic direction from relative pose
+  # direction: -1=legacy mode (no XY shift); 0..3=fixed map target direction(NESW); 5=dynamic direction from relative pose
   # when direction != -1, XY staging offset is applied from (x, y) using stage point dist
   # that is, the nonzero stage point dist doesn't gives docking. the z sent to nav is 0
     map_points: [
@@ -23,11 +23,11 @@
       2.625, 0.4, 0.2, -1.0, 3.0, -1.0, # O 14 
       2.625, 1.2, 0.2, -1.0, 3.0, -1.0, # P 15
       1.9, 0.25, 0.2,  1.0, 2.0, -1.0, # Q 16
-      1.85, 0.8, 0.2, -1.0, 2.0, 4.0, # R 17
+      1.85, 0.8, 0.2, -1.0, 2.0, 5.0, # R 17
       1.4, 0.8, 0.0, -1.0, 0.0, -1.0, # YellowNinjaPantry
       1.4, 2.2, 0.0, -1.0, 0.0, -1.0, # BlueNinjaPantry
       0.7, 0.3, 0.5, 1.0, 1.0, -1.0, # YellowCursor
       2.3, 0.3, 0.5, 1.0, 1.0, -1.0, # BlueCursor
       0.3, 1.8, 0.0, -1.0, 0.0, -1.0, # YellowHome
-      2.7, 1.7, 0.0, -1.0, 0.0, -1.0  # BlueHome
+      2.7, 1.7, 0.2, -1.0, 0.0, -1.0  # BlueHome
     ]
