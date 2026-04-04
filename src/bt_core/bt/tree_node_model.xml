@@ -11,11 +11,6 @@
         </Action>
         <Action ID="FieldUpdater"/>
         <Action ID="FirmwareReceiver"/>
-        <Action ID="FlipPublisher">
-            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
-            <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
-            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to flip</input_port>
-        </Action>
         <Action ID="GameInfoReceiver"/>
         <Action ID="LocReceiver"/>
         <Action ID="MissionChecker">
@@ -46,6 +41,21 @@
             <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
             <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
             <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
+        <Action ID="TakePublisher_white">
+            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
+        <Action ID="FlipPublisher">
+            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to flip</input_port>
+        </Action>
+        <Action ID="FlipPublisher_white">
+            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index in map_points</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to start</input_port>
         </Action>
     </TreeNodesModel>
 </root>

@@ -42,7 +42,9 @@ add_executable(bt_engine
   src/MissionChecker.cpp
   src/FieldUpdater.cpp
   src/FlipPublisher.cpp
+  src/FlipPublisher_white.cpp
   src/TakePublisher.cpp
+  src/TakePublisher_white.cpp
   src/PutPublisher.cpp
 )
 ament_target_dependencies(bt_engine

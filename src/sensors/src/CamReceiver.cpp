@@ -221,6 +221,8 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
         
         if (msg->data[i] == 1) {
             hazelnut_status[side_idx][i] = FlipStatus::NEED_FLIP;
+        } else if (msg->data[i] == -1) {
+            hazelnut_status[side_idx][i] = FlipStatus::NO_TAKE;
         } else {
             hazelnut_status[side_idx][i] = FlipStatus::NO_FLIP;
         }

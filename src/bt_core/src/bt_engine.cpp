@@ -205,9 +205,11 @@ void BTengine::createTreeNodes() {
 
     // flip publisher
     factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
+    factory.registerNodeType<FlipPublisher_white>("FlipPublisher_white", params, blackboard);
 
     // take/put publishers (new separate nodes)
     factory.registerNodeType<TakePublisher>("TakePublisher", params, blackboard);
+    factory.registerNodeType<TakePublisher_white>("TakePublisher_white", params, blackboard);
     factory.registerNodeType<PutPublisher>("PutPublisher", params, blackboard);
     // game info receiver
     factory.registerNodeType<GameInfoReceiver>("GameInfoReceiver", params, blackboard);
