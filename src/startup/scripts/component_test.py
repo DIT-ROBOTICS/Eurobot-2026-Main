@@ -22,7 +22,7 @@ from rclpy.action import ActionClient
 
 from nav2_msgs.action import NavigateToPose
 from geometry_msgs.msg import PoseStamped, Twist
-from std_msgs.msg import Int16, Int16MultiArray
+from std_msgs.msg import Int16, Int16MultiArray, Bool
 
 
 # ── colour helpers ──────────────────────────────────────────────
@@ -46,6 +46,8 @@ class ComponentTester(Node):
         self.take_pub      = self.create_publisher(Int16MultiArray,           "/robot/on_take",   10)
         self.vel_pub       = self.create_publisher(Twist,           "/cmd_vel",         10)
         self.dock_side_pub = self.create_publisher(Int16,           "/robot/dock_side", 10)
+        self.cursor_left_pub  = self.create_publisher(Bool,         "/robot/on_cursor_left",  10)
+        self.cursor_right_pub = self.create_publisher(Bool,         "/robot/on_cursor_right", 10)
 
         # ── nav2 action client ──────────────────────────────────
         self.nav_client = ActionClient(self, NavigateToPose, "navigate_to_pose")
@@ -72,6 +74,7 @@ class ComponentTester(Node):
 ║  5  │ Zero cmd_vel                               ║
 ║  6  │ Dock Side → /robot/dock_side (Int16)       ║
 ║  7  │ cmd_vel   → /cmd_vel  (vx, vy, wz)        ║
+║  8  │ Cursor    → /robot/on_cursor_(left/right) ║
 ║  h  │ Show this menu                             ║
 ║  q  │ Quit                                       ║
 ╚══════════════════════════════════════════════════╝{RESET}
@@ -104,6 +107,8 @@ class ComponentTester(Node):
                     self._cmd_dock_side()
                 elif cmd == "7":
                     self._cmd_vel()
+                elif cmd == "8":
+                    self._cmd_cursor()
                 elif cmd == "":
                     pass
                 else:
@@ -284,6 +289,38 @@ class ComponentTester(Node):
         msg.angular.z = wz
         self.vel_pub.publish(msg)
         print(f"{GREEN}Published /cmd_vel → vx={vx}, vy={vy}, wz={wz}{RESET}")
+
+    # ────────────────────────────────────────────────────────────
+    #  8 — Cursor
+    # ────────────────────────────────────────────────────────────
+    def _cmd_cursor(self):
+        """
+        /robot/on_cursor_left or /robot/on_cursor_right  →  Bool
+          one-line input: "r 1" or "l 0"
+        """
+        raw = input(f"  {YELLOW}Enter cursor command (l/r 0/1): {RESET}").strip().lower()
+        parts = raw.split()
+        if len(parts) != 2:
+            print(f"{RED}Invalid format. Example: r 1{RESET}")
+            return
+
+        side_raw, value_raw = parts
+        if side_raw not in ["l", "r"]:
+            print(f"{RED}Invalid side. Use 'l' or 'r'.{RESET}")
+            return
+        if value_raw not in ["0", "1"]:
+            print(f"{RED}Invalid value. Use 0 or 1.{RESET}")
+            return
+
+        msg = Bool()
+        msg.data = (value_raw == "1")
+
+        if side_raw == "l":
+            self.cursor_left_pub.publish(msg)
+            print(f"{GREEN}Published /robot/on_cursor_left → {int(msg.data)}{RESET}")
+        else:
+            self.cursor_right_pub.publish(msg)
+            print(f"{GREEN}Published /robot/on_cursor_right → {int(msg.data)}{RESET}")
 
 
 # ════════════════════════════════════════════════════════════════
