@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- ============================================= -->
-<!-- test for TAKE/PUT publisher -->
+<!-- test for TAKE/PUT/Cursor publisher -->
 <!-- ============================================= -->
 <root BTCPP_format="4">
     
@@ -72,18 +72,20 @@
 
     <BehaviorTree ID="CursorSubTree">
         <Sequence>
-            <Parallel success_count="2" failure_count="1">
-                <OnDockAction
-                    targetPoseIdx="{target_idx}"
-                    targetPoseSideIdx="{target_side}"
-                    targetDirection="{target_dir}"
-                    dock_type="dock_y_loose_linearBoost"
-                    isPureDocking="false"
-                    finish_pose="{dock_result}"/>
-                <CursorPublisher
-                    arms="left"
-                    targetPoseIdx="{target_idx}"/>
-            </Parallel>
+            <RetryUntilSuccessful num_attempts="3">
+                <Parallel success_count="2" failure_count="1">
+                    <OnDockAction
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}"
+                        dock_type="dock_y_loose_linearBoost"
+                        isPureDocking="false"
+                        finish_pose="{dock_result}"/>
+                    <CursorPublisher
+                        arms="left"
+                        targetPoseIdx="{target_idx}"/>
+                </Parallel>
+            </RetryUntilSuccessful>
             <Sleep msec="500"/>
         </Sequence>
     </BehaviorTree>
