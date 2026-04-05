@@ -36,6 +36,12 @@ CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config,
         "/robot/vision/hazelnut/flip", 10,
         std::bind(&CamReceiver::hazelnut_flip_callback, this, std::placeholders::_1),
         sub_options);
+    
+        // Subscribe to pickup mask (0 means NO_TAKE should be forced)
+        hazelnut_pickup_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
+            "/robot/docking/pickup", 10,
+            std::bind(&CamReceiver::hazelnut_pickup_callback, this, std::placeholders::_1),
+            sub_options);
 
     // Subscribe to on take feedback
     on_take_feedback_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
@@ -199,6 +205,8 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
         RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid side index: %d", side_idx);
         return;
     }
+    current_hazelnut_side_idx_ = side_idx;
+    has_hazelnut_side_idx_ = true;
     
     // Check robot_side_status: skip update if this side is already OCCUPIED
     // (camera may report all zeros when it can't see the hazelnuts during movement)
@@ -218,11 +226,9 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
     // Update the specified side with flip information
     for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); ++i) {
         if(robot_sides[side_idx] == FieldStatus::OCCUPIED) continue;
-        
+        if(hazelnut_status[side_idx][i] == FlipStatus::NO_TAKE) continue; // Don't update if already forced NO_TAKE by pickup mask
         if (msg->data[i] == 1) {
             hazelnut_status[side_idx][i] = FlipStatus::NEED_FLIP;
-        } else if (msg->data[i] == -1) {
-            hazelnut_status[side_idx][i] = FlipStatus::NO_TAKE;
         } else {
             hazelnut_status[side_idx][i] = FlipStatus::NO_FLIP;
         }
@@ -233,6 +239,46 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
     
     RCLCPP_DEBUG(node_->get_logger(), 
                 "CamReceiver: Updated hazelnut flip status for side %d: [%d, %d, %d, %d]",
+                side_idx, msg->data[0], msg->data[1], msg->data[2], msg->data[3]);
+}
+
+void CamReceiver::hazelnut_pickup_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg) {
+    RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: Received hazelnut pickup mask update.");
+
+    if (msg->data.size() < 4) {
+        RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid hazelnut pickup data size: %zu", msg->data.size());
+        return;
+    }
+
+    int side_idx = -1;
+    if (msg->data.size() >= 5) {
+        side_idx = msg->data[4];
+    } else if (has_hazelnut_side_idx_) {
+        side_idx = current_hazelnut_side_idx_;
+    }
+
+    if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
+        RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid/missing side index for pickup mask: %d", side_idx);
+        return;
+    }
+
+    std::vector<std::vector<FlipStatus>> hazelnut_status;
+    if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
+        hazelnut_status = std::vector<std::vector<FlipStatus>>(
+            ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
+    }
+
+    // pickup=0 means force NO_TAKE directly (override)
+    for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); ++i) {
+        if (msg->data[i] == 0) {
+            hazelnut_status[side_idx][i] = FlipStatus::NO_TAKE;
+        }
+    }
+
+    blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
+
+    RCLCPP_DEBUG(node_->get_logger(),
+                "CamReceiver: Applied pickup mask for side %d: [%d, %d, %d, %d]",
                 side_idx, msg->data[0], msg->data[1], msg->data[2], msg->data[3]);
 }
 

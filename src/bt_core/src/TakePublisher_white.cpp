@@ -66,6 +66,14 @@ BT::NodeStatus TakePublisher_white::onRunning() {
             collection_info_[collection_idx] = FieldStatus::EMPTY;
         }
 
+        // 此輪 TAKE 完成後再清掉該 side 的暫存判斷，供下一輪重新判斷
+        if (side_idx_ >= 0 && side_idx_ < ROBOT_SIDES) {
+            for (int i = 0; i < HAZELNUT_LENGTH; ++i) {
+                hazelnut_status_[side_idx_][i] = FlipStatus::NO_FLIP;
+            }
+            blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_);
+        }
+
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info_);
         return BT::NodeStatus::SUCCESS;
     }
@@ -83,6 +91,14 @@ BT::NodeStatus TakePublisher_white::onRunning() {
         int collection_idx = target_pose_idx_ - PANTRY_LENGTH;
         if (collection_idx >= 0 && collection_idx < static_cast<int>(collection_info_.size())) {
             collection_info_[collection_idx] = FieldStatus::EMPTY;
+        }
+
+        // timeout 收斂時也清掉該 side，避免帶到下一輪
+        if (side_idx_ >= 0 && side_idx_ < ROBOT_SIDES) {
+            for (int i = 0; i < HAZELNUT_LENGTH; ++i) {
+                hazelnut_status_[side_idx_][i] = FlipStatus::NO_FLIP;
+            }
+            blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_);
         }
 
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_info_);
@@ -134,13 +150,6 @@ void TakePublisher_white::publishTakeArray(int side_idx) {
     TPW_INFO(node_, "Publishing TAKE array: [%d, %d, %d, %d, %d]",
              msg.data[0], msg.data[1], msg.data[2], msg.data[3], msg.data[4]);
     take_pub_->publish(msg);
-
-    for (int i = 0; i < HAZELNUT_LENGTH; ++i) {
-        hazelnut_status_[side_idx][i] = FlipStatus::NO_FLIP;
-    }
-
-    TPW_INFO(node_, "Reset hazelnut_status for side %d to NO_FLIP", side_idx);
-    blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_);
 }
 
 bool TakePublisher_white::isTakeCompleted() {
