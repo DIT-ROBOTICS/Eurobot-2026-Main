@@ -3,6 +3,7 @@
         <Action ID="CamReceiver"/>
         <Action ID="ControllerTypePublisher">
             <input_port name="controller_type" type="std::string" default="Fast">Controller type to publish</input_port>
+            <input_port name="mode" type="std::string" default="Auto">Current mode (Auto/Manual)</input_port>
         </Action>
         <Action ID="DecisionCore">
             <output_port name="targetDirection" type="int"/>

@@ -86,6 +86,9 @@
                 targetPoseSideIdx="{target_side}"
                 timeout_ms="800"/>
             <Sleep msec="1000"/>
+            <ControllerTypePublisher
+                mode="Auto"
+                controller_type="Fast"/>
         </Sequence>
     </BehaviorTree>
 
@@ -149,8 +152,6 @@
                     <CamReceiver/>
                     <LocReceiver/>
                     <GameInfoReceiver/>
-                    <!-- Spin the thread of ControllerTypePublisher -->
-                    <ControllerTypePublisher controller_type="Fast"/>
                     <!-- <FirmwareReceiver/> -->
                     <FieldUpdater/>
                     <Repeat num_cycles="1">

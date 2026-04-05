@@ -1,49 +1,55 @@
 #include "controller_type_publisher.hpp"
 
-namespace {
-std::atomic<bool> controller_type_monitor_started(false);
-std::atomic<bool> controller_type_initialized(false);
-std::atomic<bool> controller_type_published(false);
-}
-
 ControllerTypePublisher::ControllerTypePublisher(const std::string& name, const NodeConfig& config,
                                                  const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
     : BT::SyncActionNode(name, config),
       node_(params.nh.lock()),
       blackboard_(blackboard),
-      controller_type_info("Fast") {
-    controller_type_pub_ = node_->create_publisher<std_msgs::msg::String>("/controller_type", 10);
-}
+      controller_type_info_("Fast"),
+      mode_("Auto") {}
 
 BT::PortsList ControllerTypePublisher::providedPorts() {
     return {
-        BT::InputPort<std::string>("controller_type", "Fast", "Controller type to publish")
+        BT::InputPort<std::string>("controller_type", "Fast", "Controller type to publish"),
+        BT::InputPort<std::string>("mode", "Auto", "Current mode (Auto/Manual)")
     };
 }
 
 BT::NodeStatus ControllerTypePublisher::tick() {
+    std::string input_mode;
     std::string current_controller_type;
 
-    if (!getInput<std::string>("controller_type", controller_type_info)) {
-        controller_type_info = "Fast";
+    if (!getInput<std::string>("controller_type", controller_type_info_)) {
+        controller_type_info_ = "Fast";
+    }
+ 
+    if (!getInput<std::string>("mode", input_mode)) {
+        input_mode = "Auto";
     }
 
+    mode_ = input_mode;
+    blackboard_->set<std::string>("mode", mode_);
+
     if (!blackboard_->get<std::string>("controller_type", current_controller_type)) {
-        current_controller_type = "";
+        current_controller_type = "Slow";
         blackboard_->set<std::string>("controller_type", current_controller_type);
     }
 
-    if (!controller_type_initialized.exchange(true)) {
-        std_msgs::msg::String msg;
-        msg.data = "Slow";
-        blackboard_->set<std::string>("controller_type", msg.data);
-        controller_type_pub_->publish(msg);
-        RCLCPP_INFO(node_->get_logger(),"[ControllerTypePublisher] initialized /controller_type: %s", msg.data.c_str());
+    readBlackboard();
+
+    if (mode_ == "Auto" && pantry_info.data.empty() && collection_info.data.empty() &&
+        current_controller_type != controller_type_info_) {
+        blackboard_->set<std::string>("controller_type", controller_type_info_);
+        RCLCPP_INFO(node_->get_logger(),
+                    "[ControllerTypePublisher] set controller_type blackboard: %s -> %s (mode=%s)",
+                    current_controller_type.c_str(), controller_type_info_.c_str(), mode_.c_str());
+        return BT::NodeStatus::SUCCESS;
     }
 
-    if (!controller_type_monitor_started.exchange(true)) {
-        std::thread(&ControllerTypePublisher::spinThread, this).detach();
-    }
+    RCLCPP_DEBUG(node_->get_logger(),
+                 "[ControllerTypePublisher] skipped update (mode=%s, collection=%zu, pantry=%zu, current=%s, target=%s)",
+                 mode_.c_str(), collection_info.data.size(), pantry_info.data.size(),
+                 current_controller_type.c_str(), controller_type_info_.c_str());
 
     return BT::NodeStatus::SUCCESS;
 }
@@ -58,35 +64,5 @@ void ControllerTypePublisher::readBlackboard() {
 
     if (blackboard_->get<std::vector<int>>("pantry_sequence", pantry_sequence)) {
         pantry_info.data = pantry_sequence;
-    }
-}
-
-void ControllerTypePublisher::publishControllerType() {
-    std_msgs::msg::String msg;
-    msg.data = controller_type_info;
-    blackboard_->set<std::string>("controller_type", msg.data);
-    controller_type_pub_->publish(msg);
-    RCLCPP_INFO(node_->get_logger(),"[ControllerTypePublisher] published /controller_type: %s", msg.data.c_str());
-}
-
-void ControllerTypePublisher::spinThread() {
-    while (rclcpp::ok() && !controller_type_published) {
-        std::string current_controller_type;
-
-        readBlackboard();
-
-        if (!blackboard_->get<std::string>("controller_type", current_controller_type)) {
-            current_controller_type = "";
-            blackboard_->set<std::string>("controller_type", current_controller_type);
-        }
-
-        if (pantry_info.data.empty() && collection_info.data.empty()) {
-            if (current_controller_type != controller_type_info) {
-                publishControllerType();
-            }
-            controller_type_published = true;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }

@@ -2,10 +2,6 @@
 #define CONTROLLER_TYPE_PUBLISHER_HPP
 
 #include "navigation_util.hpp"
-#include "std_msgs/msg/string.hpp"
-#include <atomic>
-#include <chrono>
-#include <thread>
 
 class ControllerTypePublisher : public BT::SyncActionNode {
 
@@ -18,13 +14,11 @@ public:
 
 private:
     void readBlackboard();
-    void publishControllerType();
-    void spinThread();
 
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr controller_type_pub_;
     std::shared_ptr<rclcpp::Node> node_;
     BT::Blackboard::Ptr blackboard_;
-    std::string controller_type_info;
+    std::string controller_type_info_;
+    std::string mode_;
     std_msgs::msg::Int32MultiArray collection_info;
     std_msgs::msg::Int32MultiArray pantry_info;
 };
