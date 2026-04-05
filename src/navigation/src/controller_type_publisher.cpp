@@ -46,6 +46,14 @@ BT::NodeStatus ControllerTypePublisher::tick() {
         return BT::NodeStatus::SUCCESS;
     }
 
+    else if (mode_ == "Manual" && current_controller_type != controller_type_info_) {
+        blackboard_->set<std::string>("controller_type", controller_type_info_);
+        RCLCPP_INFO(node_->get_logger(),
+                    "[ControllerTypePublisher]  set controller_type blackboard: %s -> %s (mode=%s)",
+                    current_controller_type.c_str(), controller_type_info_.c_str(), mode_.c_str());
+        return BT::NodeStatus::SUCCESS;
+    }
+
     RCLCPP_DEBUG(node_->get_logger(),
                  "[ControllerTypePublisher] skipped update (mode=%s, collection=%zu, pantry=%zu, current=%s, target=%s)",
                  mode_.c_str(), collection_info.data.size(), pantry_info.data.size(),
