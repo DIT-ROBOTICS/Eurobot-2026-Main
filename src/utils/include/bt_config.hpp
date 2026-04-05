@@ -78,7 +78,8 @@ enum class FieldStatus {
 enum class FlipStatus {
     NO_FLIP,
     NEED_FLIP,
-    NO_TAKE
+    NO_TAKE,
+    NEED_TAKE
 };
 
 enum class Direction {

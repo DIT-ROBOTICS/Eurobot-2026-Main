@@ -258,7 +258,7 @@ void CamReceiver::hazelnut_pickup_callback(const std_msgs::msg::Int32MultiArray:
     }
 
     if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
-        RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid/missing side index for pickup mask: %d", side_idx);
+        // RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid/missing side index for pickup mask: %d", side_idx);
         return;
     }
 
@@ -269,8 +269,12 @@ void CamReceiver::hazelnut_pickup_callback(const std_msgs::msg::Int32MultiArray:
     }
 
     // pickup=0 means force NO_TAKE directly (override)
-    for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); ++i) {
-        if (msg->data[i] == 0) {
+    for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); i++) {
+         if (hazelnut_status[side_idx][i] == FlipStatus::NEED_FLIP || hazelnut_status[side_idx][i] == FlipStatus::NO_FLIP) {
+            continue;
+        } else if (msg->data[i] == 1) {
+            hazelnut_status[side_idx][i] = FlipStatus::NEED_TAKE;
+        } else if (msg->data[i] == 0) {
             hazelnut_status[side_idx][i] = FlipStatus::NO_TAKE;
         }
     }

@@ -93,10 +93,9 @@ BT::NodeStatus TakePublisher_white::onRunning() {
             collection_info_[collection_idx] = FieldStatus::EMPTY;
         }
 
-        // timeout 收斂時也清掉該 side，避免帶到下一輪
         if (side_idx_ >= 0 && side_idx_ < ROBOT_SIDES) {
             for (int i = 0; i < HAZELNUT_LENGTH; ++i) {
-                hazelnut_status_[side_idx_][i] = FlipStatus::NO_FLIP;
+                hazelnut_status_[side_idx_][i] = FlipStatus::NO_TAKE;
             }
             blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_);
         }
