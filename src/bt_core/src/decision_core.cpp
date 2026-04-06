@@ -651,11 +651,11 @@ Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side
 
         std::vector<Direction> candidates;
         if (is_pantry) {
-            // Pantry: only N/S
-            candidates = {Direction::NORTH, Direction::SOUTH};
-        } else {
-            // Collection: N/E/S/W
+            // Pantry: N/E/S/W
             candidates = {Direction::NORTH, Direction::EAST, Direction::SOUTH, Direction::WEST};
+        } else {
+            // Collection: only N/S
+            candidates = {Direction::NORTH, Direction::SOUTH};
         }
 
         auto getStagingPoint = [&](Direction dir) -> std::pair<double, double> {
