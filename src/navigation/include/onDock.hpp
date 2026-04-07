@@ -17,9 +17,8 @@ using namespace BT;
  * 
  * Uses map_points to:
  *   1. Get target position (x, y)
- *   2. Get direction-specific staging distances (north, east, south, west)
- *   3. Get sign and dock type for docking logic
- *   4. Calculate staging pose based on robot side
+ *   2. Get pre-configured offsets (back_offset, shift, front_offset, dock_dist)
+ *   3. Calculate staging pose based on robot side
  */
 class OnDockAction : public RosActionNode<opennav_docking_msgs::action::DockRobot> {
 public:
@@ -62,6 +61,12 @@ private:
     std::string normal_dock_type_x_param;  // From YAML: normal_dock_type_x
     std::string cam_dock_type_y_param;     // From YAML: cam_dock_type_y
     std::string cam_dock_type_x_param;     // From YAML: cam_dock_type_x
+    
+    // Staging distances per robot side (from YAML)
+    double staging_dist_front_;
+    double staging_dist_right_;
+    double staging_dist_back_;
+    double staging_dist_left_;
     
     // Pose data
     geometry_msgs::msg::PoseStamped goal_pose;
