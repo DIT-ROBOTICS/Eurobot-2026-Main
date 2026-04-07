@@ -19,6 +19,7 @@ CursorPublisher::CursorPublisher(const std::string& name, const BT::NodeConfig& 
 BT::PortsList CursorPublisher::providedPorts() {
     return {
         BT::InputPort<std::string>("arms", "left", "arms: 'left' or 'right'"),
+        BT::InputPort<std::string>("state", "on", "state: 'on' or 'off'"),
         BT::InputPort<int>("targetPoseIdx", 0, "Target pose index (for collection update)"),
     };
 }
@@ -30,6 +31,11 @@ BT::NodeStatus CursorPublisher::onStart() {
         arms_ = "left";
     }
 
+    if (!getInput<std::string>("state", state_)) {
+        CP_WARN(node_, "Missing state, defaulting to 'on'");
+        state_ = "on";
+    }
+
     if (!getInput<int>("targetPoseIdx", target_pose_idx_)) {
         CP_WARN(node_, "Missing targetPoseIdx, defaulting to 0");
         target_pose_idx_ = 0;
@@ -38,46 +44,49 @@ BT::NodeStatus CursorPublisher::onStart() {
     if (!blackboard_->get<std::vector<MapPoint>>("MapPointList", map_point_list_)) {
         CP_WARN(node_, "[OnDockAction] Failed to get MapPointList from blackboard");
     }
-
-    is_arm_on_ = 0;
-    cursor_state_ = 0;
     
     return BT::NodeStatus::RUNNING;
 }
 
 BT::NodeStatus CursorPublisher::onRunning() {
-    // Immediately succeed after publishing
-    checkPosition();
     std_msgs::msg::Bool msg;
-    switch (cursor_state_) {
-        case 1:
-            if (is_arm_on_) break;
-            msg.data = true; // aligned in y, can use arm
-            if (arms_ == "left") {
-                CP_INFO(node_, "Publishing to /robot/on_cursor_left: 1");
-                left_pub_->publish(msg);
-            } else if (arms_ == "right") {
-                CP_INFO(node_, "Publishing to /robot/on_cursor_right: 1");
-                right_pub_->publish(msg);
-            }
-            is_arm_on_ = 1;
-            return BT::NodeStatus::RUNNING;
-        case 2:
-            if (!is_arm_on_) break;
-            msg.data = false; // fully aligned, finish cursor action
-            CP_INFO(node_, "Fully aligned with target pose %d", target_pose_idx_);
-            if (arms_ == "left") {
-                CP_INFO(node_, "Publishing to /robot/on_cursor_left: 0");
-                left_pub_->publish(msg);
-            } else if (arms_ == "right") {
-                CP_INFO(node_, "Publishing to /robot/on_cursor_right: 0");
-                right_pub_->publish(msg);
-            }
-            is_arm_on_ = 0;
-            return BT::NodeStatus::SUCCESS;
-        default:
-            break;
+
+    if (state_ == "off") {
+        msg.data = false;
+        if (arms_ == "left") {
+            CP_INFO(node_, "Publishing to /robot/on_cursor_left: 0");
+            left_pub_->publish(msg);
+        } else if (arms_ == "right") {
+            CP_INFO(node_, "Publishing to /robot/on_cursor_right: 0");
+            right_pub_->publish(msg);
+        } else {
+            CP_WARN(node_, "Invalid arms: %s", arms_.c_str());
+            return BT::NodeStatus::FAILURE;
+        }
+        return BT::NodeStatus::SUCCESS;
     }
+
+    if (state_ != "on") {
+        CP_WARN(node_, "Invalid state: %s (expected 'on' or 'off')", state_.c_str());
+        return BT::NodeStatus::FAILURE;
+    }
+
+    // state == on: only publish when y-stage aligned
+    if (checkPosition()) {
+        msg.data = true;
+        if (arms_ == "left") {
+            CP_INFO(node_, "Y aligned, publishing to /robot/on_cursor_left: 1");
+            left_pub_->publish(msg);
+        } else if (arms_ == "right") {
+            CP_INFO(node_, "Y aligned, publishing to /robot/on_cursor_right: 1");
+            right_pub_->publish(msg);
+        } else {
+            CP_WARN(node_, "Invalid arms: %s", arms_.c_str());
+            return BT::NodeStatus::FAILURE;
+        }
+        return BT::NodeStatus::SUCCESS;
+    }
+
     return BT::NodeStatus::RUNNING;
 }
 
@@ -85,12 +94,17 @@ void CursorPublisher::onHalted() {
     CP_INFO(node_, "Halted (preempted)");
 }
 
-int CursorPublisher::checkPosition()
+bool CursorPublisher::checkPosition()
 {
     geometry_msgs::msg::PoseStamped robot_pose_;
 
     if (!blackboard_->get("robot_pose", robot_pose_)) {
         CP_WARN(node_, "No robot_pose in blackboard");
+        return false;
+    }
+
+    if (target_pose_idx_ < 0 || target_pose_idx_ >= static_cast<int>(map_point_list_.size())) {
+        CP_WARN(node_, "Invalid targetPoseIdx: %d", target_pose_idx_);
         return false;
     }
 
@@ -103,12 +117,5 @@ int CursorPublisher::checkPosition()
     double stage_point = map_point_list_[target_pose_idx_].z_south;
     double docking_sign = map_point_list_[target_pose_idx_].sign;
 
-    if (std::abs(x_ - target_x) < tolerance_ && std::abs(y_ - target_y) < tolerance_) {
-        cursor_state_ = 2; // fully aligned
-        return 2;
-    } else if (std::abs(x_ - (target_x + stage_point * docking_sign)) < tolerance_ && std::abs(y_ - target_y) < tolerance_) {
-        cursor_state_ = 1; // y aligned
-        return 1;
-    }
-    return 0;
+    return std::abs(x_ - (target_x + stage_point * docking_sign)) < tolerance_ && std::abs(y_ - target_y) < tolerance_;
 }
