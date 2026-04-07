@@ -78,6 +78,30 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized dock types: ny=%s, nx=%s, cy=%s, cx=%s", 
             normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
             cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
+                normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
+                cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
+    
+    // Load staging distance parameters for each robot side
+    if (!node->has_parameter("staging_dist_front")) {
+        node->declare_parameter("staging_dist_front", 0.205);
+    }
+    if (!node->has_parameter("staging_dist_right")) {
+        node->declare_parameter("staging_dist_right", 0.205);
+    }
+    if (!node->has_parameter("staging_dist_back")) {
+        node->declare_parameter("staging_dist_back", 0.205);
+    }
+    if (!node->has_parameter("staging_dist_left")) {
+        node->declare_parameter("staging_dist_left", 0.205);
+    }
+    
+    staging_dist_front_ = node->get_parameter("staging_dist_front").as_double();
+    staging_dist_right_ = node->get_parameter("staging_dist_right").as_double();
+    staging_dist_back_ = node->get_parameter("staging_dist_back").as_double();
+    staging_dist_left_ = node->get_parameter("staging_dist_left").as_double();
+    
+    RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized staging distances: front=%.3f, right=%.3f, back=%.3f, left=%.3f",
+                staging_dist_front_, staging_dist_right_, staging_dist_back_, staging_dist_left_);
 }
 
 
@@ -173,17 +197,20 @@ double OnDockAction::getSideYaw(RobotSide side, double base_direction) {
 }
 
 /**
- * @brief Calculate dock pose from map_points index and robot side
+ * @brief Calculate dock pose from map_points index, robot_config and robot side
  * 
- * map_points layout per point (8 values):
+ * map_points layout per point (5 values):
  *   [0] x position (final dock pose x)
  *   [1] y position (final dock pose y)
- *   [2] z_north (staging distance if target at map north)
- *   [3] z_east (staging distance if target at map east)
- *   [4] z_south (staging distance if target at map south)
- *   [5] z_west (staging distance if target at map west)
- *   [6] sign (1 or -1)
- *   [7] dock_type (0=dock_y, 1=dock_x, 2=cam_dock_y, 3=cam_dock_x)
+ *   [2] stage_dist (staging distance)
+ *   [3] sign (1 or -1)
+ *   [4] dock_type (0=dock_y, 1=dock_x, 2=cam_dock_y, 3=cam_dock_x)
+ * 
+ * get from robot_config:
+ *   1. staging_dist_front
+ *   2. staging_dist_right
+ *   3. staging_dist_right
+ *   4. staging_dist_back
  * 
  * Position z = stage_dist * sign (nav system uses this for staging)
  * Orientation: chosen side faces the target point
@@ -201,18 +228,22 @@ geometry_msgs::msg::PoseStamped OnDockAction::calculateDockPose(int pose_idx, Ro
     // Get position and staging info from map_points
     double x = map_point_list[pose_idx].x;
     double y = map_point_list[pose_idx].y;
-    double stage_dist = 0.0;
-    if ( target_direction == Direction::NORTH ) {
-        stage_dist = map_point_list[pose_idx].z_north;
-    }
-    else if ( target_direction == Direction::EAST ) {
-        stage_dist = map_point_list[pose_idx].z_east;
-    }
-    else if ( target_direction == Direction::SOUTH ) {
-        stage_dist = map_point_list[pose_idx].z_south;
-    }
-    else if ( target_direction == Direction::WEST ) {
-        stage_dist = map_point_list[pose_idx].z_west;
+    double stage_dist = map_point_list[pose_idx].staging_dist;
+    if ( chosen_dock_type == DockType::CAM_DOCK_X || chosen_dock_type == DockType::CAM_DOCK_Y ) {
+        switch ( target_side ) {
+            case RobotSide::FRONT:
+                stage_dist = staging_dist_front_;
+                break;
+            case RobotSide::RIGHT:
+                stage_dist = staging_dist_right_;
+                break;
+            case RobotSide::BACK:
+                stage_dist = staging_dist_back_;
+                break;
+            case RobotSide::LEFT:
+                stage_dist = staging_dist_left_;
+                break;
+        }
     }
     double sign = map_point_list[pose_idx].sign;
     

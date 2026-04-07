@@ -17,10 +17,7 @@ enum class DockType {
 struct MapPoint {
     double x;
     double y;
-    double z_north;
-    double z_east;
-    double z_south;
-    double z_west;
+    double staging_dist;
     double sign;
     DockType dock_type;
 };

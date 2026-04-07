@@ -37,6 +37,12 @@
     slow_cam_dock_type_x: "dock_cam_x_slow"         # Slow dock type for CAM_DOCK_X (case 3)
     
     flip_distance_threshold: 0.1                 # Distance to target to trigger flip
+
+    # Dock Staging Dist of Each Side
+    staging_dist_front: 0.205
+    staging_dist_right: 0.205
+    staging_dist_back: 0.205
+    staging_dist_left: 0.205
     
     # Spectrum Scoring Configuration
     pantry_aggressiveness: -1.0

@@ -612,7 +612,6 @@ Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side
     
     // sign indicates which direction the target is (where selected side should face):
     //   dock_x, sign=1.0  -> target at WEST
-    // chuang: why +x is west
     //   dock_x, sign=-1.0 -> target at EAST
     //   dock_y, sign=1.0  -> target at SOUTH
     //   dock_y, sign=-1.0 -> target at NORTH
