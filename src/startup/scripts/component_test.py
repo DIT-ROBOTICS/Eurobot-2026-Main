@@ -4,9 +4,9 @@ Component Test Script — Interactive Hardware/Feature Checker
 
 Provides an interactive menu to test individual robot components:
   1. Nav2 NavigateToPose  — send (x, y, yaw) goal
-  2. Flip                 — publish Int16MultiArray to /robot/on_flip
+    2. Flip                 — publish Int16 to /robot/on_flip
   3. Put                  — publish Int16 to /robot/on_put
-  4. Take                 — publish Int16 to /robot/on_take
+    4. Take                 — publish Int16MultiArray to /robot/on_take
   5. Zero cmd_vel         — publish Twist(0,0,0) to /cmd_vel
 
 Usage:
@@ -41,9 +41,9 @@ class ComponentTester(Node):
         super().__init__("component_tester")
 
         # ── publishers ──────────────────────────────────────────
-        self.flip_pub      = self.create_publisher(Int16MultiArray, "/robot/on_flip",   10)
+        self.flip_pub      = self.create_publisher(Int16, "/robot/on_flip",   10)
         self.put_pub       = self.create_publisher(Int16,           "/robot/on_put",    10)
-        self.take_pub      = self.create_publisher(Int16,           "/robot/on_take",   10)
+        self.take_pub      = self.create_publisher(Int16MultiArray,           "/robot/on_take",   10)
         self.vel_pub       = self.create_publisher(Twist,           "/cmd_vel",         10)
         self.dock_side_pub = self.create_publisher(Int16,           "/robot/dock_side", 10)
 
@@ -66,9 +66,9 @@ class ComponentTester(Node):
 ║         Component Test — Interactive Menu        ║
 ╠══════════════════════════════════════════════════╣
 ║  1  │ Nav2 NavigateToPose  (x, y, yaw)           ║
-║  2  │ Flip      → /robot/on_flip  (Int16Multi)   ║
+║  2  │ Flip      → /robot/on_flip  (Int16)        ║
 ║  3  │ Put       → /robot/on_put   (Int16)        ║
-║  4  │ Take      → /robot/on_take  (Int16)        ║
+║  4  │ Take      → /robot/on_take  (Int16Multi)   ║
 ║  5  │ Zero cmd_vel                               ║
 ║  6  │ Dock Side → /robot/dock_side (Int16)       ║
 ║  7  │ cmd_vel   → /cmd_vel  (vx, vy, wz)        ║
@@ -173,26 +173,20 @@ class ComponentTester(Node):
     # ────────────────────────────────────────────────────────────
     def _cmd_flip(self):
         """
-        /robot/on_flip  →  Int16MultiArray (length 5)
-          index 0-3 : which hazelnut slots to flip (1 = flip, 0 = no)
-          index 4   : side index
-        Example input: 1 0 1 1 3  → flip slots 0,2,3 on side 3
+        /robot/on_flip  →  Int16
+          data : side index to start FLIP action
         """
-        raw = input(
-            f"  {YELLOW}Enter 5 ints (flip0 flip1 flip2 flip3 side): {RESET}"
-        ).strip()
+        raw = input(f"  {YELLOW}Enter side index (Int16): {RESET}").strip()
         try:
-            vals = list(map(int, raw.split()))
-            if len(vals) != 5:
-                raise ValueError
+            val = int(raw)
         except ValueError:
-            print(f"{RED}Need exactly 5 integers.{RESET}")
+            print(f"{RED}Invalid integer.{RESET}")
             return
 
-        msg = Int16MultiArray()
-        msg.data = vals
+        msg = Int16()
+        msg.data = val
         self.flip_pub.publish(msg)
-        print(f"{GREEN}Published /robot/on_flip → {vals}{RESET}")
+        print(f"{GREEN}Published /robot/on_flip → {val}{RESET}")
 
     # ────────────────────────────────────────────────────────────
     #  3 — Put
@@ -219,20 +213,26 @@ class ComponentTester(Node):
     # ────────────────────────────────────────────────────────────
     def _cmd_take(self):
         """
-        /robot/on_take  →  Int16
-          data : side index to perform take action
+        /robot/on_take  →  Int16MultiArray (length 5)
+          index 0-3 : 1=NEED_FLIP, -1=NO_TAKE, 0=NO_FLIP
+          index 4   : side index
+        Example input: 1 -1 0 1 2
         """
-        raw = input(f"  {YELLOW}Enter side index (Int16): {RESET}").strip()
+        raw = input(
+            f"  {YELLOW}Enter 5 ints (slot0 slot1 slot2 slot3 side): {RESET}"
+        ).strip()
         try:
-            val = int(raw)
+            vals = list(map(int, raw.split()))
+            if len(vals) != 5:
+                raise ValueError
         except ValueError:
-            print(f"{RED}Invalid integer.{RESET}")
+            print(f"{RED}Need exactly 5 integers.{RESET}")
             return
 
-        msg = Int16()
-        msg.data = val
+        msg = Int16MultiArray()
+        msg.data = vals
         self.take_pub.publish(msg)
-        print(f"{GREEN}Published /robot/on_take → {val}{RESET}")
+        print(f"{GREEN}Published /robot/on_take → {vals}{RESET}")
 
     # ────────────────────────────────────────────────────────────
     #  5 — Zero cmd_vel
