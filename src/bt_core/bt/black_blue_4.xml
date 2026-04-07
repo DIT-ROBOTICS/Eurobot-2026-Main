@@ -83,9 +83,14 @@
                         finish_pose="{dock_result}"/>
                     <CursorPublisher
                         arms="left"
+                        state="on"
                         targetPoseIdx="{target_idx}"/>
                 </Parallel>
             </RetryUntilSuccessful>
+            <CursorPublisher
+                arms="left"
+                state="off"
+                targetPoseIdx="{target_idx}"/>
             <Sleep msec="500"/>
         </Sequence>
     </BehaviorTree>

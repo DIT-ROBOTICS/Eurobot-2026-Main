@@ -23,8 +23,8 @@ using namespace std;
  *
  * Input ports:
  *   - arms: "left" or "right"
- *   - value: bool value to publish
- *   - target_y: target y position
+ *   - state: "on" or "off"
+ *   - targetPoseIdx: target pose index
  */
 class CursorPublisher : public BT::StatefulActionNode {
 public:
@@ -50,16 +50,14 @@ private:
 
     // ===== Input parameters =====
     std::string arms_;
-    int cursor_state_;  // 0 = not aligned, 1 = y aligned, 2 = fully aligned
-    int is_arm_on_;
-    bool state_changed_; // whether the state just changed to trigger publish
+    std::string state_; // "on" or "off"
 
     int target_pose_idx_;
     std::vector<MapPoint> map_point_list_;
     double tolerance_ = 0.18;  
 
     // ===== Position checking =====
-    int checkPosition();
+    bool checkPosition();
 };
 
 #endif // CURSOR_PUBLISHER_HPP
