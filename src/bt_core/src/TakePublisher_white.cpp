@@ -66,10 +66,9 @@ BT::NodeStatus TakePublisher_white::onRunning() {
             collection_info_[collection_idx] = FieldStatus::EMPTY;
         }
 
-        // 此輪 TAKE 完成後再清掉該 side 的暫存判斷，供下一輪重新判斷
         if (side_idx_ >= 0 && side_idx_ < ROBOT_SIDES) {
             for (int i = 0; i < HAZELNUT_LENGTH; ++i) {
-                hazelnut_status_[side_idx_][i] = FlipStatus::NO_FLIP;
+                hazelnut_status_[side_idx_][i] = FlipStatus::NO_TAKE;
             }
             blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_);
         }
