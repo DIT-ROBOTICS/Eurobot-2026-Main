@@ -114,7 +114,7 @@ bool CursorPublisher::checkPosition()
     double target_x = map_point_list_[target_pose_idx_].x;
     double target_y = map_point_list_[target_pose_idx_].y;
 
-    double stage_point = map_point_list_[target_pose_idx_].z_south;
+    double stage_point = map_point_list_[target_pose_idx_].staging_dist;
     double docking_sign = map_point_list_[target_pose_idx_].sign;
 
     return std::abs(x_ - (target_x + stage_point * docking_sign)) < tolerance_ && std::abs(y_ - target_y) < tolerance_;
