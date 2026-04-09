@@ -53,8 +53,8 @@ jobs:
         run: |
           docker load --input /tmp/eurobot-ci-env.tar
 
-      # run the ROS 2 build inside the custom Docker container
-      - name: Build ROS 2 workspace inside Custom Docker
+      # run the ROS 2 build and tests inside the custom Docker container
+      - name: Build and Test ROS 2 workspace inside Custom Docker
         run: |
           docker run --rm \
             -u root \
@@ -65,7 +65,26 @@ jobs:
               source /opt/ros/humble/setup.bash
               rosdep update
               rosdep install --from-paths . --ignore-src -y --rosdistro humble
+
+              # ── Build ──────────────────────────────────────────
               colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
-              
+
+              # ── Source the built workspace ─────────────────────
+              source install/setup.bash
+
+              # ── Run all tests (lint + launch + integration) ────
+              colcon test --return-code-on-test-failure
+              colcon test-result --verbose
+
               chmod -R 777 /workspace
             "
+
+      # upload test results so they are visible in the Actions UI
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/**/test_results/**/*.xml
+            log/latest_test/**

@@ -87,9 +87,16 @@ install(DIRECTORY
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  # Launch test — verify bt_engine node starts and advertises topics/services
+  add_launch_test(
+    test/test_bt_engine_launch.py
+    TIMEOUT 30
+  )
 endif()
 
 ament_package()
