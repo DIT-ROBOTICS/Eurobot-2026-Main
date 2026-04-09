@@ -26,6 +26,17 @@
     normal_dock_type_x: "mission_dock_x_rush"  # Dock type for MISSION_DOCK_X (case 1)
     cam_dock_type_y: "mission_dock_cam_y"         # Dock type for CAM_DOCK_Y (case 2)
     cam_dock_type_x: "mission_dock_cam_x"         # Dock type for CAM_DOCK_X (case 3)
+
+    fast_normal_dock_type_y: "dock_y_rush_fast"   # Fast dock type for MISSION_DOCK_Y (case 0)
+    fast_normal_dock_type_x: "dock_x_rush_fast"   # Fast dock type for MISSION_DOCK_X (case 1)
+    fast_cam_dock_type_y: "dock_cam_y_fast"       # Fast dock type for CAM_DOCK_Y (case 2)
+    fast_cam_dock_type_x: "dock_cam_x_fast"       # Fast dock type for CAM_DOCK_X (case 3)
+
+    slow_normal_dock_type_y: "dock_y_rush_slow"     # Slow dock type for MISSION_DOCK_Y (case 0)
+    slow_normal_dock_type_x: "dock_x_rush_slow"     # Slow dock type for MISSION_DOCK_X (case 1)
+    slow_cam_dock_type_y: "dock_cam_y_slow"         # Slow dock type for CAM_DOCK_Y (case 2)
+    slow_cam_dock_type_x: "dock_cam_x_slow"         # Slow dock type for CAM_DOCK_X (case 3)
+    
     flip_distance_threshold: 0.1                 # Distance to target to trigger flip
 
     # Dock Staging Dist of Each Side

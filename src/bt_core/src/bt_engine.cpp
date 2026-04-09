@@ -219,6 +219,7 @@ void BTengine::createTreeNodes() {
     // navigation
     // factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);  // Source commented out
     // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
+    factory.registerNodeType<ControllerTypePublisher>("ControllerTypePublisher", params, blackboard);
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
     factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
     // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
@@ -412,4 +413,3 @@ int main(int argc, char** argv) {
     
     return 0;
 }
-

@@ -38,14 +38,46 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     if (!node->has_parameter("cam_dock_type_x")) {
         node->declare_parameter("cam_dock_type_x", std::string("mission_dock_cam_x"));
     }
+    if (!node->has_parameter("fast_normal_dock_type_y")) {
+        node->declare_parameter("fast_normal_dock_type_y", std::string("mission_dock_y_gentle"));
+    }
+    if (!node->has_parameter("fast_normal_dock_type_x")) {
+        node->declare_parameter("fast_normal_dock_type_x", std::string("mission_dock_x_gentle"));
+    }
+    if (!node->has_parameter("fast_cam_dock_type_y")) {
+        node->declare_parameter("fast_cam_dock_type_y", std::string("mission_dock_cam_y"));
+    }
+    if (!node->has_parameter("fast_cam_dock_type_x")) {
+        node->declare_parameter("fast_cam_dock_type_x", std::string("mission_dock_cam_x"));
+    }
+    if (!node->has_parameter("slow_normal_dock_type_y")) {
+        node->declare_parameter("slow_normal_dock_type_y", std::string("mission_dock_y_gentle"));
+    }
+    if (!node->has_parameter("slow_normal_dock_type_x")) {
+        node->declare_parameter("slow_normal_dock_type_x", std::string("mission_dock_x_gentle"));
+    }
+    if (!node->has_parameter("slow_cam_dock_type_y")) {
+        node->declare_parameter("slow_cam_dock_type_y", std::string("mission_dock_cam_y"));
+    }
+    if (!node->has_parameter("slow_cam_dock_type_x")) {
+        node->declare_parameter("slow_cam_dock_type_x", std::string("mission_dock_cam_x"));
+    }
     normal_dock_type_y_param = node->get_parameter("normal_dock_type_y").as_string();
     normal_dock_type_x_param = node->get_parameter("normal_dock_type_x").as_string();
     cam_dock_type_y_param = node->get_parameter("cam_dock_type_y").as_string();
     cam_dock_type_x_param = node->get_parameter("cam_dock_type_x").as_string();
+    fast_normal_dock_type_y_param = node->get_parameter("fast_normal_dock_type_y").as_string();
+    fast_normal_dock_type_x_param = node->get_parameter("fast_normal_dock_type_x").as_string();
+    fast_cam_dock_type_y_param = node->get_parameter("fast_cam_dock_type_y").as_string();
+    fast_cam_dock_type_x_param = node->get_parameter("fast_cam_dock_type_x").as_string();
+    slow_normal_dock_type_y_param = node->get_parameter("slow_normal_dock_type_y").as_string();
+    slow_normal_dock_type_x_param = node->get_parameter("slow_normal_dock_type_x").as_string();
+    slow_cam_dock_type_y_param = node->get_parameter("slow_cam_dock_type_y").as_string();
+    slow_cam_dock_type_x_param = node->get_parameter("slow_cam_dock_type_x").as_string();
     
     RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized dock types: ny=%s, nx=%s, cy=%s, cx=%s", 
-                normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
-                cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
+            normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
+            cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
     
     // Load staging distance parameters for each robot side
     if (!node->has_parameter("staging_dist_front")) {
@@ -265,27 +297,37 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
         return false;
     }
     
-    // Get dock_type from map_points based on DockType value
+    std::string controller_type;
+    if (!blackboard->get<std::string>("controller_type", controller_type) || controller_type.empty()) {
+        controller_type = "Normal";
+    }
+
+    // Get dock_type from map_points and controller_type
     if (target_pose_idx < static_cast<int>(map_point_list.size())) {
         int dock_type_val = static_cast<int>(map_point_list[target_pose_idx].dock_type);
+        const bool is_fast = (controller_type == "Fast");
+        const bool is_slow = (controller_type == "Slow");
+
         switch (dock_type_val) {
             case 0: // MISSION_DOCK_Y
-                dock_type = normal_dock_type_y_param;
+                dock_type = is_fast ? fast_normal_dock_type_y_param : (is_slow ? slow_normal_dock_type_y_param : normal_dock_type_y_param);
                 break;
             case 1: // MISSION_DOCK_X
-                dock_type = normal_dock_type_x_param;
+                dock_type = is_fast ? fast_normal_dock_type_x_param : (is_slow ? slow_normal_dock_type_x_param : normal_dock_type_x_param);
                 break;
             case 2: // CAM_DOCK_Y
-                dock_type = cam_dock_type_y_param;
+                dock_type = is_fast ? fast_cam_dock_type_y_param : (is_slow ? slow_cam_dock_type_y_param : cam_dock_type_y_param);
                 break;
             case 3: // CAM_DOCK_X
-                dock_type = cam_dock_type_x_param;
+                dock_type = is_fast ? fast_cam_dock_type_x_param : (is_slow ? slow_cam_dock_type_x_param : cam_dock_type_x_param);
                 break;
             default:
                 dock_type = normal_dock_type_y_param; // fallback
                 DOCK_WARN(node, "Unknown dock_type value %d, using default", dock_type_val);
                 break;
         }
+
+        DOCK_INFO(node, "Selected dock_type=%s for controller_type=%s and dock_type_val=%d", dock_type.c_str(), controller_type.c_str(), dock_type_val);
     }
     
     getInput<bool>("isPureDocking", isPureDocking);
