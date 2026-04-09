@@ -44,6 +44,7 @@ add_executable(bt_engine
   src/FlipPublisher.cpp
   src/TakePublisher.cpp
   src/PutPublisher.cpp
+  src/CursorPublisher.cpp
 )
 ament_target_dependencies(bt_engine
   "rclcpp"

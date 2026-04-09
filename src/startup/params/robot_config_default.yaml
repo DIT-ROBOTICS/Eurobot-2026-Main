@@ -31,6 +31,9 @@
     staging_dist_back: 0.205
     staging_dist_left: 0.205
 
+    # Mission Parameters
+    cursor_tolerance: 0.18 # Tolerance for cursor placement in meters
+
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]
     
