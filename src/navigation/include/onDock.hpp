@@ -61,6 +61,14 @@ private:
     std::string normal_dock_type_x_param;  // From YAML: normal_dock_type_x
     std::string cam_dock_type_y_param;     // From YAML: cam_dock_type_y
     std::string cam_dock_type_x_param;     // From YAML: cam_dock_type_x
+    std::string fast_normal_dock_type_y_param;  // From YAML: fast_normal_dock_type_y
+    std::string fast_normal_dock_type_x_param;  // From YAML: fast_normal_dock_type_x
+    std::string fast_cam_dock_type_y_param;     // From YAML: fast_cam_dock_type_y
+    std::string fast_cam_dock_type_x_param;     // From YAML: fast_cam_dock_type_x
+    std::string slow_normal_dock_type_y_param;  // From YAML: slow_normal_dock_type_y
+    std::string slow_normal_dock_type_x_param;  // From YAML: slow_normal_dock_type_x
+    std::string slow_cam_dock_type_y_param;     // From YAML: slow_cam_dock_type_y
+    std::string slow_cam_dock_type_x_param;     // From YAML: slow_cam_dock_type_x
     
     // Staging distances per robot side (from YAML)
     double staging_dist_front_;

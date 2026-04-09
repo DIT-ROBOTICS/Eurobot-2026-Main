@@ -22,16 +22,16 @@
         "19": false
     },
     "pantry_sequence": [
-        0,
-        1,
-        5,
-        4
+        0
+        // 1,
+        // 5,
+        // 4
     ],
     "collection_sequence": [
-        11,
-        10,
-        12,
-        13
+        11
+        // 10,
+        // 12,
+        // 13
     ]
 
     // two robot test: 8 point

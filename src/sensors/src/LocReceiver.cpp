@@ -3,9 +3,9 @@
 LocReceiver::LocReceiver(const std::string& name, const BT::NodeConfig& config, 
                          const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
     : BT::SyncActionNode(name, config), 
+    running_(true),
       node_(params.nh.lock()), 
       blackboard_(blackboard),
-      running_(true),
       robot_pose_received(false),
       rival_pose_received(false) {
 

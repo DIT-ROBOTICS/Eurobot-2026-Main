@@ -124,6 +124,6 @@ void FirmwareReceiver::takeFinishCallback(const std_msgs::msg::Int16::SharedPtr 
 }
 
 BT::NodeStatus FirmwareReceiver::tick() {
-    RCLCPP_DEBUG(node_->get_logger(), "FirmwareReceiver tick");
+    RCLCPP_DEBUG(node_->get_logger(), "[FirmwareReceiver]: tick");
     return BT::NodeStatus::SUCCESS;
 }

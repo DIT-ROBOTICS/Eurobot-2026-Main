@@ -83,10 +83,12 @@ BT::NodeStatus MissionChecker::onRunning() {
         if(action_ == ActionType::TAKE){
             robot_side_status[side_idx_] = FieldStatus::OCCUPIED;
             blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            MC_INFO(node_, "Marking side %d as OCCUPIED due to TAKE timeout", side_idx_);
         }
         else if(action_ == ActionType::PUT){
             robot_side_status[side_idx_] = FieldStatus::EMPTY;
             blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            MC_INFO(node_, "Marking side %d as EMPTY due to PUT timeout", side_idx_);
         }
         return BT::NodeStatus::SUCCESS;  // Don't block the game
     }

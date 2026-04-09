@@ -6,12 +6,13 @@
     time_rate: 100          # Timer rate in microseconds (100 = 10kHz)
     game_time: 100          # Total game time in seconds
     sima_tick_threshold: 85 # Seconds before sima starts
+    sima_game_over_trigger_sec: 99 # Seconds tell sima to stop
     group_num: 5            # Total number of groups (including index 0)
     stop_time: 98           # Hard stop time limit in seconds
     go_home_time: 90        # Time in seconds to trigger go home logic
     
     # Plan Configuration
-    default_plan: 20        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
+    default_plan: 40        # Default plan code when web service unavailable (format: XY, X=plan number, Y=team 0=yellow 1=blue)
     use_camera_for_planning: false # Whether to use camera data for planning (true/false)
     # BT Engine Configuration
     pkg_share_dir: "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core"
@@ -43,6 +44,9 @@
     collection_sensitivity: 2.0
     collection_rival_sigma: 0.3
     collection_rival_distance_threshold: 0.25
+
+    # Mission Parameters
+    cursor_tolerance: 0.18 # Tolerance for cursor placement in meters
     
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]

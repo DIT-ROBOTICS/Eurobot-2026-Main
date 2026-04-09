@@ -24,6 +24,7 @@
 
 // navigation nodes
 #include "nav_action_node.hpp"
+#include "controller_type_publisher.hpp"
 #include "dock_action_node.hpp"
 #include "onDock.hpp"
 #include "stop_robot_node.hpp"
@@ -51,6 +52,7 @@
 // take/put publishers (action nodes)
 #include "TakePublisher.hpp"
 #include "PutPublisher.hpp"
+#include "CursorPublisher.hpp"
 
 // utils nodes
 

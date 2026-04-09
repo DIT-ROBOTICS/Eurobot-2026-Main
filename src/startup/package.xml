@@ -9,7 +9,6 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>main</depend>
   <depend>btcpp_ros2_interfaces</depend>
   <depend>utils</depend>
   <depend>rclcpp</depend>

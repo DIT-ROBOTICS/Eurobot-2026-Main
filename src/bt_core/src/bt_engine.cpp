@@ -209,6 +209,9 @@ void BTengine::createTreeNodes() {
     // take/put publishers (new separate nodes)
     factory.registerNodeType<TakePublisher>("TakePublisher", params, blackboard);
     factory.registerNodeType<PutPublisher>("PutPublisher", params, blackboard);
+
+    // cursor publisher
+    factory.registerNodeType<CursorPublisher>("CursorPublisher", params, blackboard);
     // game info receiver
     factory.registerNodeType<GameInfoReceiver>("GameInfoReceiver", params, blackboard);
     
@@ -216,6 +219,7 @@ void BTengine::createTreeNodes() {
     // navigation
     // factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);  // Source commented out
     // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
+    factory.registerNodeType<ControllerTypePublisher>("ControllerTypePublisher", params, blackboard);
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
     factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
     // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
@@ -410,4 +414,3 @@ int main(int argc, char** argv) {
     
     return 0;
 }
-
