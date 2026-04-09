@@ -316,7 +316,7 @@ void BTengine::setBlackboard() {
     }
     
     if (this->get_parameter("map_points", map_points_raw)) {
-        constexpr int VALUES_PER_POINT = 5;
+        constexpr int VALUES_PER_POINT = 6;
             for (size_t i = 0; i + VALUES_PER_POINT <= map_points_raw.size(); i += VALUES_PER_POINT) {
                 MapPoint pt;
                 pt.x = map_points_raw[i];
@@ -324,6 +324,7 @@ void BTengine::setBlackboard() {
                 pt.staging_dist = map_points_raw[i + 2];
                 pt.sign = map_points_raw[i + 3];
                 pt.dock_type = static_cast<DockType>(static_cast<int>(map_points_raw[i + 4]));
+                pt.direction = static_cast<int>(map_points_raw[i+5]);
                 map_point_list.push_back(pt);
             }
             RCLCPP_INFO(this->get_logger(), "[BTengine]: Loaded %zu MapPoints from parameters", map_point_list.size());

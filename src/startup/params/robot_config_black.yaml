@@ -40,10 +40,10 @@
     flip_distance_threshold: 0.1                 # Distance to target to trigger flip
 
     # Dock Staging Dist of Each Side
-    staging_dist_front: 0.205
-    staging_dist_right: 0.205
-    staging_dist_back: 0.205
-    staging_dist_left: 0.205
+    staging_dist_front: 0.2455
+    staging_dist_right: 0.1955
+    staging_dist_back: 0.2000
+    staging_dist_left: 0.1980
     
     # Spectrum Scoring Configuration
     pantry_aggressiveness: -1.0

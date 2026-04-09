@@ -619,13 +619,106 @@ Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side
     Direction result;
     if (dock_type == 0 || dock_type == 2) {  // DOCK_Y types
         result = (sign > 0) ? Direction::SOUTH : Direction::NORTH;
-        DC_INFO(node_ptr, "Dock direction for pose %d DOCK_Y (sign=%.1f): %s", 
-                idx, sign, result == Direction::SOUTH ? "SOUTH" : "NORTH");
     } else {  // DOCK_X types
         result = (sign > 0) ? Direction::WEST : Direction::EAST;
-        DC_INFO(node_ptr, "Dock direction for pose %d DOCK_X (sign=%.1f): %s", 
-                idx, sign, result == Direction::WEST ? "WEST" : "EAST");
     }
+
+    int mp_dir = map_point_list[idx].direction;
+    // if map_point.direction == -1
+    if( mp_dir == -1 ) { 
+        DC_INFO(node_ptr, "Dock direction for pose %d from sign (dock_type=%d, sign=%.1f): %d",
+                idx, dock_type, sign, static_cast<int>(result));
+    }
+    else if ( mp_dir >= 0 && mp_dir <= 3 ) {
+        result = static_cast<Direction>(mp_dir);
+        DC_INFO(node_ptr, "Dock direction for pose %d forced by map_point.direction=%d", idx, mp_dir);
+    }
+    else if ( mp_dir == 5 ) {
+        // Dynamic direction selection:
+        // 1) Build staging candidates around map_point
+        // 2) Remove candidates too close to rival
+        // 3) Pick the remaining candidate closest to current robot pose
+        const bool is_pantry = (idx < PANTRY_LENGTH);
+        const double goal_x = map_point_list[idx].x;
+        const double goal_y = map_point_list[idx].y;
+        const double stage_dist = map_point_list[idx].staging_dist;
+        if (stage_dist < 0) DC_WARN(node_ptr, "Invalid staging distance (negative) for pose %d", idx);
+        
+        const double rival_threshold = is_pantry
+            ? pantry_params.rival_distance_threshold
+            : collection_params.rival_distance_threshold;
+
+        std::vector<Direction> candidates;
+        // Pantry: N/E/S/W, Collection: only N/S
+        if (is_pantry) candidates = {Direction::NORTH, Direction::EAST, Direction::SOUTH, Direction::WEST};
+        else candidates = {Direction::NORTH, Direction::SOUTH};
+
+        auto getStagingPoint = [&](Direction dir) -> std::pair<double, double> {
+            double sx = goal_x;
+            double sy = goal_y;
+            if (dir == Direction::NORTH) sy -= stage_dist;
+            else if (dir == Direction::EAST) sx -= stage_dist;
+            else if (dir == Direction::SOUTH) sy += stage_dist;
+            else if (dir == Direction::WEST) sx += stage_dist;
+            return {sx, sy};
+        };
+
+        bool found_valid = false;
+        double best_robot_dist = 1e9;
+        Direction best_dir = result;
+
+        for (auto dir : candidates) {
+            auto [sx, sy] = getStagingPoint(dir);
+
+            double d_rival = std::hypot(sx - rival_pose.pose.position.x, sy - rival_pose.pose.position.y);
+            if (d_rival < rival_threshold) {
+                DC_WARN(node_ptr,
+                        "Pose %d dir=%d rejected (too close to rival): d_rival=%.3f < thr=%.3f",
+                        idx, static_cast<int>(dir), d_rival, rival_threshold);
+                continue;
+            }
+
+            double d_robot = std::hypot(sx - robot_pose.pose.position.x, sy - robot_pose.pose.position.y);
+            if (!found_valid || d_robot < best_robot_dist) {
+                found_valid = true;
+                best_robot_dist = d_robot;
+                best_dir = dir;
+            }
+        }
+
+        if (!found_valid) {
+            // Fallback: ignore rival filter and choose closest to robot
+            best_robot_dist = 1e9;
+            for (auto dir : candidates) {
+                auto [sx, sy] = getStagingPoint(dir);
+
+                double d_robot = std::hypot(sx - robot_pose.pose.position.x, sy - robot_pose.pose.position.y);
+                if (d_robot < best_robot_dist) {
+                    best_robot_dist = d_robot;
+                    best_dir = dir;
+                }
+            }
+            DC_WARN(node_ptr,
+                    "Pose %d dynamic direction: all candidates filtered by rival threshold, fallback dir=%d",
+                    idx, static_cast<int>(best_dir));
+        }
+
+        result = best_dir;
+        // update dock_type
+        DC_INFO(node_ptr,
+                "Pose %d dynamic direction selected=%d (is_pantry=%s, stage_dist=%.3f, rival_thr=%.3f)",
+                idx, static_cast<int>(result), is_pantry ? "true" : "false", stage_dist, rival_threshold);
+    }
+    else {
+        // Invalid map_point.direction value -> fallback to sign logic
+        DC_WARN(node_ptr,
+                "Invalid map_point.direction=%d for pose %d, fallback to sign-based direction=%d",
+                mp_dir, idx, static_cast<int>(result));
+    }
+
+    // else (direction = 5): use diff of goal pose and robot pose, to determine direction
+    // pantry: choose one of North, East, South, West
+    // collection: choose one of North and South
     
     return result;
 }
