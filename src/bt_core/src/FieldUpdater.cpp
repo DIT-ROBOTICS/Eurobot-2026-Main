@@ -48,13 +48,13 @@ void FieldUpdater::updateFieldStatus() {
     if (use_camera_for_planning) {
         for(size_t i = 0; i < collection_info_raw.data.size(); i++) {
             int val = collection_info_raw.data[i];
-            if (val != 0) { // -1 (blocked), 1, 2, 3 (occupied) -> add to keepout
+            if (val != 0) { // -1 (blocked), 1, 2, 3, 4 (occupied) -> add to keepout
                 keepout_zone_msg += goalPoseToString(static_cast<GoalPose>(static_cast<int>(GoalPose::K) + i));
             }
         }
         for(size_t i = 0; i < pantry_info_raw.data.size(); i++) {
             int val = pantry_info_raw.data[i];
-            if (val != 0) { // -1 (blocked), 1, 2, 3 (occupied) -> add to keepout
+            if (val != 0) { // -1 (blocked), 1, 2, 3, 4 (occupied) -> add to keepout
                 keepout_zone_msg += goalPoseToString(static_cast<GoalPose>(static_cast<int>(GoalPose::A) + i));
             }
         }
@@ -62,13 +62,13 @@ void FieldUpdater::updateFieldStatus() {
     else {
         for (size_t i = 0; i < collection_info.size(); i++) {
             int val = static_cast<int>(collection_info[i]);
-            if (val != 0) { // -1 (blocked), 1, 2, 3 (occupied) -> add to keepout
+            if (val != 0) { // -1 (blocked), 1, 2, 3, 4 (occupied) -> add to keepout
                 keepout_zone_msg += goalPoseToString(static_cast<GoalPose>(static_cast<int>(GoalPose::K) + i));
             }
         }
         for (size_t i = 0; i < pantry_info.size(); i++) {
             int val = static_cast<int>(pantry_info[i]);
-            if (val != 0) { // -1 (blocked), 1, 2, 3 (occupied) -> add to keepout
+            if (val != 0) { // -1 (blocked), 1, 2, 3, 4 (occupied) -> add to keepout
                 keepout_zone_msg += goalPoseToString(static_cast<GoalPose>(static_cast<int>(GoalPose::A) + i));
             }
         }

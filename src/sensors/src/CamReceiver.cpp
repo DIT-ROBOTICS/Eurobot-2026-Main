@@ -42,6 +42,12 @@ CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config,
         "/robot/vision/onTakeSuccess", 10,
         std::bind(&CamReceiver::onTakeFeedback, this, std::placeholders::_1),
         sub_options);
+
+    // Subscribe to robbery pose updates
+    robbery_pose_sub = node_->create_subscription<geometry_msgs::msg::PoseArray>(
+        "/robbery_poses", 10,
+        std::bind(&CamReceiver::robberyPoseCallback, this, std::placeholders::_1),
+        sub_options);
     
     // Initialize with default values (camera fallback)
     initializeDefaultStatus();
@@ -101,6 +107,10 @@ void CamReceiver::initializeDefaultStatus() {
     // Initialize visited lists
     blackboard_->set<std::vector<int>>("visited_collections", std::vector<int>());
     blackboard_->set<std::vector<int>>("visited_pantries", std::vector<int>());
+
+    // Initialize robbery poses
+    geometry_msgs::msg::PoseArray default_robbery_poses;
+    blackboard_->set<geometry_msgs::msg::PoseArray>("robbery_pantry_poses", default_robbery_poses);
 }
 
 PortsList CamReceiver::providedPorts() {
@@ -169,15 +179,9 @@ void CamReceiver::pantry_info_callback(const std_msgs::msg::Int32MultiArray::Sha
                 val = static_cast<int>(FieldStatus::OCCUPIED);
             }
 
-            if (val == -1 && i < existing_status.size()) {
-                pantry_status.push_back(existing_status[i]);
-            }
-            else if (val == 2 || val == 3) {
-                pantry_status.push_back(FieldStatus::OCCUPIED);
-            }
-            else {
-                pantry_status.push_back(static_cast<FieldStatus>(val));
-            }
+            if (val == -1 && i < existing_status.size()) pantry_status.push_back(existing_status[i]);
+            else pantry_status.push_back(static_cast<FieldStatus>(val));
+            
         }
         blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info_raw", pantry_info);
@@ -253,7 +257,13 @@ void CamReceiver::onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr
     }
 
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
+}
 
+void CamReceiver::robberyPoseCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg) {
+    RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: Received robbery pose update with %zu poses.", msg->poses.size());
+    
+    // Store the received robbery poses in the blackboard
+    blackboard_->set<geometry_msgs::msg::PoseArray>("robbery_pantry_poses", *msg);
 }
 
 BT::NodeStatus CamReceiver::tick() {

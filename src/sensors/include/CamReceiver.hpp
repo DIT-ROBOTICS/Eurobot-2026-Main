@@ -43,6 +43,7 @@ private:
     void pantry_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+    void robberyPoseCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
     
     // Background spin thread
     void spinThread();
@@ -57,7 +58,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr pantry_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hazelnut_flip_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr on_take_feedback_sub;
-
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr robbery_pose_sub;
     // Node references (order must match constructor initialization)
     shared_ptr<rclcpp::Node> node_;
     BT::Blackboard::Ptr blackboard_;
@@ -67,6 +68,7 @@ private:
     std_msgs::msg::Int32MultiArray collection_info;
     std_msgs::msg::Int32MultiArray pantry_info;
     std_msgs::msg::Int32MultiArray on_take_feedback;
+    geometry_msgs::msg::PoseArray robbery_pantry_poses;
 };
 
 #endif // CAM_RECEIVER_HPP
