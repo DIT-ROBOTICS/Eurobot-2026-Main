@@ -14,11 +14,8 @@ on:
 
 jobs:
   build:
-    name: Build ROS 2 Workspace
+    name: Build using Custom ROS2 Dockerfile
     runs-on: ubuntu-22.04
-    # Use the official ROS 2 Docker image to ensure a clean environment with the complete ROS toolchain
-    container:
-      image: ros:humble-ros-base
 
     steps:
       - name: Checkout repository
@@ -27,28 +24,29 @@ jobs:
       - name: Cache ROS 2 Build Artifacts
         uses: actions/cache@v4
         with:
-          # Specify the directories to cache: build, install, and log
           path: |
             build/
             install/
             log/
-          # Generate a cache key based on the OS and the hash of all package.xml files
           key: ${{ runner.os }}-ros2-build-${{ hashFiles('**/package.xml') }}
-          # Fallback key to restore the most recent cache if an exact match is not found
           restore-keys: |
             ${{ runner.os }}-ros2-build-
 
-      - name: Setup ROS 2 environment & Install dependencies
+      - name: Build custom ROS2 Docker image
         run: |
-          sudo apt-get update
-          rosdep update
-          # Scan the workspace for dependencies and install them, ignoring any already installed packages
-          rosdep install --from-paths . --ignore-src -y --rosdistro humble
+          # build the custom Docker image defined in docker/Dockerfile
+          docker build -t eurobot-ci-env -f docker/Dockerfile .
 
-      - name: Build workspace with colcon
-        shell: bash
+      - name: Build ROS 2 workspace inside Custom Docker
         run: |
-          # Source the ROS 2 setup script to ensure the environment is configured for building
-          source /opt/ros/humble/setup.bash
-          # Build the ROS 2 workspace using colcon, specifying Release build type for optimized performance
-          colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+          # launch a container from the custom image, mount the workspace, and run the build commands
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            eurobot-ci-env \
+            bash -ec "
+              source /opt/ros/humble/setup.bash
+              rosdep update
+              rosdep install --from-paths . --ignore-src -y --rosdistro humble
+              colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+            "
