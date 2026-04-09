@@ -23,6 +23,7 @@ import pytest
 
 import rclpy
 from rclpy.node import Node
+from ament_index_python.packages import get_package_share_directory
 
 
 @pytest.mark.launch_test
@@ -38,6 +39,10 @@ def generate_test_description():
     map_points_config = os.path.join(pkg_dir, 'params', 'map_points_default.yaml')
     robot_config = os.path.join(src_dir, 'startup', 'params', 'robot_config_default.yaml')
 
+    # Override pkg_share_dir so bt_engine finds BT XMLs at the correct install path
+    # (robot_config_default.yaml hardcodes a path for the real robot)
+    bt_core_share_dir = get_package_share_directory('bt_core')
+
     bt_engine_node = launch_ros.actions.Node(
         package='bt_core',
         executable='bt_engine',
@@ -48,6 +53,7 @@ def generate_test_description():
             map_points_config,
             {'frame_id': 'base_footprint'},
             {'tree_name': 'MainTree'},
+            {'pkg_share_dir': bt_core_share_dir},
         ],
     )
 

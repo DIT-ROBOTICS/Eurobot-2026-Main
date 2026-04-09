@@ -32,6 +32,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, Float32, String
 from btcpp_ros2_interfaces.srv import StartUpSrv
+from ament_index_python.packages import get_package_share_directory
 
 
 # How many groups the startup node expects (index 1..group_num-1)
@@ -51,6 +52,10 @@ def generate_test_description():
     default_config = os.path.join(startup_pkg_dir, 'params', 'robot_config_default.yaml')
     map_points_config = os.path.join(bt_core_dir, 'params', 'map_points_default.yaml')
 
+    # Override pkg_share_dir so bt_engine finds BT XMLs at the correct install path
+    # (robot_config_default.yaml hardcodes a path for the real robot)
+    bt_core_share_dir = get_package_share_directory('bt_core')
+
     startup_node = launch_ros.actions.Node(
         package='startup',
         executable='startup_new',
@@ -69,6 +74,7 @@ def generate_test_description():
             map_points_config,
             {'frame_id': 'base_footprint'},
             {'tree_name': 'MainTree'},
+            {'pkg_share_dir': bt_core_share_dir},
         ],
     )
 
