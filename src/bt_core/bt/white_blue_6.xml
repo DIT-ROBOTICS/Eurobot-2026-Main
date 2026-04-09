@@ -82,12 +82,12 @@
                     isPureDocking="false"
                     finish_pose="{dock_result}"/>
                 <CursorPublisher
-                    arms="left"
+                    arms="right"
                     state="on"
                     targetPoseIdx="{target_idx}"/>
             </Parallel>
             <CursorPublisher
-                arms="left"
+                arms="right"
                 state="off"
                 targetPoseIdx="{target_idx}"/>
             <Sleep msec="500"/>
@@ -110,7 +110,7 @@
 
                     <DecisionCore 
                         ActionType="take"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -119,7 +119,7 @@
 
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -128,7 +128,7 @@
 
                     <DecisionCore 
                         ActionType="take"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -146,7 +146,7 @@
 
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -155,7 +155,7 @@
                     
                     <DecisionCore 
                         ActionType="take"
-                        RobotSideIdx="3"
+                        RobotSideIdx="1"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -180,7 +180,7 @@
                     <SubTree ID="PutSubTree" _autoremap="true"/>
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="3"
+                        RobotSideIdx="1"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"

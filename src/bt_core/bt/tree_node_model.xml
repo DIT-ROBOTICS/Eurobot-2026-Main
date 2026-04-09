@@ -3,8 +3,8 @@
         <Action ID="CamReceiver"/>
         <Action ID="CursorPublisher">
             <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
-            <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
             <input_port name="state" type="std::string" default="on">state: 'on' or 'off'</input_port>
+            <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
         </Action>
         <Action ID="DecisionCore">
             <output_port name="targetDirection" type="int"/>
@@ -16,6 +16,16 @@
         </Action>
         <Action ID="FieldUpdater"/>
         <Action ID="FirmwareReceiver"/>
+        <Action ID="FlipPublisher">
+            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to flip</input_port>
+        </Action>
+        <Action ID="FlipPublisher_white">
+            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index in map_points</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
         <Action ID="GameInfoReceiver"/>
         <Action ID="LocReceiver"/>
         <Action ID="MissionChecker">
@@ -48,25 +58,9 @@
             <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
         </Action>
         <Action ID="TakePublisher_white">
-            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
-            <input_port name="targetPoseIdx" type="int" default="0">Target pose index</input_port>
-            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
-        </Action>
-        <Action ID="FlipPublisher">
-            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
-            <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
-            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to flip</input_port>
-        </Action>
-        <Action ID="FlipPublisher_white">
-            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
-            <input_port name="targetPoseIdx" type="int" default="0">Target pose index in map_points</input_port>
-            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to start</input_port>
-        <Action ID="CursorPublisher">
-            <input_port name="direction" type="std::string" default="left">Direction: 'left' or 'right'</input_port>
-            <input_port name="value" type="bool" default="false">Bool value to publish</input_port>
-        <Action ID="CursorPublisher">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
             <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
-            <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
         </Action>
     </TreeNodesModel>
 </root>
