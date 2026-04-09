@@ -43,6 +43,9 @@
     collection_sensitivity: 2.0
     collection_rival_sigma: 0.3
     collection_rival_distance_threshold: 0.25
+
+    # Mission Parameters
+    cursor_tolerance: 0.18 # Tolerance for cursor placement in meters
     
     # Start Pose Configuration
     # Format: [x, y, yaw_in_radians]
