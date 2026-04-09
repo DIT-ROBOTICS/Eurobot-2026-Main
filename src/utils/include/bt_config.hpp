@@ -50,6 +50,7 @@ enum class ActionType {
     DOCK,
     GO_HOME,
     CURSOR,
+    STEAL,
     NAV,
     ROTATE
 };
@@ -73,9 +74,12 @@ constexpr int HAZELNUT_LENGTH = 4;
 constexpr int ROBOT_SIDES = 4;
 
 enum class FieldStatus {
+    UNKNOWN = -1
     EMPTY = 0,
     OCCUPIED = 1,
-    UNKNOWN = -1
+    OCCUPIED_BY_RIVAL = 2,
+    OCCIPIED_BY_BOTH = 3,
+    OCCIPIED_CAN_STEAL = 4
 };
 
 enum class FlipStatus {
@@ -140,6 +144,7 @@ inline ActionType stringToActionType(const std::string& str) {
     if (lower_str == "dock") return ActionType::DOCK;
     if (lower_str == "go_home") return ActionType::GO_HOME;
     if (lower_str == "cursor") return ActionType::CURSOR;
+    if (lower_str == "steal") return ActionType::STEAL;
     if (lower_str == "nav") return ActionType::NAV;
     if (lower_str == "rotate") return ActionType::ROTATE;
     throw std::runtime_error("Invalid action type string: " + str);
@@ -153,6 +158,7 @@ inline std::string actionTypeToString(ActionType action_type) {
         case ActionType::DOCK: return "dock";
         case ActionType::GO_HOME: return "go_home";
         case ActionType::CURSOR: return "cursor";
+        case ActionType::STEAL: return "steal";
         case ActionType::NAV: return "nav";
         case ActionType::ROTATE: return "rotate";
         default: return "unknown";
@@ -164,6 +170,9 @@ inline std::string fieldStatusToString(FieldStatus status) {
         case FieldStatus::EMPTY: return "EMPTY";
         case FieldStatus::OCCUPIED: return "OCCUPIED";
         case FieldStatus::UNKNOWN: return "UNKNOWN";
+        case FieldStatus::OCCUPIED_BY_RIVAL: return "OCCUPIED_BY_RIVAL";
+        case FieldStatus::OCCIPIED_BY_BOTH: return "OCCUPIED_BY_BOTH";
+        case FieldStatus::OCCIPIED_CAN_STEAL: return "OCCUPIED_CAN_STEAL";
         default: return "unknown";
     }
 }

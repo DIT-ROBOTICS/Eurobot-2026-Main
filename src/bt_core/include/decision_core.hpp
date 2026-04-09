@@ -68,6 +68,7 @@ public:
     BT::NodeStatus doDock();
     BT::NodeStatus doGoHome();
     BT::NodeStatus doCursor();
+    BT::NodeStatus doSteal();
 
 private:
     // init

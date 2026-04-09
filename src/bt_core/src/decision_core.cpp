@@ -219,6 +219,8 @@ BT::NodeStatus DecisionCore::onStart() {
             return doGoHome();
         case ActionType::CURSOR:
             return doCursor();
+        case ActionType::STEAL:
+            return doSteal();
         default:
             DC_ERROR(node_ptr, "Invalid action type");
             throw std::runtime_error("Invalid action type");
@@ -302,6 +304,22 @@ BT::NodeStatus DecisionCore::doCursor() {
     return BT::NodeStatus::SUCCESS;
 }
 
+BT::NodeStatus DecisionCore::doSteal() {
+    auto target_point_info_opt = getTargetPointInfo(ActionType::STEAL);
+    if (!target_point_info_opt) {
+        DC_INFO(node_ptr, "No valid STEAL target found. Waiting...");
+        return BT::NodeStatus::RUNNING;
+    }
+    auto target_point_info = target_point_info_opt.value();
+    target_goal_pose_idx = target_point_info.first;
+    target_pose_side_idx = target_point_info.second;
+    updateVisitedPoints();
+    target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
+    decided_action_type = ActionType::DOCK;
+    writeOutputPort();
+    return BT::NodeStatus::SUCCESS;
+}
+
 std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(ActionType action_type) {
     RobotSide selected_side = getTargetSideIndex(action_type);
     printFieldInfo();
@@ -317,7 +335,7 @@ std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(Action
             pantry_sequence.erase(pantry_sequence.begin());  // Pop from front
             
             // Check if pantry is already full (OCCUPIED)
-            if (pantry_info[next_pantry] == FieldStatus::OCCUPIED) {
+            if (static_cast<int>(pantry_info[next_pantry]) >= static_cast<int>(FieldStatus::OCCUPIED)) {
                 DC_WARN(node_ptr, "[PUT->PANTRY] Skipping pantry %s (ALREADY OCCUPIED)", goalPoseToString(static_cast<GoalPose>(next_pantry)).c_str());
                 // Update blackboard with modified sequence even if skipping
                 blackboard_ptr->set<vector<int>>("pantry_sequence", pantry_sequence);
@@ -347,8 +365,8 @@ std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(Action
         DC_INFO(node_ptr, "[PUT->PANTRY] Selected pantry %s with score: %d", 
                 goalPoseToString(best_pantry).c_str(), pantry_priority.top().score);
         return make_pair(best_pantry, selected_side);
-        
-    } else if (action_type == ActionType::TAKE) {
+    }
+    else if (action_type == ActionType::TAKE) {
         // Fetch current sequence from blackboard to ensure we have the latest state
         if (blackboard_ptr->get<vector<int>>("collection_sequence", collection_sequence)) {
             use_collection_sequence = !collection_sequence.empty();
@@ -399,6 +417,19 @@ std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(Action
                 goalPoseToString(best_collection).c_str(), collection_priority.top().score);
         return make_pair(best_collection, selected_side);
     }
+    else if (action_type == ActionType::STEAL) {
+        selectedSortPantryPriority();
+        
+        if (pantry_priority.empty()) {
+            RCLCPP_WARN(node_ptr->get_logger(), "No available pantry points");
+            return std::nullopt; // fallback
+        }
+        
+        GoalPose best_pantry = pantry_priority.top().pose;
+        DC_INFO(node_ptr, "[PUT->PANTRY] Selected pantry %s with score: %d", 
+                goalPoseToString(best_pantry).c_str(), pantry_priority.top().score);
+        return make_pair(best_pantry, selected_side);
+    }
     
     RCLCPP_ERROR(node_ptr->get_logger(), "getTargetPointInfo called with invalid action");
     return std::nullopt;
@@ -407,7 +438,7 @@ std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(Action
 RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
     int default_idx = static_cast<int>(default_robot_side);
     
-    if (action_type == ActionType::TAKE) {
+    if (action_type == ActionType::TAKE || action_type == ActionType::STEAL) {
         // For TAKE: Need an EMPTY side to hold hazelnuts
         DC_INFO(node_ptr, "[TAKE]: robot_side_status: %d, %d, %d, %d ", 
             static_cast<int>(robot_side_status[0]), 
@@ -524,28 +555,12 @@ double DecisionCore::calculateSpectralScore(GoalPose pose, SpectrumParams params
 
 int DecisionCore::calculatePantryScore(int pantry_idx) {
     GoalPose pose = static_cast<GoalPose>(pantry_idx);
-    
-    // Base: availability check
-    if (pantry_info[pantry_idx] == FieldStatus::OCCUPIED) {
-        return -1000; // Cannot put if occupied, skip entirely
-    }
-    
-    if (pantry_info[pantry_idx] == FieldStatus::UNKNOWN) {
-        // Handle UNKNOWN if necessary (for now treat as EMPTY but maybe lower score)
-    }
-
     double score = calculateSpectralScore(pose, pantry_params);
     return static_cast<int>(score);
 }
 
 int DecisionCore::calculateCollectionScore(int collection_idx) {
     GoalPose pose = static_cast<GoalPose>(PANTRY_LENGTH + collection_idx);
-    
-    // Base: availability check
-    if (collection_info[collection_idx] == FieldStatus::EMPTY) {
-        return -1000; // Nothing to collect, skip entirely
-    }
-    
     double score = calculateSpectralScore(pose, collection_params);
     return static_cast<int>(score);
 }
@@ -558,11 +573,36 @@ void DecisionCore::sortPantryPriority() {
     pantry_priority = priority_queue<PointScore>();
     
     for (int i = 0; i < PANTRY_LENGTH; ++i) {
-        int score = calculatePantryScore(i);
+        int score = 0;
+
+        if(pantry_info[i] >= FieldStatus::OCCUPIED) score = -1000;
+        else score = calculatePantryScore(i);
+
         if (score > 0) { // Only add viable options
             GoalPose pose = static_cast<GoalPose>(i);
             pantry_priority.push(PointScore(pose, score));
             RCLCPP_DEBUG(node_ptr->get_logger(), "Pantry %s score: %d", goalPoseToString(pose).c_str(), score);
+        }
+    }
+}
+
+void DecisionCore::selectedSortPantryPriority() {
+    // Update pose data before scoring
+    updatePoseData();
+
+    // clear and rebuild priority queue
+    selected_pantry_priority = priority_queue<PointScore>();
+
+    for (int i = 0; i < PANTRY_LENGTH; ++i) {
+        int score = 0;
+
+        if(pantry_info[i] == FieldStatus::OCCUPIED_CAN_STEAL) score = calculatePantryScore(i);
+        else score = -1000;
+
+        if (score > 0) { // Only add viable options
+            GoalPose pose = static_cast<GoalPose>(i);
+            selected_pantry_priority.push(PointScore(pose, score));
+            RCLCPP_DEBUG(node_ptr->get_logger(), "Selected Steal Pantry %s score: %d", goalPoseToString(pose).c_str(), score);
         }
     }
 }
@@ -575,7 +615,10 @@ void DecisionCore::sortCollectionPriority() {
     collection_priority = priority_queue<PointScore>();
     
     for (int i = 0; i < COLLECTION_LENGTH; ++i) {
-        int score = calculateCollectionScore(i);
+        int score = 0;
+        if (collection_info[i] == FieldStatus::EMPTY) score = -1000;
+        else score = calculateCollectionScore(i);
+
         if (score > 0) { // Only add viable options
             GoalPose pose = static_cast<GoalPose>(PANTRY_LENGTH + i);
             collection_priority.push(PointScore(pose, score));
