@@ -95,7 +95,7 @@
     <BehaviorTree ID="GoHomeSubTree">
         <Sequence>
             <ControllerTypePublisher
-                mode="Auto"
+                mode="Manual"
                 controller_type="Slow"/>
             <OnDockAction
                 targetPoseIdx="{target_idx}"

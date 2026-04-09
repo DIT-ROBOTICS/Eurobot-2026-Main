@@ -78,8 +78,6 @@ OnDockAction::OnDockAction(const std::string& name, const NodeConfig& conf,
     RCLCPP_INFO(node->get_logger(), "[OnDockAction] Initialized dock types: ny=%s, nx=%s, cy=%s, cx=%s", 
             normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
             cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
-                normal_dock_type_y_param.c_str(), normal_dock_type_x_param.c_str(),
-                cam_dock_type_y_param.c_str(), cam_dock_type_x_param.c_str());
     
     // Load staging distance parameters for each robot side
     if (!node->has_parameter("staging_dist_front")) {
@@ -307,8 +305,8 @@ bool OnDockAction::setGoal(RosActionNode::Goal& dock_goal) {
     // Get dock_type from map_points and controller_type
     if (target_pose_idx < static_cast<int>(map_point_list.size())) {
         int dock_type_val = static_cast<int>(map_point_list[target_pose_idx].dock_type);
-        const bool is_fast = controller_type == "Fast";
-        const bool is_slow = controller_type == "Slow";
+        const bool is_fast = (controller_type == "Fast");
+        const bool is_slow = (controller_type == "Slow");
 
         switch (dock_type_val) {
             case 0: // MISSION_DOCK_Y
