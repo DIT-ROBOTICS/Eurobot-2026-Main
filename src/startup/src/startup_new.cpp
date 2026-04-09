@@ -298,7 +298,7 @@ void StartUp::publishTime() {
         msg.data = true;
         sima_game_over_pub->publish(msg);
         sima_game_over_sent = true;
-        RCLCPP_INFO(this->get_logger(), "[StartUp]: Sima game over signal sent at game time %f", game_time);
+        RCLCPP_INFO(this->get_logger(), "[StartUp]: Sima game over signal sent at game time %f", static_cast<double>(game_time));
     }
 
     tickLittleSima(game_time);
