@@ -35,7 +35,8 @@ jobs:
       - name: Build custom ROS2 Docker image
         run: |
           # build the custom Docker image defined in docker/Dockerfile
-          docker build -t eurobot-ci-env -f docker/Dockerfile .
+          cd docker
+          docker build -t eurobot-ci-env -f Dockerfile .
 
       - name: Build ROS 2 workspace inside Custom Docker
         run: |
