@@ -14,13 +14,14 @@ on:
 
 jobs:
   build:
-    name: Build using Custom ROS2 Dockerfile
+    name: Build using Custom Dockerfile with Cache
     runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # cache ROS 2 build artifacts to speed up subsequent builds (colcon build outputs)
       - name: Cache ROS 2 Build Artifacts
         uses: actions/cache@v4
         with:
@@ -32,26 +33,39 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros2-build-
 
-      - name: Build custom ROS2 Docker image
-        run: |
-          # build the custom Docker image defined in docker/Dockerfile
-          cd docker
-          docker build -t eurobot-ci-env -f Dockerfile .
+      # set up Docker Buildx for advanced caching
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
+      # build Docker image with cache and export it as a file for the next step
+      - name: Build and cache Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker             
+          file: ./docker/Dockerfile 
+          tags: eurobot-ci-env:latest
+          outputs: type=docker,dest=/tmp/eurobot-ci-env.tar 
+          cache-from: type=gha          
+          cache-to: type=gha,mode=max 
+
+      # load the built Docker image from the previous step
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/eurobot-ci-env.tar
+
+      # run the ROS 2 build inside the custom Docker container
       - name: Build ROS 2 workspace inside Custom Docker
         run: |
-          # launch a container from the custom image, mount the workspace, and run the build commands
           docker run --rm \
             -u root \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            eurobot-ci-env \
+            eurobot-ci-env:latest \
             bash -ec "
               source /opt/ros/humble/setup.bash
               rosdep update
               rosdep install --from-paths . --ignore-src -y --rosdistro humble
               colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+              
+              chmod -R 777 /workspace
             "
-      - name: Fix workspace permissions for Post Cache
-        if: always()
-        run: sudo chown -R $USER:$USER ${{ github.workspace }}
