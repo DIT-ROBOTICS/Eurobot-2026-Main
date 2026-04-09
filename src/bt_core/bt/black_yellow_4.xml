@@ -82,13 +82,13 @@
                         isPureDocking="false"
                         finish_pose="{dock_result}"/>
                     <CursorPublisher
-                        arms="left"
+                        arms="right"
                         state="on"
                         targetPoseIdx="{target_idx}"/>
                 </Parallel>
             </RetryUntilSuccessful>
             <CursorPublisher
-                arms="left"
+                arms="right"
                 state="off"
                 targetPoseIdx="{target_idx}"/>
             <Sleep msec="500"/>
@@ -111,7 +111,7 @@
                 <Sequence>
                     <DecisionCore 
                         ActionType="take"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -120,7 +120,7 @@
 
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -129,7 +129,7 @@
 
                     <DecisionCore 
                         ActionType="take"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -147,7 +147,7 @@
 
                     <DecisionCore 
                         ActionType="put"
-                        RobotSideIdx="1"
+                        RobotSideIdx="3"
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
@@ -187,8 +187,8 @@
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
-                        targetDirection="{target_dir}"/>
-                    <SubTree ID="PutSubTree" _autoremap="true"/> -->
+                        targetDirection="{target_dir}"/> -->
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
                 </Sequence>
             </Repeat>
             
