@@ -16,7 +16,7 @@ jobs:
   build:
     name: Build ROS 2 Workspace
     runs-on: ubuntu-22.04
-    # 使用官方的 ROS 2 Docker Image，確保擁有乾淨且具備完整 ROS 工具鏈的環境
+    # Use the official ROS 2 Docker image to ensure a clean environment with the complete ROS toolchain
     container:
       image: ros:humble-ros-base
 
@@ -24,14 +24,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache ROS 2 Build Artifacts
+        uses: actions/cache@v4
+        with:
+          # Specify the directories to cache: build, install, and log
+          path: |
+            build/
+            install/
+            log/
+          # Generate a cache key based on the OS and the hash of all package.xml files
+          key: ${{ runner.os }}-ros2-build-${{ hashFiles('**/package.xml') }}
+          # Fallback key to restore the most recent cache if an exact match is not found
+          restore-keys: |
+            ${{ runner.os }}-ros2-build-
+
       - name: Setup ROS 2 environment & Install dependencies
         run: |
           sudo apt-get update
           rosdep update
-          # scan the workspace for dependencies and install them, ignoring any already installed packages
+          # Scan the workspace for dependencies and install them, ignoring any already installed packages
           rosdep install --from-paths . --ignore-src -y --rosdistro humble
 
       - name: Build workspace with colcon
+        shell: bash
         run: |
           # Source the ROS 2 setup script to ensure the environment is configured for building
           source /opt/ros/humble/setup.bash
