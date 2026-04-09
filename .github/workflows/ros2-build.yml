@@ -42,6 +42,7 @@ jobs:
         run: |
           # launch a container from the custom image, mount the workspace, and run the build commands
           docker run --rm \
+            -u root \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             eurobot-ci-env \
