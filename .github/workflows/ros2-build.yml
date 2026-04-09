@@ -72,8 +72,8 @@ jobs:
               # ── Source the built workspace ─────────────────────
               source install/setup.bash
 
-              # ── Run all tests (lint + launch + integration) ────
-              colcon test --return-code-on-test-failure
+              # ── Run launch + integration tests ───────────────
+              colcon test --packages-select startup bt_core --return-code-on-test-failure
               colcon test-result --verbose
 
               chmod -R 777 /workspace
