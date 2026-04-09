@@ -17,6 +17,9 @@ CursorPublisher::CursorPublisher(const std::string& name, const BT::NodeConfig& 
 
     node_.declare_parameter("cursor_tolerance", 0.18);
     node_.get_parameter("cursor_tolerance", tolerance_);
+
+    blackboard_->declare<pair<string, bool>>("left_cursor_status", std::make_pair("left", false));
+    blackboard_->declare<pair<string, bool>>("right_cursor_status", std::make_pair("right", false));
 }
 
 BT::PortsList CursorPublisher::providedPorts() {
@@ -59,10 +62,12 @@ BT::NodeStatus CursorPublisher::onRunning() {
         if (arms_ == "left") {
             CP_INFO(node_, "Publishing to /robot/on_cursor_left: 0");
             left_pub_->publish(msg);
+            blackboard_->set("left_cursor_status", std::make_pair("left", false));
         }
         else if (arms_ == "right") {
             CP_INFO(node_, "Publishing to /robot/on_cursor_right: 0");
             right_pub_->publish(msg);
+            blackboard_->set("right_cursor_status", std::make_pair("right", false));
         }
         else {
             CP_WARN(node_, "Invalid arms: %s", arms_.c_str());
@@ -82,10 +87,12 @@ BT::NodeStatus CursorPublisher::onRunning() {
         if (arms_ == "left") {
             CP_INFO(node_, "Y aligned, publishing to /robot/on_cursor_left: 1");
             left_pub_->publish(msg);
+            blackboard_->set("left_cursor_status", std::make_pair("left", true));
         }
         else if (arms_ == "right") {
             CP_INFO(node_, "Y aligned, publishing to /robot/on_cursor_right: 1");
             right_pub_->publish(msg);
+            blackboard_->set("right_cursor_status", std::make_pair("right", true));
         }
         else {
             CP_WARN(node_, "Invalid arms: %s", arms_.c_str());
