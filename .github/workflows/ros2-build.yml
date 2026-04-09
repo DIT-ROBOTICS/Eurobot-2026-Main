@@ -52,3 +52,6 @@ jobs:
               rosdep install --from-paths . --ignore-src -y --rosdistro humble
               colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
             "
+      - name: Fix workspace permissions for Post Cache
+        if: always()
+        run: sudo chown -R $USER:$USER ${{ github.workspace }}
