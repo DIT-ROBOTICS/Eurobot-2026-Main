@@ -20,6 +20,7 @@ struct MapPoint {
     double staging_dist;
     double sign;
     DockType dock_type;
+    int direction;
 };
 
 enum class StartUpState {
