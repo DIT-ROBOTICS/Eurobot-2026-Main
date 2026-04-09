@@ -209,6 +209,9 @@ void BTengine::createTreeNodes() {
     // take/put publishers (new separate nodes)
     factory.registerNodeType<TakePublisher>("TakePublisher", params, blackboard);
     factory.registerNodeType<PutPublisher>("PutPublisher", params, blackboard);
+
+    // cursor publisher
+    factory.registerNodeType<CursorPublisher>("CursorPublisher", params, blackboard);
     // game info receiver
     factory.registerNodeType<GameInfoReceiver>("GameInfoReceiver", params, blackboard);
     

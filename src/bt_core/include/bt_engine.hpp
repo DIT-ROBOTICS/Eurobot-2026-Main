@@ -52,6 +52,7 @@
 // take/put publishers (action nodes)
 #include "TakePublisher.hpp"
 #include "PutPublisher.hpp"
+#include "CursorPublisher.hpp"
 
 // utils nodes
 
