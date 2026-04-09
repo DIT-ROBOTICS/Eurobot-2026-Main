@@ -42,7 +42,7 @@ BT::NodeStatus CursorPublisher::onStart() {
     }
 
     if (!blackboard_->get<std::vector<MapPoint>>("MapPointList", map_point_list_)) {
-        CP_WARN(node_, "[OnDockAction] Failed to get MapPointList from blackboard");
+        CP_WARN(node_, "Failed to get MapPointList from blackboard");
     }
     
     return BT::NodeStatus::RUNNING;
