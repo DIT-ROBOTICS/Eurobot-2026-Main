@@ -29,7 +29,7 @@ jobs:
             build/
             install/
             log/
-          key: ${{ runner.os }}-ros2-build-${{ hashFiles('**/package.xml') }}
+          key: ${{ runner.os }}-ros2-build-${{ hashFiles('**/package.xml', '!**/build/**', '!**/install/**', '!**/log/**') }}
           restore-keys: |
             ${{ runner.os }}-ros2-build-
 
@@ -65,7 +65,7 @@ jobs:
               source /opt/ros/humble/setup.bash
               rosdep update
               rosdep install --from-paths . --ignore-src -y --rosdistro humble
-              colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+              colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
               
               chmod -R 777 /workspace
             "
