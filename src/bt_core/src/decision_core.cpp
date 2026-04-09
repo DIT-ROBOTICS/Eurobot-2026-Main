@@ -642,34 +642,24 @@ Direction DecisionCore::decideDirection(GoalPose goal_pose, RobotSide robot_side
         const double goal_x = map_point_list[idx].x;
         const double goal_y = map_point_list[idx].y;
         const double stage_dist = map_point_list[idx].staging_dist;
-        if (stage_dist < 0) {
-            DC_WARN(node_ptr, "Invalid staging distance (negative) for pose %d", idx);
-        }
+        if (stage_dist < 0) DC_WARN(node_ptr, "Invalid staging distance (negative) for pose %d", idx);
+        
         const double rival_threshold = is_pantry
             ? pantry_params.rival_distance_threshold
             : collection_params.rival_distance_threshold;
 
         std::vector<Direction> candidates;
-        if (is_pantry) {
-            // Pantry: N/E/S/W
-            candidates = {Direction::NORTH, Direction::EAST, Direction::SOUTH, Direction::WEST};
-        } else {
-            // Collection: only N/S
-            candidates = {Direction::NORTH, Direction::SOUTH};
-        }
+        // Pantry: N/E/S/W, Collection: only N/S
+        if (is_pantry) candidates = {Direction::NORTH, Direction::EAST, Direction::SOUTH, Direction::WEST};
+        else candidates = {Direction::NORTH, Direction::SOUTH};
 
         auto getStagingPoint = [&](Direction dir) -> std::pair<double, double> {
             double sx = goal_x;
             double sy = goal_y;
-            if (dir == Direction::NORTH) {
-                sy -= stage_dist;
-            } else if (dir == Direction::EAST) {
-                sx -= stage_dist;
-            } else if (dir == Direction::SOUTH) {
-                sy += stage_dist;
-            } else if (dir == Direction::WEST) {
-                sx += stage_dist;
-            }
+            if (dir == Direction::NORTH) sy -= stage_dist;
+            else if (dir == Direction::EAST) sx -= stage_dist;
+            else if (dir == Direction::SOUTH) sy += stage_dist;
+            else if (dir == Direction::WEST) sx += stage_dist;
             return {sx, sy};
         };
 
