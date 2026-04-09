@@ -1,0 +1,33 @@
+name: ROS 2 CI Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build ROS 2 Workspace
+    runs-on: ubuntu-22.04
+    # 使用官方的 ROS 2 Docker Image，確保擁有乾淨且具備完整 ROS 工具鏈的環境
+    container:
+      image: ros:humble-ros-base
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ROS 2 environment & Install dependencies
+        run: |
+          sudo apt-get update
+          rosdep update
+          # scan the workspace for dependencies and install them, ignoring any already installed packages
+          rosdep install --from-paths . --ignore-src -y --rosdistro humble
+
+      - name: Build workspace with colcon
+        run: |
+          # Source the ROS 2 setup script to ensure the environment is configured for building
+          source /opt/ros/humble/setup.bash
+          # Build the ROS 2 workspace using colcon, specifying Release build type for optimized performance
+          colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
