@@ -51,6 +51,9 @@ private:
     // ===== Input parameters =====
     std::string arms_;
     std::string state_; // "on" or "off"
+    
+    pair<string, bool> left_cursor_status;
+    pair<string, bool> right_cursor_status;
 
     int target_pose_idx_;
     std::vector<MapPoint> map_point_list_;

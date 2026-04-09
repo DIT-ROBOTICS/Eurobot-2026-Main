@@ -1,6 +1,13 @@
 <root BTCPP_format="4">
     <TreeNodesModel>
         <Action ID="CamReceiver"/>
+        <Action ID="ControllerTypePublisher">
+            <input_port name="controller_type" type="std::string" default="Fast">Controller type to publish</input_port>
+            <input_port name="mode" type="std::string" default="Auto">Current mode (Auto/Manual)</input_port>
+        <Action ID="CursorPublisher">
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
+            <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
+            <input_port name="state" type="std::string" default="on">state: 'on' or 'off'</input_port>
         <Action ID="CursorPublisher">
             <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
             <input_port name="state" type="std::string" default="on">state: 'on' or 'off'</input_port>
