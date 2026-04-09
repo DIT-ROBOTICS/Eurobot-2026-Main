@@ -73,8 +73,10 @@ jobs:
               source install/setup.bash
 
               # ── Run launch + integration tests ───────────────
-              colcon test --packages-select startup bt_core --return-code-on-test-failure
-              colcon test-result --verbose
+              colcon test --packages-select startup bt_core \
+                --return-code-on-test-failure \
+                --event-handlers console_cohesion+
+              colcon test-result --all --verbose
 
               chmod -R 777 /workspace
             "
