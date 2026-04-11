@@ -107,7 +107,7 @@
             <Repeat num_cycles="1">
                 <Sequence>
 
-                    <!-- <DecisionCore 
+                    <DecisionCore 
                         ActionType="take"
                         RobotSideIdx="2"
                         nextActionType="{next_action}"
@@ -123,7 +123,7 @@
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}"/>
-                    <SubTree ID="PutSubTree" _autoremap="true"/> -->
+                    <SubTree ID="PutSubTree" _autoremap="true"/>
 
                     <!-- <DecisionCore 
                         ActionType="take"
