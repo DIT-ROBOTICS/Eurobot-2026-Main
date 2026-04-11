@@ -91,7 +91,7 @@ void CamReceiver::initializeDefaultStatus() {
     
     // Initialize hazelnut_status: all NO_FLIP
     std::vector<std::vector<FlipStatus>> default_hazelnut(
-        ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
+        ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_TAKE));
     blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", default_hazelnut);
 
     // Initialize raw collection info for debugging/visualization
