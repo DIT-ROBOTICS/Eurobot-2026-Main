@@ -4,14 +4,11 @@
         <Action ID="ControllerTypePublisher">
             <input_port name="controller_type" type="std::string" default="Fast">Controller type to publish</input_port>
             <input_port name="mode" type="std::string" default="Auto">Current mode (Auto/Manual)</input_port>
+        </Action>
         <Action ID="CursorPublisher">
             <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
             <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
             <input_port name="state" type="std::string" default="on">state: 'on' or 'off'</input_port>
-        <Action ID="CursorPublisher">
-            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
-            <input_port name="state" type="std::string" default="on">state: 'on' or 'off'</input_port>
-            <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
         </Action>
         <Action ID="DecisionCore">
             <output_port name="targetDirection" type="int"/>
@@ -20,6 +17,11 @@
             <output_port name="nextActionType" type="std::string"/>
             <input_port name="RobotSideIdx" type="int"/>
             <input_port name="ActionType" type="std::string"/>
+        </Action>
+        <Action ID="TidyPublisher">
+            <input_port name="state" type="std::string" default="off">state: 'on', 'off' or 'pulse'</input_port>
+            <input_port name="pulse_ms" type="int" default="200">pulse duration in ms (used when state='pulse')</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to check</input_port>
         </Action>
         <Action ID="FieldUpdater"/>
         <Action ID="FirmwareReceiver"/>
