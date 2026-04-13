@@ -42,20 +42,15 @@
                     isPureDocking="false"
                     finish_pose="{dock_result}"/>
                 <TidyPublisher
-                    state="pulse"
+                    state="auto"
                     pulse_ms="100000"
                     targetPoseSideIdx="{target_side}"/>
             </Parallel>
-            <Sleep msec="500"/>
             <!-- Publish TAKE command and wait for completion -->
             <TakePublisher_white
                 targetPoseSideIdx="{target_side}"
                 targetPoseIdx="{target_idx}"
                 timeout_ms="2000"/>   <!-- test for callback -->
-            <TidyPublisher
-                state="off"
-                pulse_ms="0"
-                targetPoseSideIdx="{target_side}"/>
             <FieldUpdater/>
             <!-- <Sleep msec="2000"/> -->
         </Sequence>

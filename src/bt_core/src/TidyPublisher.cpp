@@ -23,8 +23,8 @@ TidyPublisher::TidyPublisher(const std::string& name,
 
 BT::PortsList TidyPublisher::providedPorts() {
     return {
-        BT::InputPort<std::string>("state", "off", "state: 'on', 'off' or 'pulse'"),
-        BT::InputPort<int>("pulse_ms", 200, "pulse duration in ms (used when state='pulse')"),
+        BT::InputPort<std::string>("state", "off", "state: 'on', 'off' or 'auto'"),
+        BT::InputPort<int>("pulse_ms", 200, "pulse duration in ms (used when state='auto')"),
         BT::InputPort<int>("targetPoseSideIdx", 0, "Robot side index to check")
     };
 }
@@ -50,6 +50,11 @@ BT::NodeStatus TidyPublisher::onStart() {
     }
 
     if (state_ == "off") {
+        if (side_idx_ != 2) {
+            TD_INFO(node_, "Skip OFF publish: targetPoseSideIdx=%d (only side 2 enabled)", side_idx_);
+            return BT::NodeStatus::SUCCESS;
+        }
+
         std_msgs::msg::Bool msg;
         msg.data = false;
         TD_INFO(node_, "Publishing /robot/on_tidy: false");
@@ -57,22 +62,41 @@ BT::NodeStatus TidyPublisher::onStart() {
         return BT::NodeStatus::SUCCESS;
     }
 
-    if (state_ == "pulse") {
+    if (state_ == "on") {
+        if (side_idx_ != 2) {
+            TD_INFO(node_, "Skip ON publish: targetPoseSideIdx=%d (only side 2 enabled)", side_idx_);
+            return BT::NodeStatus::SUCCESS;
+        }
+
+        std_msgs::msg::Bool msg;
+        msg.data = true;
+        TD_INFO(node_, "Publishing /robot/on_tidy: true");
+        tidy_pub_->publish(msg);
+        return BT::NodeStatus::SUCCESS;
+    }
+
+    if (state_ == "auto") {
         pulse_on_sent_ = false;
         pulse_off_sent_ = false;
+
+        if (side_idx_ != 2) {
+            TD_INFO(node_, "AUTO no-op: targetPoseSideIdx=%d (only side 2 enabled)", side_idx_);
+        }
+
         return BT::NodeStatus::RUNNING;
     }
 
-    if (state_ != "on") {
-        TD_WARN(node_, "Invalid state '%s' (expected 'on', 'off' or 'pulse')", state_.c_str());
-        return BT::NodeStatus::FAILURE;
-    }
-
-    return BT::NodeStatus::RUNNING;
+    TD_WARN(node_, "Invalid state '%s' (expected 'on', 'off' or 'auto')", state_.c_str());
+    return BT::NodeStatus::FAILURE;
 }
 
 BT::NodeStatus TidyPublisher::onRunning() {
-    // Shared condition logic for state==on and state==pulse
+    if (state_ == "auto" && side_idx_ != 2) {
+        // Keep RUNNING so Parallel result remains controlled by OnDockAction.
+        return BT::NodeStatus::RUNNING;
+    }
+
+    // Shared condition logic for state==auto
     std::vector<std::vector<FlipStatus>> hazelnut_status;
     if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
         TD_WARN(node_, "hazelnut_status not in blackboard");
@@ -92,12 +116,12 @@ BT::NodeStatus TidyPublisher::onRunning() {
         }
     }
 
-    if (state_ == "pulse") {
-        // Keep original 'on' trigger logic: only send ON when condition is met.
+    if (state_ == "auto") {
+        // Keep original trigger logic: only send ON when condition is met.
         if (!pulse_on_sent_ && !all_no_take) {
             std_msgs::msg::Bool msg;
             msg.data = true;
-            TD_INFO(node_, "Publishing /robot/on_tidy: true (pulse trigger, %d ms)", pulse_ms_);
+            TD_INFO(node_, "Publishing /robot/on_tidy: true (auto trigger, %d ms)", pulse_ms_);
             tidy_pub_->publish(msg);
 
             pulse_on_sent_ = true;
@@ -112,7 +136,7 @@ BT::NodeStatus TidyPublisher::onRunning() {
                 if (elapsed_ms >= pulse_ms_) {
                     std_msgs::msg::Bool msg;
                     msg.data = false;
-                    TD_INFO(node_, "Publishing /robot/on_tidy: false (pulse end)");
+                    TD_INFO(node_, "Publishing /robot/on_tidy: false (auto end)");
                     tidy_pub_->publish(msg);
                     pulse_off_sent_ = true;
                 }
@@ -123,22 +147,14 @@ BT::NodeStatus TidyPublisher::onRunning() {
         return BT::NodeStatus::RUNNING;
     }
 
-    if (!all_no_take) {
-        std_msgs::msg::Bool msg;
-        msg.data = true;
-        TD_INFO(node_, "Publishing /robot/on_tidy: true (side %d has actionable face)", side_idx_);
-        tidy_pub_->publish(msg);
-        return BT::NodeStatus::SUCCESS;
-    }
-
     return BT::NodeStatus::RUNNING;
 }
 
 void TidyPublisher::onHalted() {
-    if (state_ == "pulse" && pulse_on_sent_ && !pulse_off_sent_) {
+    if (state_ == "auto" && pulse_on_sent_ && !pulse_off_sent_) {
         std_msgs::msg::Bool msg;
         msg.data = false;
-        TD_INFO(node_, "Publishing /robot/on_tidy: false (halt safety)");
+        TD_INFO(node_, "Publishing /robot/on_tidy: false (auto halt safety)");
         tidy_pub_->publish(msg);
         pulse_off_sent_ = true;
     }
