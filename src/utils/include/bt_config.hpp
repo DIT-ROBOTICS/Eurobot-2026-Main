@@ -17,12 +17,10 @@ enum class DockType {
 struct MapPoint {
     double x;
     double y;
-    double z_north;
-    double z_east;
-    double z_south;
-    double z_west;
+    double staging_dist;
     double sign;
     DockType dock_type;
+    int direction;
 };
 
 enum class StartUpState {
@@ -84,7 +82,9 @@ enum class FieldStatus {
 
 enum class FlipStatus {
     NO_FLIP,
-    NEED_FLIP
+    NEED_FLIP,
+    NO_TAKE,
+    NEED_TAKE
 };
 
 enum class Direction {

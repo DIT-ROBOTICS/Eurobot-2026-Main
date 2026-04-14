@@ -39,6 +39,7 @@ include_directories(
 add_library(navigation_nodes SHARED
     # src/dock_action_node.cpp
     # src/rotate_action_node.cpp
+    src/controller_type_publisher.cpp
     src/stop_robot_node.cpp
     # src/nav_action_node.cpp
     src/relativeNav.cpp

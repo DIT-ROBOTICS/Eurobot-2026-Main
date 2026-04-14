@@ -42,6 +42,7 @@ private:
     void collection_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void pantry_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+    void hazelnut_pickup_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void robberyPoseCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
     
@@ -57,6 +58,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr collection_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr pantry_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hazelnut_flip_sub;
+    rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hazelnut_pickup_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr on_take_feedback_sub;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr robbery_pose_sub;
     // Node references (order must match constructor initialization)
@@ -68,6 +70,10 @@ private:
     std_msgs::msg::Int32MultiArray collection_info;
     std_msgs::msg::Int32MultiArray pantry_info;
     std_msgs::msg::Int32MultiArray on_take_feedback;
+
+    // Keep last side index for pickup messages that don't carry side id
+    int current_hazelnut_side_idx_{0};
+    bool has_hazelnut_side_idx_{false};
     geometry_msgs::msg::PoseArray robbery_pantry_poses;
 };
 

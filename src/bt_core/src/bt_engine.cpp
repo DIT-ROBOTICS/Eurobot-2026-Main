@@ -203,12 +203,20 @@ void BTengine::createTreeNodes() {
     // field updater
     factory.registerNodeType<FieldUpdater>("FieldUpdater", params, blackboard);
 
+    // tidy publisher
+    factory.registerNodeType<TidyPublisher>("TidyPublisher", params, blackboard);
+
     // flip publisher
     factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
+    factory.registerNodeType<FlipPublisher_white>("FlipPublisher_white", params, blackboard);
 
     // take/put publishers (new separate nodes)
     factory.registerNodeType<TakePublisher>("TakePublisher", params, blackboard);
+    factory.registerNodeType<TakePublisher_white>("TakePublisher_white", params, blackboard);
     factory.registerNodeType<PutPublisher>("PutPublisher", params, blackboard);
+
+    // cursor publisher
+    factory.registerNodeType<CursorPublisher>("CursorPublisher", params, blackboard);
     // game info receiver
     factory.registerNodeType<GameInfoReceiver>("GameInfoReceiver", params, blackboard);
     
@@ -216,6 +224,7 @@ void BTengine::createTreeNodes() {
     // navigation
     // factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);  // Source commented out
     // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
+    factory.registerNodeType<ControllerTypePublisher>("ControllerTypePublisher", params, blackboard);
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
     factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
     factory.registerNodeType<RelativeNavNode>("RelativeNavNode", params, blackboard);
@@ -313,17 +322,15 @@ void BTengine::setBlackboard() {
     }
     
     if (this->get_parameter("map_points", map_points_raw)) {
-        constexpr int VALUES_PER_POINT = 8;
+        constexpr int VALUES_PER_POINT = 6;
             for (size_t i = 0; i + VALUES_PER_POINT <= map_points_raw.size(); i += VALUES_PER_POINT) {
                 MapPoint pt;
                 pt.x = map_points_raw[i];
                 pt.y = map_points_raw[i + 1];
-                pt.z_north = map_points_raw[i + 2];
-                pt.z_east = map_points_raw[i + 3];
-                pt.z_south = map_points_raw[i + 4];
-                pt.z_west = map_points_raw[i + 5];
-                pt.sign = map_points_raw[i + 6];
-                pt.dock_type = static_cast<DockType>(static_cast<int>(map_points_raw[i + 7]));
+                pt.staging_dist = map_points_raw[i + 2];
+                pt.sign = map_points_raw[i + 3];
+                pt.dock_type = static_cast<DockType>(static_cast<int>(map_points_raw[i + 4]));
+                pt.direction = static_cast<int>(map_points_raw[i+5]);
                 map_point_list.push_back(pt);
             }
             RCLCPP_INFO(this->get_logger(), "[BTengine]: Loaded %zu MapPoints from parameters", map_point_list.size());
@@ -413,4 +420,3 @@ int main(int argc, char** argv) {
     
     return 0;
 }
-

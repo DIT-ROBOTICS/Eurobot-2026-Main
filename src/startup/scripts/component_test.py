@@ -4,10 +4,11 @@ Component Test Script — Interactive Hardware/Feature Checker
 
 Provides an interactive menu to test individual robot components:
   1. Nav2 NavigateToPose  — send (x, y, yaw) goal
-  2. Flip                 — publish Int16MultiArray to /robot/on_flip
+    2. Flip                 — publish Int16 to /robot/on_flip
   3. Put                  — publish Int16 to /robot/on_put
-  4. Take                 — publish Int16 to /robot/on_take
+    4. Take                 — publish Int16MultiArray to /robot/on_take
   5. Zero cmd_vel         — publish Twist(0,0,0) to /cmd_vel
+    9. Tidy                 — publish Bool to /robot/on_tidy
 
 Usage:
     python3 src/startup/scripts/component_test.py
@@ -22,7 +23,7 @@ from rclpy.action import ActionClient
 
 from nav2_msgs.action import NavigateToPose
 from geometry_msgs.msg import PoseStamped, Twist
-from std_msgs.msg import Int16, Int16MultiArray
+from std_msgs.msg import Int16, Int16MultiArray, Bool
 
 
 # ── colour helpers ──────────────────────────────────────────────
@@ -41,11 +42,14 @@ class ComponentTester(Node):
         super().__init__("component_tester")
 
         # ── publishers ──────────────────────────────────────────
-        self.flip_pub      = self.create_publisher(Int16MultiArray, "/robot/on_flip",   10)
+        self.flip_pub      = self.create_publisher(Int16, "/robot/on_flip",   10)
         self.put_pub       = self.create_publisher(Int16,           "/robot/on_put",    10)
-        self.take_pub      = self.create_publisher(Int16,           "/robot/on_take",   10)
+        self.take_pub      = self.create_publisher(Int16MultiArray,           "/robot/on_take",   10)
         self.vel_pub       = self.create_publisher(Twist,           "/cmd_vel",         10)
         self.dock_side_pub = self.create_publisher(Int16,           "/robot/dock_side", 10)
+        self.cursor_left_pub  = self.create_publisher(Bool,         "/robot/on_cursor_left",  10)
+        self.cursor_right_pub = self.create_publisher(Bool,         "/robot/on_cursor_right", 10)
+        self.tidy_pub         = self.create_publisher(Bool,         "/robot/on_tidy", 10)
 
         # ── nav2 action client ──────────────────────────────────
         self.nav_client = ActionClient(self, NavigateToPose, "navigate_to_pose")
@@ -66,12 +70,14 @@ class ComponentTester(Node):
 ║         Component Test — Interactive Menu        ║
 ╠══════════════════════════════════════════════════╣
 ║  1  │ Nav2 NavigateToPose  (x, y, yaw)           ║
-║  2  │ Flip      → /robot/on_flip  (Int16Multi)   ║
+║  2  │ Flip      → /robot/on_flip  (Int16)        ║
 ║  3  │ Put       → /robot/on_put   (Int16)        ║
-║  4  │ Take      → /robot/on_take  (Int16)        ║
+║  4  │ Take      → /robot/on_take  (Int16Multi)   ║
 ║  5  │ Zero cmd_vel                               ║
 ║  6  │ Dock Side → /robot/dock_side (Int16)       ║
 ║  7  │ cmd_vel   → /cmd_vel  (vx, vy, wz)        ║
+║  8  │ Cursor    → /robot/on_cursor_(left/right) ║
+║  9  │ Tidy      → /robot/on_tidy (Bool)         ║
 ║  h  │ Show this menu                             ║
 ║  q  │ Quit                                       ║
 ╚══════════════════════════════════════════════════╝{RESET}
@@ -104,6 +110,10 @@ class ComponentTester(Node):
                     self._cmd_dock_side()
                 elif cmd == "7":
                     self._cmd_vel()
+                elif cmd == "8":
+                    self._cmd_cursor()
+                elif cmd == "9":
+                    self._cmd_tidy()
                 elif cmd == "":
                     pass
                 else:
@@ -173,26 +183,20 @@ class ComponentTester(Node):
     # ────────────────────────────────────────────────────────────
     def _cmd_flip(self):
         """
-        /robot/on_flip  →  Int16MultiArray (length 5)
-          index 0-3 : which hazelnut slots to flip (1 = flip, 0 = no)
-          index 4   : side index
-        Example input: 1 0 1 1 3  → flip slots 0,2,3 on side 3
+        /robot/on_flip  →  Int16
+          data : side index to start FLIP action
         """
-        raw = input(
-            f"  {YELLOW}Enter 5 ints (flip0 flip1 flip2 flip3 side): {RESET}"
-        ).strip()
+        raw = input(f"  {YELLOW}Enter side index (Int16): {RESET}").strip()
         try:
-            vals = list(map(int, raw.split()))
-            if len(vals) != 5:
-                raise ValueError
+            val = int(raw)
         except ValueError:
-            print(f"{RED}Need exactly 5 integers.{RESET}")
+            print(f"{RED}Invalid integer.{RESET}")
             return
 
-        msg = Int16MultiArray()
-        msg.data = vals
+        msg = Int16()
+        msg.data = val
         self.flip_pub.publish(msg)
-        print(f"{GREEN}Published /robot/on_flip → {vals}{RESET}")
+        print(f"{GREEN}Published /robot/on_flip → {val}{RESET}")
 
     # ────────────────────────────────────────────────────────────
     #  3 — Put
@@ -219,20 +223,26 @@ class ComponentTester(Node):
     # ────────────────────────────────────────────────────────────
     def _cmd_take(self):
         """
-        /robot/on_take  →  Int16
-          data : side index to perform take action
+        /robot/on_take  →  Int16MultiArray (length 5)
+          index 0-3 : 1=NEED_FLIP, -1=NO_TAKE, 0=NO_FLIP
+          index 4   : side index
+        Example input: 1 -1 0 1 2
         """
-        raw = input(f"  {YELLOW}Enter side index (Int16): {RESET}").strip()
+        raw = input(
+            f"  {YELLOW}Enter 5 ints (slot0 slot1 slot2 slot3 side): {RESET}"
+        ).strip()
         try:
-            val = int(raw)
+            vals = list(map(int, raw.split()))
+            if len(vals) != 5:
+                raise ValueError
         except ValueError:
-            print(f"{RED}Invalid integer.{RESET}")
+            print(f"{RED}Need exactly 5 integers.{RESET}")
             return
 
-        msg = Int16()
-        msg.data = val
+        msg = Int16MultiArray()
+        msg.data = vals
         self.take_pub.publish(msg)
-        print(f"{GREEN}Published /robot/on_take → {val}{RESET}")
+        print(f"{GREEN}Published /robot/on_take → {vals}{RESET}")
 
     # ────────────────────────────────────────────────────────────
     #  5 — Zero cmd_vel
@@ -284,6 +294,56 @@ class ComponentTester(Node):
         msg.angular.z = wz
         self.vel_pub.publish(msg)
         print(f"{GREEN}Published /cmd_vel → vx={vx}, vy={vy}, wz={wz}{RESET}")
+
+    # ────────────────────────────────────────────────────────────
+    #  8 — Cursor
+    # ────────────────────────────────────────────────────────────
+    def _cmd_cursor(self):
+        """
+        /robot/on_cursor_left or /robot/on_cursor_right  →  Bool
+          one-line input: "r 1" or "l 0"
+        """
+        raw = input(f"  {YELLOW}Enter cursor command (l/r 0/1): {RESET}").strip().lower()
+        parts = raw.split()
+        if len(parts) != 2:
+            print(f"{RED}Invalid format. Example: r 1{RESET}")
+            return
+
+        side_raw, value_raw = parts
+        if side_raw not in ["l", "r"]:
+            print(f"{RED}Invalid side. Use 'l' or 'r'.{RESET}")
+            return
+        if value_raw not in ["0", "1"]:
+            print(f"{RED}Invalid value. Use 0 or 1.{RESET}")
+            return
+
+        msg = Bool()
+        msg.data = (value_raw == "1")
+
+        if side_raw == "l":
+            self.cursor_left_pub.publish(msg)
+            print(f"{GREEN}Published /robot/on_cursor_left → {int(msg.data)}{RESET}")
+        else:
+            self.cursor_right_pub.publish(msg)
+            print(f"{GREEN}Published /robot/on_cursor_right → {int(msg.data)}{RESET}")
+
+    # ────────────────────────────────────────────────────────────
+    #  9 — Tidy
+    # ────────────────────────────────────────────────────────────
+    def _cmd_tidy(self):
+        """
+        /robot/on_tidy  →  Bool
+          one-line input: 1(on) or 0(off)
+        """
+        raw = input(f"  {YELLOW}Enter tidy state (0/1): {RESET}").strip()
+        if raw not in ["0", "1"]:
+            print(f"{RED}Invalid value. Use 0 or 1.{RESET}")
+            return
+
+        msg = Bool()
+        msg.data = (raw == "1")
+        self.tidy_pub.publish(msg)
+        print(f"{GREEN}Published /robot/on_tidy → {int(msg.data)}{RESET}")
 
 
 # ════════════════════════════════════════════════════════════════

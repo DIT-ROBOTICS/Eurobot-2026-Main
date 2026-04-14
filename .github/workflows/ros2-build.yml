@@ -1,0 +1,92 @@
+name: ROS 2 CI Build
+
+on:
+  push:
+    branches: 
+      - "main"
+      - "develop"
+      - "feat/*"
+  pull_request:
+    branches:
+      - "main"
+      - "develop"
+      - "feat/*"
+
+jobs:
+  build:
+    name: Build using Custom Dockerfile with Cache
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # cache ROS 2 build artifacts to speed up subsequent builds (colcon build outputs)
+      - name: Cache ROS 2 Build Artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/
+            install/
+            log/
+          key: ${{ runner.os }}-ros2-build-${{ hashFiles('**/package.xml', '!**/build/**', '!**/install/**', '!**/log/**') }}
+          restore-keys: |
+            ${{ runner.os }}-ros2-build-
+
+      # set up Docker Buildx for advanced caching
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # build Docker image with cache and export it as a file for the next step
+      - name: Build and cache Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker             
+          file: ./docker/Dockerfile 
+          tags: eurobot-ci-env:latest
+          outputs: type=docker,dest=/tmp/eurobot-ci-env.tar 
+          cache-from: type=gha          
+          cache-to: type=gha,mode=max 
+
+      # load the built Docker image from the previous step
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/eurobot-ci-env.tar
+
+      # run the ROS 2 build and tests inside the custom Docker container
+      - name: Build and Test ROS 2 workspace inside Custom Docker
+        run: |
+          docker run --rm \
+            -u root \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            eurobot-ci-env:latest \
+            bash -ec "
+              source /opt/ros/humble/setup.bash
+              rosdep update
+              rosdep install --from-paths . --ignore-src -y --rosdistro humble
+
+              # ── Build ──────────────────────────────────────────
+              colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+              # ── Source the built workspace ─────────────────────
+              source install/setup.bash
+
+              # ── Run launch + integration tests ───────────────
+              colcon test --packages-select startup bt_core \
+                --return-code-on-test-failure \
+                --event-handlers console_cohesion+
+              colcon test-result --all --verbose
+
+              chmod -R 777 /workspace
+            "
+
+      # upload test results so they are visible in the Actions UI
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/**/test_results/**/*.xml
+            log/latest_test/**

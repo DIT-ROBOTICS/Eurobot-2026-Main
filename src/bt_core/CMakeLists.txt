@@ -41,9 +41,13 @@ add_executable(bt_engine
   src/MissionPublisher.cpp
   src/MissionChecker.cpp
   src/FieldUpdater.cpp
+  src/TidyPublisher.cpp
   src/FlipPublisher.cpp
+  src/FlipPublisher_white.cpp
   src/TakePublisher.cpp
+  src/TakePublisher_white.cpp
   src/PutPublisher.cpp
+  src/CursorPublisher.cpp
 )
 ament_target_dependencies(bt_engine
   "rclcpp"
@@ -83,10 +87,13 @@ install(DIRECTORY
 )
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
+  find_package(launch_testing_ament_cmake REQUIRED)
+
+  # Launch test — verify bt_engine node starts and advertises topics/services
+  add_launch_test(
+    test/test_bt_engine_launch.py
+    TIMEOUT 30
+  )
 endif()
 
 ament_package()

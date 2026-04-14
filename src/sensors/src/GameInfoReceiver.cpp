@@ -3,9 +3,9 @@
 GameInfoReceiver::GameInfoReceiver(const std::string& name, const BT::NodeConfig& config, 
                          const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
     : BT::SyncActionNode(name, config), 
+    running_(true),
       node_(params.nh.lock()), 
-      blackboard_(blackboard),
-      running_(true) {
+    blackboard_(blackboard) {
 
     // Create a dedicated callback group for our subscriptions
     callback_group_ = node_->create_callback_group(rclcpp::CallbackGroupType::Reentrant);

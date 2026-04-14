@@ -24,6 +24,7 @@
 
 // navigation nodes
 #include "nav_action_node.hpp"
+#include "controller_type_publisher.hpp"
 #include "dock_action_node.hpp"
 #include "onDock.hpp"
 #include "stop_robot_node.hpp"
@@ -46,14 +47,18 @@
 // field updater
 #include "FieldUpdater.hpp"
 
+// tidy publisher
+#include "TidyPublisher.hpp"
+
 // flip publisher
 #include "FlipPublisher.hpp"
 
 // take/put publishers (action nodes)
 #include "TakePublisher.hpp"
 #include "PutPublisher.hpp"
-
-// utils nodes
+#include "TakePublisher_white.hpp"
+#include "FlipPublisher_white.hpp"
+#include "CursorPublisher.hpp"
 
 // firmware nodes
 #include "FirmwareReceiver.hpp"

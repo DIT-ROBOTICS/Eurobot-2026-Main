@@ -21,17 +21,25 @@
         "18": false,
         "19": false
     },
+    // yellow side
+    // "pantry_sequence": [
+    //     0,
+    //     1,
+    //     5,
+    //     4
+    // ],
+    // "collection_sequence": [
+    //     11,
+    //     10,
+    //     12,
+    //     13
+    // ]
+    // blue side
     "pantry_sequence": [
-        0,
-        1,
-        5,
-        4
+        1
     ],
     "collection_sequence": [
-        11,
-        10,
-        12,
-        13
+        10
     ]
 
     // two robot test: 8 point
