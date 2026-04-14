@@ -8,10 +8,19 @@
 #include <algorithm>
 
 enum class DockType {
-    MISSION_DOCK_Y,
-    MISSION_DOCK_X,
-    CAM_DOCK_Y,
-    CAM_DOCK_X
+    MISSION_DOCK_Y = 0,
+    MISSION_DOCK_X = 1,
+    CAM_DOCK_Y = 2,
+    CAM_DOCK_X = 3
+};
+
+struct MapPoint {
+    double x;
+    double y;
+    double staging_dist;
+    double sign;
+    DockType dock_type;
+    int direction;
 };
 
 enum class StartUpState {
@@ -37,6 +46,8 @@ enum class ActionType {
     PUT,
     FLIP,
     DOCK,
+    GO_HOME,
+    CURSOR,
     NAV,
     ROTATE
 };
@@ -67,7 +78,9 @@ enum class FieldStatus {
 
 enum class FlipStatus {
     NO_FLIP,
-    NEED_FLIP
+    NEED_FLIP,
+    NO_TAKE,
+    NEED_TAKE
 };
 
 enum class Direction {
@@ -125,6 +138,8 @@ inline ActionType stringToActionType(const std::string& str) {
     if (lower_str == "put") return ActionType::PUT;
     if (lower_str == "flip") return ActionType::FLIP;
     if (lower_str == "dock") return ActionType::DOCK;
+    if (lower_str == "go_home") return ActionType::GO_HOME;
+    if (lower_str == "cursor") return ActionType::CURSOR;
     if (lower_str == "nav") return ActionType::NAV;
     if (lower_str == "rotate") return ActionType::ROTATE;
     throw std::runtime_error("Invalid action type string: " + str);
@@ -136,8 +151,19 @@ inline std::string actionTypeToString(ActionType action_type) {
         case ActionType::PUT: return "put";
         case ActionType::FLIP: return "flip";
         case ActionType::DOCK: return "dock";
+        case ActionType::GO_HOME: return "go_home";
+        case ActionType::CURSOR: return "cursor";
         case ActionType::NAV: return "nav";
         case ActionType::ROTATE: return "rotate";
+        default: return "unknown";
+    }
+}
+
+inline std::string fieldStatusToString(FieldStatus status) {
+    switch (status) {
+        case FieldStatus::EMPTY: return "EMPTY";
+        case FieldStatus::OCCUPIED: return "OCCUPIED";
+        case FieldStatus::UNKNOWN: return "UNKNOWN";
         default: return "unknown";
     }
 }

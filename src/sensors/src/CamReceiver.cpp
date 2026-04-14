@@ -36,6 +36,12 @@ CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config,
         "/robot/vision/hazelnut/flip", 10,
         std::bind(&CamReceiver::hazelnut_flip_callback, this, std::placeholders::_1),
         sub_options);
+    
+        // Subscribe to pickup mask (0 means NO_TAKE should be forced)
+        hazelnut_pickup_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
+            "/robot/docking/pickup", 10,
+            std::bind(&CamReceiver::hazelnut_pickup_callback, this, std::placeholders::_1),
+            sub_options);
 
     // Subscribe to on take feedback
     on_take_feedback_sub = node_->create_subscription<std_msgs::msg::Int32MultiArray>(
@@ -85,8 +91,22 @@ void CamReceiver::initializeDefaultStatus() {
     
     // Initialize hazelnut_status: all NO_FLIP
     std::vector<std::vector<FlipStatus>> default_hazelnut(
-        ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
+        ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_TAKE));
     blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", default_hazelnut);
+
+    // Initialize raw collection info for debugging/visualization
+    std_msgs::msg::Int32MultiArray default_collection_raw;
+    default_collection_raw.data = std::vector<int>(COLLECTION_LENGTH, 1); //
+    blackboard_->set<std_msgs::msg::Int32MultiArray>("collection_info_raw", default_collection_raw);
+
+    // Initialize raw pantry info with 0 (EMPTY) for debugging/visualization
+    std_msgs::msg::Int32MultiArray default_pantry_raw;
+    default_pantry_raw.data = std::vector<int>(PANTRY_LENGTH, 0);
+    blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info_raw", default_pantry_raw);
+
+    // Initialize visited lists
+    blackboard_->set<std::vector<int>>("visited_collections", std::vector<int>());
+    blackboard_->set<std::vector<int>>("visited_pantries", std::vector<int>());
 }
 
 PortsList CamReceiver::providedPorts() {
@@ -98,11 +118,33 @@ void CamReceiver::collection_info_callback(const std_msgs::msg::Int32MultiArray:
     collection_info = *msg;
     
     if (!collection_info.data.empty()) {
+        std::vector<FieldStatus> existing_status;
+        if (!blackboard_->get<std::vector<FieldStatus>>("collection_info", existing_status)) {
+            RCLCPP_WARN(node_->get_logger(), "CamReceiver: collection_info not found in blackboard");
+        }
+        
+        std::vector<int> visited_collections;
+        if (!blackboard_->get<std::vector<int>>("visited_collections", visited_collections)) {
+            RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: visited_collections not found in blackboard");
+        }
+
         // Convert Int32MultiArray to vector<FieldStatus> for blackboard
         std::vector<FieldStatus> collection_status;
-        for (const auto& val : collection_info.data) {
-            collection_status.push_back(static_cast<FieldStatus>(val));
+        for (size_t i = 0; i < collection_info.data.size(); ++i) {
+            int val = collection_info.data[i];
+            
+            // Force close if this collection has already been visited
+            if (std::find(visited_collections.begin(), visited_collections.end(), i) != visited_collections.end()) {
+                val = static_cast<int>(FieldStatus::EMPTY);
+            }
+
+            if (val == -1 && i < existing_status.size()) {
+                collection_status.push_back(existing_status[i]);
+            } else {
+                collection_status.push_back(static_cast<FieldStatus>(val));
+            }
         }
+        // RCLCPP_INFO(node_->get_logger(), "CamReceiver: writeing updated collection_info to blackboard");
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("collection_info_raw", collection_info);
     }
@@ -113,10 +155,35 @@ void CamReceiver::pantry_info_callback(const std_msgs::msg::Int32MultiArray::Sha
     pantry_info = *msg;
     
     if (!pantry_info.data.empty()) {
+        std::vector<FieldStatus> existing_status;
+        if (!blackboard_->get<std::vector<FieldStatus>>("pantry_info", existing_status)) {
+            RCLCPP_WARN(node_->get_logger(), "CamReceiver: pantry_info not found in blackboard");
+        }
+        
+        std::vector<int> visited_pantries;
+        if (!blackboard_->get<std::vector<int>>("visited_pantries", visited_pantries)) {
+            RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: visited_pantries not found in blackboard");
+        }
+
         // Convert Int32MultiArray to vector<FieldStatus> for blackboard
         std::vector<FieldStatus> pantry_status;
-        for (const auto& val : pantry_info.data) {
-            pantry_status.push_back(static_cast<FieldStatus>(val));
+        for (size_t i = 0; i < pantry_info.data.size(); ++i) {
+            int val = pantry_info.data[i];
+            
+            // Force close if this pantry has already been visited
+            if (std::find(visited_pantries.begin(), visited_pantries.end(), i) != visited_pantries.end()) {
+                val = static_cast<int>(FieldStatus::OCCUPIED);
+            }
+
+            if (val == -1 && i < existing_status.size()) {
+                pantry_status.push_back(existing_status[i]);
+            }
+            else if (val == 2 || val == 3) {
+                pantry_status.push_back(FieldStatus::OCCUPIED);
+            }
+            else {
+                pantry_status.push_back(static_cast<FieldStatus>(val));
+            }
         }
         blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info_raw", pantry_info);
@@ -138,6 +205,8 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
         RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid side index: %d", side_idx);
         return;
     }
+    current_hazelnut_side_idx_ = side_idx;
+    has_hazelnut_side_idx_ = true;
     
     // Check robot_side_status: skip update if this side is already OCCUPIED
     // (camera may report all zeros when it can't see the hazelnuts during movement)
@@ -157,7 +226,7 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
     // Update the specified side with flip information
     for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); ++i) {
         if(robot_sides[side_idx] == FieldStatus::OCCUPIED) continue;
-        
+        if(hazelnut_status[side_idx][i] == FlipStatus::NO_TAKE) continue; // Don't update if already forced NO_TAKE by pickup mask
         if (msg->data[i] == 1) {
             hazelnut_status[side_idx][i] = FlipStatus::NEED_FLIP;
         } else {
@@ -170,6 +239,50 @@ void CamReceiver::hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::S
     
     RCLCPP_DEBUG(node_->get_logger(), 
                 "CamReceiver: Updated hazelnut flip status for side %d: [%d, %d, %d, %d]",
+                side_idx, msg->data[0], msg->data[1], msg->data[2], msg->data[3]);
+}
+
+void CamReceiver::hazelnut_pickup_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg) {
+    RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: Received hazelnut pickup mask update.");
+
+    if (msg->data.size() < 4) {
+        RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid hazelnut pickup data size: %zu", msg->data.size());
+        return;
+    }
+
+    int side_idx = -1;
+    if (msg->data.size() >= 5) {
+        side_idx = msg->data[4];
+    } else if (has_hazelnut_side_idx_) {
+        side_idx = current_hazelnut_side_idx_;
+    }
+
+    if (side_idx < 0 || side_idx >= ROBOT_SIDES) {
+        // RCLCPP_WARN(node_->get_logger(), "CamReceiver: Invalid/missing side index for pickup mask: %d", side_idx);
+        return;
+    }
+
+    std::vector<std::vector<FlipStatus>> hazelnut_status;
+    if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status)) {
+        hazelnut_status = std::vector<std::vector<FlipStatus>>(
+            ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
+    }
+
+    // pickup=0 means force NO_TAKE directly (override)
+    for (int i = 0; i < std::min(4, HAZELNUT_LENGTH); i++) {
+         if (hazelnut_status[side_idx][i] == FlipStatus::NEED_FLIP || hazelnut_status[side_idx][i] == FlipStatus::NO_FLIP) {
+            continue;
+        } else if (msg->data[i] == 1) {
+            hazelnut_status[side_idx][i] = FlipStatus::NEED_TAKE;
+        } else if (msg->data[i] == 0) {
+            hazelnut_status[side_idx][i] = FlipStatus::NO_TAKE;
+        }
+    }
+
+    blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status);
+
+    RCLCPP_DEBUG(node_->get_logger(),
+                "CamReceiver: Applied pickup mask for side %d: [%d, %d, %d, %d]",
                 side_idx, msg->data[0], msg->data[1], msg->data[2], msg->data[3]);
 }
 
@@ -186,7 +299,7 @@ void CamReceiver::onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr
     if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_sides)) {
         robot_sides = std::vector<FieldStatus>(ROBOT_SIDES, FieldStatus::EMPTY);
     }
-    for(size_t i = 0; i < msg->data.size() && i < robot_sides.size(); i++) {
+    for(size_t i = 1; i < msg->data.size() && i < robot_sides.size(); i++) { // TODO: start with 0
         robot_sides[i] = static_cast<FieldStatus>(msg->data[i]);
         // RCLCPP_WARN(node_->get_logger(), "CamReceiver: Updated robot side status for side %d: %d", i, static_cast<int>(robot_sides[i]));
     }

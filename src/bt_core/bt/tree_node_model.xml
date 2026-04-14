@@ -1,6 +1,15 @@
 <root BTCPP_format="4">
     <TreeNodesModel>
         <Action ID="CamReceiver"/>
+        <Action ID="ControllerTypePublisher">
+            <input_port name="mode" type="std::string" default="Auto">Current mode (Auto/Manual)</input_port>
+            <input_port name="controller_type" type="std::string" default="Fast">Controller type to publish</input_port>
+        </Action>
+        <Action ID="CursorPublisher">
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
+            <input_port name="state" type="std::string" default="on">state: 'on' or 'off'</input_port>
+            <input_port name="arms" type="std::string" default="left">arms: 'left' or 'right'</input_port>
+        </Action>
         <Action ID="DecisionCore">
             <output_port name="targetDirection" type="int"/>
             <output_port name="targetPoseIdx" type="int"/>
@@ -13,8 +22,15 @@
         <Action ID="FirmwareReceiver"/>
         <Action ID="FlipPublisher">
             <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
             <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to flip</input_port>
         </Action>
+        <Action ID="FlipPublisher_white">
+            <input_port name="timeout_ms" type="int" default="5000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index in map_points</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
+        <Action ID="GameInfoReceiver"/>
         <Action ID="LocReceiver"/>
         <Action ID="MissionChecker">
             <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
@@ -33,6 +49,27 @@
             <input_port name="dock_type" type="std::string" default="dock_y_loose_linearBoost">Dock type</input_port>
             <input_port name="targetPoseSideIdx" type="int">Robot side index to face target</input_port>
             <input_port name="targetPoseIdx" type="int">Target pose index in map_points</input_port>
+        </Action>
+        <Action ID="PutPublisher">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for pantry update)</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
+        <Action ID="StopRobotNode"/>
+        <Action ID="TakePublisher">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
+        <Action ID="TakePublisher_white">
+            <input_port name="timeout_ms" type="int" default="3000">Timeout in milliseconds</input_port>
+            <input_port name="targetPoseIdx" type="int" default="0">Target pose index (for collection update)</input_port>
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to use</input_port>
+        </Action>
+        <Action ID="TidyPublisher">
+            <input_port name="targetPoseSideIdx" type="int" default="0">Robot side index to check</input_port>
+            <input_port name="pulse_ms" type="int" default="200">pulse duration in ms (used when state='auto')</input_port>
+            <input_port name="state" type="std::string" default="off">state: 'on', 'off' or 'auto'</input_port>
         </Action>
     </TreeNodesModel>
 </root>

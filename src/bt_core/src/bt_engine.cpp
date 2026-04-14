@@ -33,6 +33,8 @@ BTengine::BTengine() : rclcpp::Node("bt_engine") {
     canStart = false;  // Will be set to true when start signal is received
     group = 1;  // Main BT group
     file_logged = false;
+    use_camera_for_planning = false;
+    map_point_list = std::vector<MapPoint>();
 }
 
 void BTengine::init() {
@@ -45,6 +47,9 @@ void BTengine::initParam() {
     // Declare parameters with defaults
     this->declare_parameter<int>("time_rate", 100);
     this->declare_parameter<int>("game_time", 100);
+    this->declare_parameter<int>("stop_time", 98);
+    this->declare_parameter<int>("go_home_time", 90);
+    this->declare_parameter<bool>("use_camera_for_planning", false);
     this->declare_parameter<std::string>("pkg_share_dir", "/home/main/eurobot-2026-main-ws/install/bt_core/share/bt_core");
     this->declare_parameter<std::string>("tree_name", "MainTree");
     this->declare_parameter<std::string>("json_file_path", "params/mission_sequence.json");
@@ -54,6 +59,9 @@ void BTengine::initParam() {
     // Get parameters
     this->get_parameter("time_rate", time_rate);
     this->get_parameter("game_time", terminate_time);
+    this->get_parameter("stop_time", stop_time);
+    this->get_parameter("go_home_time", go_home_time);
+    this->get_parameter("use_camera_for_planning", use_camera_for_planning);
     this->get_parameter("pkg_share_dir", pkg_share_dir);
     this->get_parameter("tree_name", tree_name);
     
@@ -67,9 +75,11 @@ void BTengine::initParam() {
     bt_xml_directory = pkg_share_dir + "/" + bt_xml_rel_path;
     bt_tree_node_model = pkg_share_dir + "/" + bt_model_rel_path;
     
+    RCLCPP_INFO(this->get_logger(), "[BTengine] Parameters initialized: time_rate=%d, game_time=%d, stop_time=%d, go_home_time=%d, use_camera_for_planning=%s", 
+                time_rate, terminate_time, stop_time, go_home_time, use_camera_for_planning ? "true" : "false");
     RCLCPP_INFO(this->get_logger(), "[BTengine] JSON path: %s", json_file_path.c_str());
     RCLCPP_INFO(this->get_logger(), "[BTengine] BT XML dir: %s", bt_xml_directory.c_str());
-    RCLCPP_INFO(this->get_logger(), "[BTengine] Time rate: %d, Terminate time: %d", time_rate, terminate_time);
+    RCLCPP_INFO(this->get_logger(), "[BTengine] Time rate: %d, Terminate time: %d, Stop time: %d, Go home time: %d", time_rate, terminate_time, stop_time, go_home_time);
 }
 
 void BTengine::readyCallback(const std_msgs::msg::Bool::SharedPtr msg) {
@@ -108,6 +118,11 @@ void BTengine::planFileCallback(const std_msgs::msg::String::SharedPtr msg) {
     robot = stringToRobot(plan_file_name_split[0]);
     team = stringToTeam(plan_file_name_split[1]);
     selected_plan = std::stoi(plan_file_name_split[2]);
+
+    // Update blackboard with newly parsed values
+    blackboard->set<std::string>("team", teamToString(team));
+    blackboard->set<std::string>("robot", robotToString(robot));
+    blackboard->set<int>("selected_plan", selected_plan);
 
     if (!file_logged) {
         RCLCPP_INFO(this->get_logger(), "[BTengine]: Received plan file for robot %s, team %s, plan %d", robotToString(robot).c_str(), teamToString(team).c_str(), selected_plan);
@@ -188,15 +203,30 @@ void BTengine::createTreeNodes() {
     // field updater
     factory.registerNodeType<FieldUpdater>("FieldUpdater", params, blackboard);
 
+    // tidy publisher
+    factory.registerNodeType<TidyPublisher>("TidyPublisher", params, blackboard);
+
     // flip publisher
     factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
+    factory.registerNodeType<FlipPublisher_white>("FlipPublisher_white", params, blackboard);
+
+    // take/put publishers (new separate nodes)
+    factory.registerNodeType<TakePublisher>("TakePublisher", params, blackboard);
+    factory.registerNodeType<TakePublisher_white>("TakePublisher_white", params, blackboard);
+    factory.registerNodeType<PutPublisher>("PutPublisher", params, blackboard);
+
+    // cursor publisher
+    factory.registerNodeType<CursorPublisher>("CursorPublisher", params, blackboard);
+    // game info receiver
+    factory.registerNodeType<GameInfoReceiver>("GameInfoReceiver", params, blackboard);
     
     params.default_port_value = "dock_robot";
     // navigation
     // factory.registerNodeType<NavigationActionNode>("NavigationActionNode", params);  // Source commented out
     // factory.registerNodeType<Docking>("Docking", params, blackboard);  // Source commented out
+    factory.registerNodeType<ControllerTypePublisher>("ControllerTypePublisher", params, blackboard);
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
-    // factory.registerNodeType<StopRobotNode>("StopRobotNode", params);  // Source commented out
+    factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
     // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
 
     // utils
@@ -281,6 +311,33 @@ void BTengine::setBlackboard() {
     blackboard->set<std::string>("robot", robotToString(robot));
     blackboard->set<int>("selected_plan", selected_plan);
     blackboard->set<double>("game_time", game_time);
+    blackboard->set<double>("stop_time", static_cast<double>(stop_time));
+    blackboard->set<double>("go_home_time", static_cast<double>(go_home_time));
+    
+    // Read map_points parameter and populate map_point_list
+    std::vector<double> map_points_raw;
+    if (!this->has_parameter("map_points")) {
+        this->declare_parameter("map_points", std::vector<double>());
+    }
+    
+    if (this->get_parameter("map_points", map_points_raw)) {
+        constexpr int VALUES_PER_POINT = 6;
+            for (size_t i = 0; i + VALUES_PER_POINT <= map_points_raw.size(); i += VALUES_PER_POINT) {
+                MapPoint pt;
+                pt.x = map_points_raw[i];
+                pt.y = map_points_raw[i + 1];
+                pt.staging_dist = map_points_raw[i + 2];
+                pt.sign = map_points_raw[i + 3];
+                pt.dock_type = static_cast<DockType>(static_cast<int>(map_points_raw[i + 4]));
+                pt.direction = static_cast<int>(map_points_raw[i+5]);
+                map_point_list.push_back(pt);
+            }
+            RCLCPP_INFO(this->get_logger(), "[BTengine]: Loaded %zu MapPoints from parameters", map_point_list.size());
+            blackboard->set<std::vector<MapPoint>>("MapPointList", map_point_list);
+    } else {
+        RCLCPP_ERROR(this->get_logger(), "[BTengine]: Failed to get map_points parameter");
+    }
+
     // json_point is loaded separately via loadSequenceFromJson in DecisionCore
     
     RCLCPP_INFO(this->get_logger(), "[BTengine]: Blackboard initialized");
@@ -362,4 +419,3 @@ int main(int argc, char** argv) {
     
     return 0;
 }
-

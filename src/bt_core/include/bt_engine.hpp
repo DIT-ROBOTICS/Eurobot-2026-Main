@@ -24,6 +24,7 @@
 
 // navigation nodes
 #include "nav_action_node.hpp"
+#include "controller_type_publisher.hpp"
 #include "dock_action_node.hpp"
 #include "onDock.hpp"
 #include "stop_robot_node.hpp"
@@ -45,13 +46,27 @@
 // field updater
 #include "FieldUpdater.hpp"
 
+// tidy publisher
+#include "TidyPublisher.hpp"
+
 // flip publisher
 #include "FlipPublisher.hpp"
 
-// utils nodes
+// take/put publishers (action nodes)
+#include "TakePublisher.hpp"
+#include "PutPublisher.hpp"
+#include "TakePublisher_white.hpp"
+#include "FlipPublisher_white.hpp"
+#include "CursorPublisher.hpp"
 
 // firmware nodes
 #include "FirmwareReceiver.hpp"
+
+// game info nodes
+#include "GameInfoReceiver.hpp"
+
+// stop robot
+#include "stop_robot_node.hpp"
 
 // C++
 #include <memory>
@@ -129,10 +144,13 @@ private:
     std::string tree_name;  // Name of the main tree to create (e.g., "MainTree")
     std::string bt_tree_node_model;  // Path to save tree node model XML
     int group;              // Group ID for ready signal
+    bool use_camera_for_planning; // Whether to use camera data for planning (true/false)
 
     // Configuration parameters
     int time_rate;          // Timer rate in microseconds
     int terminate_time;     // Game time limit in seconds (when to stop tree execution)
+    int stop_time;          // Hard stop time limit in seconds
+    int go_home_time;       // Time in seconds to trigger go home logic
     std::string pkg_share_dir;      // Package share directory path
     std::string json_file_path;     // Full path to mission sequence JSON
     std::string bt_xml_directory;   // Full path to BT XML directory
@@ -144,5 +162,8 @@ private:
 
     // ros variables
     std::shared_ptr<rclcpp::Node> node;
+    
+    // map points
+    std::vector<MapPoint> map_point_list;
 };
 

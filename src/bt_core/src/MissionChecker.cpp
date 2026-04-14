@@ -77,14 +77,18 @@ BT::NodeStatus MissionChecker::onRunning() {
         MC_WARN(node_, "%s on side %d timed out after %ld ms — proceeding anyway",
                 actionTypeToString(action_).c_str(), side_idx_, elapsed);
         std::vector<FieldStatus> robot_side_status;
-        blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+        if (!blackboard_->get<std::vector<FieldStatus>>("robot_side_status", robot_side_status)) {
+            MC_WARN(node_, "Failed to get robot_side_status from blackboard during timeout override");
+        }
         if(action_ == ActionType::TAKE){
             robot_side_status[side_idx_] = FieldStatus::OCCUPIED;
             blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            MC_INFO(node_, "Marking side %d as OCCUPIED due to TAKE timeout", side_idx_);
         }
         else if(action_ == ActionType::PUT){
             robot_side_status[side_idx_] = FieldStatus::EMPTY;
             blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_side_status);
+            MC_INFO(node_, "Marking side %d as EMPTY due to PUT timeout", side_idx_);
         }
         return BT::NodeStatus::SUCCESS;  // Don't block the game
     }

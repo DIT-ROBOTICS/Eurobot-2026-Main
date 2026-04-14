@@ -9,6 +9,8 @@
 #include <vector>
 #include <cmath>
 #include <queue>
+#include <optional>
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "bt_config.hpp"
 
 using namespace BT;
@@ -29,8 +31,16 @@ struct PointScore {
         return score < other.score;
     }
 };
+
+struct SpectrumParams {
+    double aggressiveness; // P: -1.0 ~ 1.0
+    double sensitivity;    // k
+    double rival_sigma;    // Rival repulsion range
+    double rival_distance_threshold; // Hard cutoff distance (meters)
+};
+
 /**
- * @brief DecisionCore - A BT SyncActionNode that decides the next target
+ * @brief DecisionCore - A BT StatefulActionNode that decides the next target
  * 
  * Reads from blackboard:
  *   - json_point: sequence of point indices from mission_sequence.json
@@ -41,23 +51,26 @@ struct PointScore {
  *   - current_target_index: index of current point
  *   - current_target_pose: PoseStamped of target
  */
-class DecisionCore : public BT::SyncActionNode {
+class DecisionCore : public BT::StatefulActionNode {
 public:
     // BT function
     DecisionCore(const std::string& name, const BT::NodeConfig& config, 
                  const RosNodeParams& params, BT::Blackboard::Ptr blackboard);
     static BT::PortsList providedPorts();
-    BT::NodeStatus tick() override;
+    BT::NodeStatus onStart() override;
+    BT::NodeStatus onRunning() override;
+    void onHalted() override;
     
     // system function
-    void doTake();
-    void doPut();
-    void doFlip();
-    void doDock();
+    BT::NodeStatus doTake();
+    BT::NodeStatus doPut();
+    BT::NodeStatus doFlip();
+    BT::NodeStatus doDock();
+    BT::NodeStatus doGoHome();
+    BT::NodeStatus doCursor();
 
 private:
     // init
-    void loadMapPoints();
     void readBlackboard();        // Read current state from blackboard
     void loadSequenceFromJson();
     void getFieldInfo();
@@ -65,14 +78,16 @@ private:
     void getInputPort();
     void sortPantryPriority();
     void sortCollectionPriority();
-    pair<GoalPose, RobotSide> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
+    void publishScoreMarkers();
+    std::optional<pair<GoalPose, RobotSide>> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
     RobotSide getTargetSideIndex(ActionType action_type);
     Direction decideDirection(GoalPose goal_pose, RobotSide robot_side);
     ActionType decideNextActionType(ActionType action_type);
     void writeOutputPort();
-    void writeBlackboard();
     
     // Reward calculation helpers
+    void loadSpectrumParams();
+    double calculateSpectralScore(GoalPose pose, SpectrumParams params);
     int calculatePantryScore(int pantry_idx);
     int calculateCollectionScore(int collection_idx);
     
@@ -80,11 +95,9 @@ private:
     double calculateDistance(GoalPose pose);
     double calculateRivalDistance(GoalPose pose);
     geometry_msgs::msg::Point getPointPosition(GoalPose pose);
-    bool isOwnSidePantry(GoalPose pose);
-    bool isOwnSideCollection(GoalPose pose);
-    bool isMiddlePantry(GoalPose pose);
-    bool isMiddleCollection(GoalPose pose);
     void updatePoseData();
+    void updateVisitedPoints();
+    void printFieldInfo();
 
     // blackboard variable
     vector<FieldStatus> collection_info;
@@ -95,22 +108,19 @@ private:
     priority_queue<PointScore> collection_priority;
     geometry_msgs::msg::PoseStamped robot_pose;
     geometry_msgs::msg::PoseStamped rival_pose;
-    vector<double> map_points;
+    vector<MapPoint> map_point_list;
     Team current_team;
+    Robot current_robot;
     
-    // Reward constants
-    static constexpr int SCORE_BASE_AVAILABLE = 100;
-    static constexpr int SCORE_MIDDLE_BONUS = 80;       // E,F for pantry; middle collection
-    static constexpr int SCORE_OWN_SIDE_BONUS = 40;
-    static constexpr int SCORE_OPPONENT_SIDE_PENALTY = -20;
-    static constexpr int SCORE_DISTANCE_FACTOR = 10;    // Points per meter closer
-    static constexpr double RIVAL_PROXIMITY_THRESHOLD = 0.3; // meters
-    static constexpr int SCORE_RIVAL_NEARBY_PENALTY = -200;
+    // Spectrum Parameters
+    SpectrumParams pantry_params;
+    SpectrumParams collection_params;
 
 
     // system variable
     shared_ptr<rclcpp::Node> node_ptr;
     BT::Blackboard::Ptr blackboard_ptr;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr score_marker_pub_;
     
     // Sequence priority (from mission_sequence.json)
     vector<int> pantry_sequence;      // Priority order for PUT action

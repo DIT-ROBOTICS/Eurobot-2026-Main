@@ -13,27 +13,30 @@ FlipPublisher::FlipPublisher(const std::string& name, const BT::NodeConfig& conf
       blackboard_(blackboard),
       side_idx_(0),
       timeout_ms_(5000),
-      is_docking_received_(false),
+      target_pose_idx_(0),
       flip_published_(false) {
     
     // Create publisher for flip commands
     flip_pub_ = node_->create_publisher<std_msgs::msg::Int16MultiArray>("/robot/on_flip", 10);
     
-    // Subscribe to isDocking signal
-    is_docking_sub_ = node_->create_subscription<std_msgs::msg::Int16>(
-        "/robot/isDocking", 10,
-        std::bind(&FlipPublisher::isDockingCallback, this, std::placeholders::_1));
+    // Load flip_distance_threshold parameter (default to 0.15m if not found)
+    if (!node_->has_parameter("flip_distance_threshold")) {
+        node_->declare_parameter("flip_distance_threshold", 0.15);
+    }
+    flip_distance_threshold_ = node_->get_parameter("flip_distance_threshold").as_double();
     
+
     // Initialize hazelnut status
     hazelnut_status_ = std::vector<std::vector<FlipStatus>>(
         ROBOT_SIDES, std::vector<FlipStatus>(HAZELNUT_LENGTH, FlipStatus::NO_FLIP));
     
-    FP_INFO(node_, "Initialized — subscribing to /robot/isDocking, publishing to /robot/on_flip");
+    FP_INFO(node_, "Initialized — distance threshold: %.2fm, publishing to /robot/on_flip", flip_distance_threshold_);
 }
 
 BT::PortsList FlipPublisher::providedPorts() {
     return {
         BT::InputPort<int>("targetPoseSideIdx", 0, "Robot side index to flip"),
+        BT::InputPort<int>("targetPoseIdx", "Target pose index in map_points"),
         BT::InputPort<int>("timeout_ms", 5000, "Timeout in milliseconds")
     };
 }
@@ -44,6 +47,10 @@ BT::NodeStatus FlipPublisher::onStart() {
         FP_WARN(node_, "Missing targetPoseSideIdx, defaulting to 0");
         side_idx_ = 0;
     }
+    if (!getInput<int>("targetPoseIdx", target_pose_idx_)) {
+        FP_WARN(node_, "Missing targetPoseIdx, defaulting to 0");
+        target_pose_idx_ = 0;
+    }
     if (!getInput<int>("timeout_ms", timeout_ms_)) {
         timeout_ms_ = 5000;
     }
@@ -52,28 +59,53 @@ BT::NodeStatus FlipPublisher::onStart() {
     readBlackboard();
     
     // Reset state
-    is_docking_received_ = false;
     flip_published_ = false;
     start_time_ = std::chrono::steady_clock::now();
     
-    FP_INFO(node_, "Waiting for isDocking signal to flip side %d (timeout: %d ms)", side_idx_, timeout_ms_);
+    FP_INFO(node_, "Waiting to reach distance %.2f to target idx %d (timeout: %d ms)", 
+            flip_distance_threshold_, target_pose_idx_, timeout_ms_);
     
     return BT::NodeStatus::RUNNING;
 }
 
 BT::NodeStatus FlipPublisher::onRunning() {
-    // If isDocking received (data == 1) and we haven't published yet, publish flip
-    if (is_docking_received_ && !flip_published_) {
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start_time_).count();
-        FP_INFO(node_, "isDocking received! Publishing flip for side %d (waited %ld ms)", side_idx_, elapsed);
-        publishFlip(side_idx_);
-        flip_published_ = true;
-        
-        // Update blackboard: reset hazelnut_status for this side
-        blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_);
-        
+    if (flip_published_) {
         return BT::NodeStatus::SUCCESS;
+    }
+
+    // Get current robot pose from blackboard
+    geometry_msgs::msg::PoseStamped robot_pose;
+    if (!blackboard_->get<geometry_msgs::msg::PoseStamped>("robot_pose", robot_pose)) {
+        FP_WARN(node_, "Failed to get robot_pose from blackboard, will rely on timeout.");
+    } else {
+        // Calculate data index into map_points
+        if (target_pose_idx_ < static_cast<int>(map_point_list_.size())) {
+            double target_x = map_point_list_[target_pose_idx_].x;
+            double target_y = map_point_list_[target_pose_idx_].y;
+            
+            // Note: Since OnDockAction adjusts positioning somewhat for staging, 
+            // Euclidean distance to final target pose is compared to threshold.
+            double dist = std::hypot(robot_pose.pose.position.x - target_x,
+                                     robot_pose.pose.position.y - target_y);
+            
+            if (dist <= flip_distance_threshold_) {
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - start_time_).count();
+                FP_INFO(node_, "Reached distance limit (%.3f <= %.3f)! Publishing flip for side %d (waited %ld ms)", 
+                        dist, flip_distance_threshold_, side_idx_, elapsed);
+                publishFlip(side_idx_);
+                flip_published_ = true;
+                
+                // Update blackboard: reset hazelnut_status for this side
+                blackboard_->set<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_);
+                
+                return BT::NodeStatus::SUCCESS;
+            }
+        } else {
+            // Should only log once if needed, but for now rely on timeout
+            FP_WARN(node_, "Invalid map_points index %d or array length %zu", 
+                    target_pose_idx_, map_point_list_.size());
+        }
     }
     
     // Check timeout
@@ -95,15 +127,14 @@ void FlipPublisher::onHalted() {
     FP_INFO(node_, "Halted (preempted)");
 }
 
-void FlipPublisher::isDockingCallback(const std_msgs::msg::Int16::SharedPtr msg) {
-    if (msg->data == 1) {
-        is_docking_received_ = true;
-    }
-}
+
 
 void FlipPublisher::readBlackboard() {
     if (!blackboard_->get<std::vector<std::vector<FlipStatus>>>("hazelnut_status", hazelnut_status_)) {
         FP_WARN(node_, "hazelnut_status not in blackboard, using defaults");
+    }
+    if (!blackboard_->get<std::vector<MapPoint>>("MapPointList", map_point_list_)) {
+        FP_WARN(node_, "MapPointList not in blackboard");
     }
     
     // Print hazelnut status for debugging

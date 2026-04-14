@@ -32,7 +32,6 @@ public:
 
 private:
     // Helper methods
-    void loadMapPoints();
     geometry_msgs::msg::PoseStamped calculateDockPose(int pose_idx, RobotSide robot_side, DockType chosen_dock_type);
     double getSideYaw(RobotSide side, double base_direction);
     
@@ -41,22 +40,15 @@ private:
     
     // Node references
     std::shared_ptr<rclcpp::Node> node;
-    BT::Blackboard::Ptr blackboard;
     tf2_ros::Buffer tf_buffer;
     tf2_ros::TransformListener listener;
+    BT::Blackboard::Ptr blackboard;
     
     // Publisher to notify camera team which side is docking
     rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr dock_side_pub;
     
-    // Map points data (5 values per point)
-    std::vector<double> map_points;
-    static constexpr int VALUES_PER_POINT = 5;
-    // Indices: x, y, stage_dist, sign, dock_type
-    static constexpr int IDX_X = 0;
-    static constexpr int IDX_Y = 1;
-    static constexpr int IDX_STAGE_DIST = 2;
-    static constexpr int IDX_SIGN = 3;
-    static constexpr int IDX_DOCK_TYPE = 4;
+    // Map points data
+    std::vector<MapPoint> map_point_list;
     
     // Dock state
     bool dock_finished;
@@ -69,6 +61,20 @@ private:
     std::string normal_dock_type_x_param;  // From YAML: normal_dock_type_x
     std::string cam_dock_type_y_param;     // From YAML: cam_dock_type_y
     std::string cam_dock_type_x_param;     // From YAML: cam_dock_type_x
+    std::string fast_normal_dock_type_y_param;  // From YAML: fast_normal_dock_type_y
+    std::string fast_normal_dock_type_x_param;  // From YAML: fast_normal_dock_type_x
+    std::string fast_cam_dock_type_y_param;     // From YAML: fast_cam_dock_type_y
+    std::string fast_cam_dock_type_x_param;     // From YAML: fast_cam_dock_type_x
+    std::string slow_normal_dock_type_y_param;  // From YAML: slow_normal_dock_type_y
+    std::string slow_normal_dock_type_x_param;  // From YAML: slow_normal_dock_type_x
+    std::string slow_cam_dock_type_y_param;     // From YAML: slow_cam_dock_type_y
+    std::string slow_cam_dock_type_x_param;     // From YAML: slow_cam_dock_type_x
+    
+    // Staging distances per robot side (from YAML)
+    double staging_dist_front_;
+    double staging_dist_right_;
+    double staging_dist_back_;
+    double staging_dist_left_;
     
     // Pose data
     geometry_msgs::msg::PoseStamped goal_pose;

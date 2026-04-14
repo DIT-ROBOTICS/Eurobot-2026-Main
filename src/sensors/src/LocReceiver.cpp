@@ -3,9 +3,9 @@
 LocReceiver::LocReceiver(const std::string& name, const BT::NodeConfig& config, 
                          const RosNodeParams& params, BT::Blackboard::Ptr blackboard)
     : BT::SyncActionNode(name, config), 
+    running_(true),
       node_(params.nh.lock()), 
       blackboard_(blackboard),
-      running_(true),
       robot_pose_received(false),
       rival_pose_received(false) {
 
@@ -91,18 +91,18 @@ void LocReceiver::rival_pose_callback(const nav_msgs::msg::Odometry::SharedPtr m
 }
 
 BT::NodeStatus LocReceiver::tick() {
-    RCLCPP_INFO(node_->get_logger(), "LocReceiver: tick");
+    RCLCPP_DEBUG(node_->get_logger(), "LocReceiver: tick");
     
     // Log current pose info (updated by background thread)
     if (robot_pose_received) {
-        RCLCPP_INFO(node_->get_logger(), "Robot pose: (%.2f, %.2f)", 
+        RCLCPP_DEBUG(node_->get_logger(), "Robot pose: (%.2f, %.2f)", 
                     robot_pose.pose.position.x, robot_pose.pose.position.y);
     } else {
         RCLCPP_WARN(node_->get_logger(), "LocReceiver: Robot pose not yet received");
     }
     
     if (rival_pose_received) {
-        RCLCPP_INFO(node_->get_logger(), "Rival pose: (%.2f, %.2f)", 
+        RCLCPP_DEBUG(node_->get_logger(), "Rival pose: (%.2f, %.2f)", 
                     rival_pose.pose.position.x, rival_pose.pose.position.y);
     } else {
         RCLCPP_DEBUG(node_->get_logger(), "LocReceiver: Rival pose not yet received");

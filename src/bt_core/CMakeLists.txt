@@ -14,6 +14,7 @@ find_package(std_srvs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -40,7 +41,13 @@ add_executable(bt_engine
   src/MissionPublisher.cpp
   src/MissionChecker.cpp
   src/FieldUpdater.cpp
+  src/TidyPublisher.cpp
   src/FlipPublisher.cpp
+  src/FlipPublisher_white.cpp
+  src/TakePublisher.cpp
+  src/TakePublisher_white.cpp
+  src/PutPublisher.cpp
+  src/CursorPublisher.cpp
 )
 ament_target_dependencies(bt_engine
   "rclcpp"
@@ -50,6 +57,7 @@ ament_target_dependencies(bt_engine
   "geometry_msgs"
   "nav_msgs"
   "nav2_msgs"
+  "visualization_msgs"
   "tf2"
   "tf2_ros"
   "tf2_geometry_msgs"
@@ -79,10 +87,13 @@ install(DIRECTORY
 )
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
+  find_package(launch_testing_ament_cmake REQUIRED)
+
+  # Launch test — verify bt_engine node starts and advertises topics/services
+  add_launch_test(
+    test/test_bt_engine_launch.py
+    TIMEOUT 30
+  )
 endif()
 
 ament_package()

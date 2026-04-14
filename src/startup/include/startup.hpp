@@ -77,9 +77,11 @@ private:
     // game timer
     rclcpp::TimerBase::SharedPtr timer;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr game_time_pub;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr sima_game_over_pub;
     std::shared_ptr<rclcpp::Rate> rate;
     int game_time;
-
+    bool sima_game_over_sent;
+ 
     // State checker for other groups
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr are_you_ready_pub;   
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr plan_file_pub;
@@ -123,6 +125,7 @@ private:
     std::vector<double> yellow_start_pose;
     int time_rate;
     int game_time_limit;
+    int sima_game_over_trigger_sec;
     int sima_tick_threshold;
     int group_num;
 };
