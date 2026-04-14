@@ -227,6 +227,7 @@ void BTengine::createTreeNodes() {
     factory.registerNodeType<ControllerTypePublisher>("ControllerTypePublisher", params, blackboard);
     factory.registerNodeType<OnDockAction>("OnDockAction", params, blackboard);
     factory.registerNodeType<StopRobotNode>("StopRobotNode", params);
+    factory.registerNodeType<RelativeNavNode>("RelativeNavNode", params, blackboard);
     // factory.registerNodeType<RotateActionNode>("RotateActionNode", params);  // Source commented out
 
     // utils

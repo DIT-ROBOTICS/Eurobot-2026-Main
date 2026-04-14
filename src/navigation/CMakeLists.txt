@@ -42,6 +42,7 @@ add_library(navigation_nodes SHARED
     src/controller_type_publisher.cpp
     src/stop_robot_node.cpp
     # src/nav_action_node.cpp
+    src/relativeNav.cpp
     src/onDock.cpp
 )
 
