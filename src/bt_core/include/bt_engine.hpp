@@ -46,6 +46,9 @@
 // field updater
 #include "FieldUpdater.hpp"
 
+// tidy publisher
+#include "TidyPublisher.hpp"
+
 // flip publisher
 #include "FlipPublisher.hpp"
 
@@ -55,8 +58,6 @@
 #include "TakePublisher_white.hpp"
 #include "FlipPublisher_white.hpp"
 #include "CursorPublisher.hpp"
-
-// utils nodes
 
 // firmware nodes
 #include "FirmwareReceiver.hpp"

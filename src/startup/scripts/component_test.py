@@ -8,6 +8,7 @@ Provides an interactive menu to test individual robot components:
   3. Put                  — publish Int16 to /robot/on_put
     4. Take                 — publish Int16MultiArray to /robot/on_take
   5. Zero cmd_vel         — publish Twist(0,0,0) to /cmd_vel
+    9. Tidy                 — publish Bool to /robot/on_tidy
 
 Usage:
     python3 src/startup/scripts/component_test.py
@@ -48,6 +49,7 @@ class ComponentTester(Node):
         self.dock_side_pub = self.create_publisher(Int16,           "/robot/dock_side", 10)
         self.cursor_left_pub  = self.create_publisher(Bool,         "/robot/on_cursor_left",  10)
         self.cursor_right_pub = self.create_publisher(Bool,         "/robot/on_cursor_right", 10)
+        self.tidy_pub         = self.create_publisher(Bool,         "/robot/on_tidy", 10)
 
         # ── nav2 action client ──────────────────────────────────
         self.nav_client = ActionClient(self, NavigateToPose, "navigate_to_pose")
@@ -75,6 +77,7 @@ class ComponentTester(Node):
 ║  6  │ Dock Side → /robot/dock_side (Int16)       ║
 ║  7  │ cmd_vel   → /cmd_vel  (vx, vy, wz)        ║
 ║  8  │ Cursor    → /robot/on_cursor_(left/right) ║
+║  9  │ Tidy      → /robot/on_tidy (Bool)         ║
 ║  h  │ Show this menu                             ║
 ║  q  │ Quit                                       ║
 ╚══════════════════════════════════════════════════╝{RESET}
@@ -109,6 +112,8 @@ class ComponentTester(Node):
                     self._cmd_vel()
                 elif cmd == "8":
                     self._cmd_cursor()
+                elif cmd == "9":
+                    self._cmd_tidy()
                 elif cmd == "":
                     pass
                 else:
@@ -321,6 +326,24 @@ class ComponentTester(Node):
         else:
             self.cursor_right_pub.publish(msg)
             print(f"{GREEN}Published /robot/on_cursor_right → {int(msg.data)}{RESET}")
+
+    # ────────────────────────────────────────────────────────────
+    #  9 — Tidy
+    # ────────────────────────────────────────────────────────────
+    def _cmd_tidy(self):
+        """
+        /robot/on_tidy  →  Bool
+          one-line input: 1(on) or 0(off)
+        """
+        raw = input(f"  {YELLOW}Enter tidy state (0/1): {RESET}").strip()
+        if raw not in ["0", "1"]:
+            print(f"{RED}Invalid value. Use 0 or 1.{RESET}")
+            return
+
+        msg = Bool()
+        msg.data = (raw == "1")
+        self.tidy_pub.publish(msg)
+        print(f"{GREEN}Published /robot/on_tidy → {int(msg.data)}{RESET}")
 
 
 # ════════════════════════════════════════════════════════════════

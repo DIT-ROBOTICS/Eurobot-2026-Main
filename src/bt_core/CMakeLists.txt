@@ -41,6 +41,7 @@ add_executable(bt_engine
   src/MissionPublisher.cpp
   src/MissionChecker.cpp
   src/FieldUpdater.cpp
+  src/TidyPublisher.cpp
   src/FlipPublisher.cpp
   src/FlipPublisher_white.cpp
   src/TakePublisher.cpp

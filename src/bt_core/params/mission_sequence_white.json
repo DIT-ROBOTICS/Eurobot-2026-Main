@@ -36,16 +36,10 @@
     // ]
     // blue side
     "pantry_sequence": [
-        9,
-        8,
-        5,
-        4
+        1
     ],
     "collection_sequence": [
-        15,
-        14,
-        16,
-        17
+        10
     ]
 
     // two robot test: 8 point

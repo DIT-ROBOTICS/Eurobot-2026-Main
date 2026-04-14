@@ -203,6 +203,9 @@ void BTengine::createTreeNodes() {
     // field updater
     factory.registerNodeType<FieldUpdater>("FieldUpdater", params, blackboard);
 
+    // tidy publisher
+    factory.registerNodeType<TidyPublisher>("TidyPublisher", params, blackboard);
+
     // flip publisher
     factory.registerNodeType<FlipPublisher>("FlipPublisher", params, blackboard);
     factory.registerNodeType<FlipPublisher_white>("FlipPublisher_white", params, blackboard);

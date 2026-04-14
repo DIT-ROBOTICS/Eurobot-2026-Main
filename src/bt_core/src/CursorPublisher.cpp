@@ -15,7 +15,7 @@ CursorPublisher::CursorPublisher(const std::string& name, const BT::NodeConfig& 
     right_pub_ = node_->create_publisher<std_msgs::msg::Bool>("/robot/on_cursor_right", 10);
     CP_INFO(node_, "Initialized — publishing to /robot/on_cursor_left and /robot/on_cursor_right");
 
-    node_->declare_parameter("cursor_tolerance", 0.18);
+    if (!node_->has_parameter("cursor_tolerance")) node_->declare_parameter("cursor_tolerance", 0.18);
     node_->get_parameter("cursor_tolerance", tolerance_);
 
     blackboard_->set("left_cursor_status", std::make_pair(std::string("left"), false));
