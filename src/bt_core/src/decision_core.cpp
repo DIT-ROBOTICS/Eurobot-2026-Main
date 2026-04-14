@@ -21,6 +21,7 @@ DecisionCore::DecisionCore(const string& name, const BT::NodeConfig& config, con
     collection_priority = std::priority_queue<PointScore>();
     robot_pose = geometry_msgs::msg::PoseStamped();
     map_point_list = std::vector<MapPoint>();
+    wait_start_time = rclcpp::Time(0, 0, RCL_ROS_TIME);
     
     // Sequence priority initialization
     pantry_sequence = std::vector<int>();
@@ -138,10 +139,12 @@ BT::PortsList DecisionCore::providedPorts()
     return {
         InputPort<string>("ActionType"),
         InputPort<int>("RobotSideIdx"),
+        InputPort<int>("timeout_ms"),
         OutputPort<string>("nextActionType"),
         OutputPort<int>("targetPoseIdx"),
         OutputPort<int>("targetPoseSideIdx"),
-        OutputPort<int>("targetDirection")
+        OutputPort<int>("targetDirection"),
+        OutputPort<bool>("skip")
     };
 }
 
@@ -159,6 +162,13 @@ void DecisionCore::getInputPort() {
         default_robot_side = static_cast<RobotSide>(side_idx_opt.value());
     } else {
         default_robot_side = RobotSide::FRONT; // default
+    }
+
+    auto timeout_opt = getInput<int>("timeout_ms");
+    if (timeout_opt) {
+        timeout_ms = timeout_opt.value();
+    } else {
+        timeout_ms = 1000; // default
     }
 }
 
@@ -206,6 +216,7 @@ BT::NodeStatus DecisionCore::onStart() {
     getInputPort();
     updatePoseData();
     publishScoreMarkers();
+    wait_start_time = node_ptr->now();
     
     DC_INFO(node_ptr, "Processing action: %s", actionTypeToString(decided_action_type).c_str());
     switch(decided_action_type) {
@@ -238,9 +249,15 @@ void DecisionCore::onHalted() {
 BT::NodeStatus DecisionCore::doTake() {
     auto target_point_info_opt = getTargetPointInfo(ActionType::TAKE);
     if (!target_point_info_opt) {
+        if (checkTimeout()) {
+            DC_INFO(node_ptr, "Take timeout reached. Skipping...");
+            setOutput<bool>("skip", true);
+            return BT::NodeStatus::SUCCESS;
+        }
         DC_INFO(node_ptr, "No valid TAKE target found. Waiting...");
         return BT::NodeStatus::RUNNING;
     }
+    setOutput<bool>("skip", false);
     auto target_point_info = target_point_info_opt.value();
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
@@ -254,9 +271,15 @@ BT::NodeStatus DecisionCore::doTake() {
 BT::NodeStatus DecisionCore::doPut() {
     auto target_point_info_opt = getTargetPointInfo(ActionType::PUT);
     if (!target_point_info_opt) {
+        if (checkTimeout()) {
+            DC_INFO(node_ptr, "Put timeout reached. Skipping...");
+            setOutput<bool>("skip", true);
+            return BT::NodeStatus::SUCCESS;
+        }
         DC_INFO(node_ptr, "No valid PUT target found. Waiting...");
         return BT::NodeStatus::RUNNING;
     }
+    setOutput<bool>("skip", false);
     auto target_point_info = target_point_info_opt.value();
     target_goal_pose_idx = target_point_info.first;
     target_pose_side_idx = target_point_info.second;
@@ -270,7 +293,8 @@ BT::NodeStatus DecisionCore::doPut() {
 BT::NodeStatus DecisionCore::doFlip() {
     decided_action_type = ActionType::FLIP;
     // TODO: more action inside Flip
-    target_pose_side_idx = getTargetSideIndex(ActionType::FLIP);
+    auto selected_side_opt = getTargetSideIndex(ActionType::FLIP);
+    target_pose_side_idx = selected_side_opt.value_or(default_robot_side);
     writeOutputPort();
     return BT::NodeStatus::SUCCESS;
 }
@@ -302,8 +326,16 @@ BT::NodeStatus DecisionCore::doCursor() {
     return BT::NodeStatus::SUCCESS;
 }
 
+bool DecisionCore::checkTimeout() {
+    if ((node_ptr->now() - wait_start_time).seconds() * 1000.0 >= timeout_ms) 
+        return true;
+    return false;
+}
+
 std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(ActionType action_type) {
-    RobotSide selected_side = getTargetSideIndex(action_type);
+    auto side_opt = getTargetSideIndex(action_type);
+    if (!side_opt) return std::nullopt;
+    RobotSide selected_side = side_opt.value();
     printFieldInfo();
     if (action_type == ActionType::PUT) {
         // Fetch current sequence from blackboard to ensure we have the latest state
@@ -404,7 +436,7 @@ std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(Action
     return std::nullopt;
 }
 
-RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
+std::optional<RobotSide> DecisionCore::getTargetSideIndex(ActionType action_type) {
     int default_idx = static_cast<int>(default_robot_side);
     
     if (action_type == ActionType::TAKE) {
@@ -427,6 +459,8 @@ RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
                 return static_cast<RobotSide>(i);
             }
         }
+
+        return std::nullopt;
     } else if (action_type == ActionType::PUT) {
         // For PUT: Need an OCCUPIED side that has hazelnuts to put
         DC_INFO(node_ptr, "[PUT]: robot_side_status: %d, %d, %d, %d ", 
@@ -447,12 +481,13 @@ RobotSide DecisionCore::getTargetSideIndex(ActionType action_type) {
                 return static_cast<RobotSide>(i);
             }
         }
+        return std::nullopt;
     }
     else return default_robot_side; // For FLIP and DOCK, just return default side without checks
     
     // Fallback: return default_robot_side
     DC_WARN(node_ptr, "No suitable side found, using default_robot_side %d", default_idx);
-    return default_robot_side;
+    return std::nullopt;
 }
 
 // ============ Pose Data Update ============

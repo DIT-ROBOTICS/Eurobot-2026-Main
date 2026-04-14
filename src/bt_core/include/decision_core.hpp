@@ -80,10 +80,11 @@ private:
     void sortCollectionPriority();
     void publishScoreMarkers();
     std::optional<pair<GoalPose, RobotSide>> getTargetPointInfo(ActionType action_type); // return {point_index, side_index}
-    RobotSide getTargetSideIndex(ActionType action_type);
+    std::optional<RobotSide> getTargetSideIndex(ActionType action_type);
     Direction decideDirection(GoalPose goal_pose, RobotSide robot_side);
     ActionType decideNextActionType(ActionType action_type);
     void writeOutputPort();
+    bool checkTimeout();
     
     // Reward calculation helpers
     void loadSpectrumParams();
@@ -111,6 +112,9 @@ private:
     vector<MapPoint> map_point_list;
     Team current_team;
     Robot current_robot;
+    // timeout
+    rclcpp::Time wait_start_time;
+    int timeout_ms;
     
     // Spectrum Parameters
     SpectrumParams pantry_params;
