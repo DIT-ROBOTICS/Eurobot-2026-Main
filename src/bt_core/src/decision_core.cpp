@@ -296,6 +296,7 @@ BT::NodeStatus DecisionCore::doFlip() {
     auto selected_side_opt = getTargetSideIndex(ActionType::FLIP);
     target_pose_side_idx = selected_side_opt.value_or(default_robot_side);
     writeOutputPort();
+    setOutput<bool>("skip", false);
     return BT::NodeStatus::SUCCESS;
 }
 
@@ -309,6 +310,7 @@ BT::NodeStatus DecisionCore::doGoHome() {
     
     target_direction = decideDirection(target_goal_pose_idx, target_pose_side_idx);
     decided_action_type = ActionType::DOCK;
+    setOutput<bool>("skip", false);
     writeOutputPort();
     return BT::NodeStatus::SUCCESS;
 }
@@ -323,6 +325,7 @@ BT::NodeStatus DecisionCore::doCursor() {
     target_direction = Direction::SOUTH;
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
+    setOutput<bool>("skip", false);
     return BT::NodeStatus::SUCCESS;
 }
 

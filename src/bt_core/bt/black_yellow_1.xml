@@ -83,8 +83,8 @@
                     nextActionType="{next_action}"
                     targetPoseIdx="{target_idx}"
                     targetPoseSideIdx="{target_side}"
-                    targetDirection="{target_dir}"/>
-                <SubTree ID="TakeSubTree" _autoremap="true"/>
+                    targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                <SubTree ID="TakeSubTree" _autoremap="true" _skipIf="skip == true"/>
                 <Sleep msec="3000"/>
 
                 <DecisionCore 
@@ -93,8 +93,8 @@
                     nextActionType="{next_action}"
                     targetPoseIdx="{target_idx}"
                     targetPoseSideIdx="{target_side}"
-                    targetDirection="{target_dir}"/>
-                <SubTree ID="TakeSubTree" _autoremap="true"/>
+                    targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                <SubTree ID="TakeSubTree" _autoremap="true" _skipIf="skip == true"/>
                 <Sleep msec="3000"/>
 
                 <Parallel success_count="2" failure_count="1">
@@ -105,8 +105,8 @@
                             nextActionType="{next_action}"
                             targetPoseIdx="{target_idx}"
                             targetPoseSideIdx="{target_side}"
-                            targetDirection="{target_dir}"/>
-                        <SubTree ID="FlipSubTree" _autoremap="true"/>
+                            targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                        <SubTree ID="FlipSubTree" _autoremap="true" _skipIf="skip == true"/>
                     </Sequence>
                     <Sequence>
                         <DecisionCore 
@@ -115,8 +115,8 @@
                             nextActionType="{next_action}"
                             targetPoseIdx="{target_idx}"
                             targetPoseSideIdx="{target_side}"
-                            targetDirection="{target_dir}"/>
-                        <SubTree ID="PutSubTree" _autoremap="true"/>
+                            targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                        <SubTree ID="PutSubTree" _autoremap="true" _skipIf="skip == true"/>
                     </Sequence>
                 </Parallel>
                 <Sleep msec="3000"/>
@@ -129,8 +129,8 @@
                             nextActionType="{next_action}"
                             targetPoseIdx="{target_idx}"
                             targetPoseSideIdx="{target_side}"
-                            targetDirection="{target_dir}"/>
-                        <SubTree ID="FlipSubTree" _autoremap="true"/>
+                            targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                        <SubTree ID="FlipSubTree" _autoremap="true" _skipIf="skip == true"/>
                     </Sequence>
                     <Sequence>
                         <DecisionCore 
@@ -139,8 +139,8 @@
                             nextActionType="{next_action}"
                             targetPoseIdx="{target_idx}"
                             targetPoseSideIdx="{target_side}"
-                            targetDirection="{target_dir}"/>
-                        <SubTree ID="PutSubTree" _autoremap="true"/>
+                            targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                        <SubTree ID="PutSubTree" _autoremap="true" _skipIf="skip == true"/>
                     </Sequence>
                 </Parallel>
                 <Sleep msec="3000"/>

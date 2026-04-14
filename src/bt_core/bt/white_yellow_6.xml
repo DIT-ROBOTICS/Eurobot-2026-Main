@@ -144,8 +144,8 @@
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
-                        targetDirection="{target_dir}"/>
-                    <SubTree ID="StealSubTree" _autoremap="true"/>
+                        targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                    <SubTree ID="StealSubTree" _autoremap="true" _skipIf="skip == true"/>
 
                     <DecisionCore 
                         ActionType="put"
@@ -153,8 +153,8 @@
                         nextActionType="{next_action}"
                         targetPoseIdx="{target_idx}"
                         targetPoseSideIdx="{target_side}"
-                        targetDirection="{target_dir}"/>
-                    <SubTree ID="PutSubTree" _autoremap="true"/>
+                        targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                    <SubTree ID="PutSubTree" _autoremap="true" _skipIf="skip == true"/>
 
                 </Sequence>
             </Repeat>

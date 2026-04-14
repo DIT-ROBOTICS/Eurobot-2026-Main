@@ -15,8 +15,10 @@
             <output_port name="targetPoseIdx" type="int"/>
             <output_port name="targetPoseSideIdx" type="int"/>
             <output_port name="nextActionType" type="std::string"/>
+            <output_port name="skip" type="bool"/>
             <input_port name="RobotSideIdx" type="int"/>
             <input_port name="ActionType" type="std::string"/>
+            <input_port name="timeout_ms" type="int" default="1000"/>
         </Action>
         <Action ID="FieldUpdater"/>
         <Action ID="FirmwareReceiver"/>

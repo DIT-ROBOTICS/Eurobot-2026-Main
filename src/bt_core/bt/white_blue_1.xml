@@ -15,7 +15,7 @@
                         <DecisionCore 
                             next_target_index="{target_index}"
                             next_target_pose="{target_pose}"
-                            action_type="{action_type}"/>
+                            action_type="{action_type}" skip="{skip}" timeout_ms="1000"/>
                         
                         <!-- Navigate to target -->
                         <NavigationActionNode
