@@ -49,7 +49,8 @@ enum class ActionType {
     GO_HOME,
     CURSOR,
     NAV,
-    ROTATE
+    ROTATE,
+    STEAL
 };
 
 enum class RobotSide {
@@ -143,6 +144,7 @@ inline ActionType stringToActionType(const std::string& str) {
     if (lower_str == "cursor") return ActionType::CURSOR;
     if (lower_str == "nav") return ActionType::NAV;
     if (lower_str == "rotate") return ActionType::ROTATE;
+    if (lower_str == "steal") return ActionType::STEAL;
     throw std::runtime_error("Invalid action type string: " + str);
 }
 
@@ -156,6 +158,7 @@ inline std::string actionTypeToString(ActionType action_type) {
         case ActionType::CURSOR: return "cursor";
         case ActionType::NAV: return "nav";
         case ActionType::ROTATE: return "rotate";
+        case ActionType::STEAL: return "steal";
         default: return "unknown";
     }
 }

@@ -230,6 +230,8 @@ BT::NodeStatus DecisionCore::onStart() {
             return doGoHome();
         case ActionType::CURSOR:
             return doCursor();
+        case ActionType::STEAL:
+            return doSteal();
         default:
             DC_ERROR(node_ptr, "Invalid action type");
             throw std::runtime_error("Invalid action type");
@@ -321,11 +323,33 @@ BT::NodeStatus DecisionCore::doCursor() {
 
     if(current_robot == Robot::WHITE) target_pose_side_idx = RobotSide::FRONT;
     else if(current_robot == Robot::BLACK) target_pose_side_idx = RobotSide::BACK;
-    
+
     target_direction = Direction::SOUTH;
     decided_action_type = ActionType::DOCK;
     writeOutputPort();
     setOutput<bool>("skip", false);
+    return BT::NodeStatus::SUCCESS;
+}
+
+BT::NodeStatus DecisionCore::doSteal() {
+    auto target_point_info_opt = getTargetPointInfo(ActionType::STEAL);
+    if (!target_point_info_opt) {
+        if (checkTimeout()) {
+            DC_INFO(node_ptr, "Steal timeout reached. Skipping...");
+            setOutput<bool>("skip", true);
+            return BT::NodeStatus::SUCCESS;
+        }
+        DC_INFO(node_ptr, "No valid STEAL target found. Waiting...");
+        return BT::NodeStatus::RUNNING;
+    }
+    setOutput<bool>("skip", false);
+    auto target_point_info = target_point_info_opt.value();
+    target_goal_pose_idx = target_point_info.first;
+    target_pose_side_idx = target_point_info.second;
+    // Direction is placeholder; DynamicDock computes its own from robbery_poses
+    target_direction = Direction::NORTH;
+    decided_action_type = ActionType::DOCK;
+    writeOutputPort();
     return BT::NodeStatus::SUCCESS;
 }
 
@@ -433,8 +457,21 @@ std::optional<pair<GoalPose, RobotSide>> DecisionCore::getTargetPointInfo(Action
         DC_INFO(node_ptr, "[TAKE->COLLECTION] Selected collection %s with score: %d",
                 goalPoseToString(best_collection).c_str(), collection_priority.top().score);
         return make_pair(best_collection, selected_side);
+    } else if (action_type == ActionType::STEAL) {
+        // Score only pantries flagged CAN_ROB; no sequence fallback — steal is opportunistic.
+        sortStealPriority();
+
+        if (pantry_priority.empty()) {
+            RCLCPP_WARN(node_ptr->get_logger(), "No CAN_ROB pantry points available to steal");
+            return std::nullopt;
+        }
+
+        GoalPose best_steal = pantry_priority.top().pose;
+        DC_INFO(node_ptr, "[STEAL->PANTRY] Selected pantry %s with score: %d",
+                goalPoseToString(best_steal).c_str(), pantry_priority.top().score);
+        return make_pair(best_steal, selected_side);
     }
-    
+
     RCLCPP_ERROR(node_ptr->get_logger(), "getTargetPointInfo called with invalid action");
     return std::nullopt;
 }
@@ -484,6 +521,19 @@ std::optional<RobotSide> DecisionCore::getTargetSideIndex(ActionType action_type
                 return static_cast<RobotSide>(i);
             }
         }
+        return std::nullopt;
+    } else if (action_type == ActionType::STEAL) {
+        // For STEAL: always use BACK, but only if EMPTY (need room for stolen hazelnuts)
+        DC_INFO(node_ptr, "[STEAL]: robot_side_status: %d, %d, %d, %d ",
+            static_cast<int>(robot_side_status[0]),
+            static_cast<int>(robot_side_status[1]),
+            static_cast<int>(robot_side_status[2]),
+            static_cast<int>(robot_side_status[3]));
+        if (robot_side_status[static_cast<int>(RobotSide::BACK)] == FieldStatus::EMPTY) {
+            DC_INFO(node_ptr, "Using BACK (EMPTY) for STEAL");
+            return RobotSide::BACK;
+        }
+        DC_WARN(node_ptr, "BACK not EMPTY, cannot STEAL");
         return std::nullopt;
     }
     else return default_robot_side; // For FLIP and DOCK, just return default side without checks
@@ -608,16 +658,42 @@ void DecisionCore::sortPantryPriority() {
 void DecisionCore::sortCollectionPriority() {
     // Update pose data before scoring
     updatePoseData();
-    
+
     // Clear and rebuild priority queue
     collection_priority = priority_queue<PointScore>();
-    
+
     for (int i = 0; i < COLLECTION_LENGTH; ++i) {
         int score = calculateCollectionScore(i);
         if (score > 0) { // Only add viable options
             GoalPose pose = static_cast<GoalPose>(PANTRY_LENGTH + i);
             collection_priority.push(PointScore(pose, score));
             RCLCPP_DEBUG(node_ptr->get_logger(), "Collection %s score: %d", goalPoseToString(pose).c_str(), score);
+        }
+    }
+}
+
+int DecisionCore::calculateStealScore(int pantry_idx) {
+    GoalPose pose = static_cast<GoalPose>(pantry_idx);
+
+    // Only CAN_ROB pantries are viable steal targets
+    if (pantry_info[pantry_idx] != FieldStatus::CAN_ROB) {
+        return -1000;
+    }
+
+    double score = calculateSpectralScore(pose, pantry_params);
+    return static_cast<int>(score);
+}
+
+void DecisionCore::sortStealPriority() {
+    updatePoseData();
+    pantry_priority = priority_queue<PointScore>();
+
+    for (int i = 0; i < PANTRY_LENGTH; ++i) {
+        int score = calculateStealScore(i);
+        if (score > 0) {
+            GoalPose pose = static_cast<GoalPose>(i);
+            pantry_priority.push(PointScore(pose, score));
+            RCLCPP_DEBUG(node_ptr->get_logger(), "Steal %s score: %d", goalPoseToString(pose).c_str(), score);
         }
     }
 }

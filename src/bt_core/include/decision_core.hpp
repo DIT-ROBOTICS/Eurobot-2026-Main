@@ -68,6 +68,7 @@ public:
     BT::NodeStatus doDock();
     BT::NodeStatus doGoHome();
     BT::NodeStatus doCursor();
+    BT::NodeStatus doSteal();
 
 private:
     // init
@@ -91,6 +92,8 @@ private:
     double calculateSpectralScore(GoalPose pose, SpectrumParams params);
     int calculatePantryScore(int pantry_idx);
     int calculateCollectionScore(int collection_idx);
+    int calculateStealScore(int pantry_idx);
+    void sortStealPriority();
     
     // Distance and location helpers
     double calculateDistance(GoalPose pose);
