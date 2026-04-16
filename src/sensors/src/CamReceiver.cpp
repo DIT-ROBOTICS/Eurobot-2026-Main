@@ -157,13 +157,11 @@ std::vector<FieldStatus> CamReceiver::processVisionData(
         }
 
         // Translation logic
-        if (val == -1 && i < existing_status.size()) {
-            updated_status.push_back(existing_status[i]);
-        } else if (is_pantry && (val == 2 || val == 3)) {
-            updated_status.push_back(FieldStatus::OCCUPIED);
-        } else {
-            updated_status.push_back(static_cast<FieldStatus>(val));
-        }
+        if (val == -1 && i < existing_status.size()) updated_status.push_back(existing_status[i]);
+        else if (is_pantry && (val == 2 || val == 3)) updated_status.push_back(FieldStatus::OCCUPIED);
+        else if (is_pantry && val == 4) updated_status.push_back(FieldStatus::CAN_ROB);
+        else updated_status.push_back(static_cast<FieldStatus>(val));
+        
     }
     return updated_status;
 }

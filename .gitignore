@@ -22,3 +22,5 @@
 *.AppImage
 **/Backups/
 /Project.btproj
+
+.claude/
