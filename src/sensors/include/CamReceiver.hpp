@@ -2,6 +2,8 @@
 #define CAM_RECEIVER_HPP
 
 #include "receiver_util.hpp"
+#include "bt_config.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
 #include <thread>
 #include <atomic>
 
@@ -44,6 +46,7 @@ private:
     void hazelnut_flip_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void hazelnut_pickup_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+    void robbery_poses_callback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
     
     // Helper to process vision data for both collections and pantries
     std::vector<FieldStatus> processVisionData(
@@ -68,6 +71,7 @@ private:
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hazelnut_flip_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hazelnut_pickup_sub;
     rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr on_take_feedback_sub;
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr robbery_poses_sub;
 
     // Node references (order must match constructor initialization)
     shared_ptr<rclcpp::Node> node_;
