@@ -41,8 +41,8 @@ jobs:
       - name: Build and cache Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker             
-          file: ./docker/Dockerfile 
+          context: ./docker
+          file: ./docker/Dockerfile.ci
           tags: eurobot-ci-env:latest
           outputs: type=docker,dest=/tmp/eurobot-ci-env.tar 
           cache-from: type=gha          

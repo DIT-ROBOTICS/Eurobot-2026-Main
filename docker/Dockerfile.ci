@@ -1,0 +1,74 @@
+##############################################################################
+# CI-only image for GitHub Actions.
+# Stripped of dev-comfort tools (vim/tmux/vnc/gemini-cli/rviz/...) —
+# keeps only what `colcon build` + `colcon test` need.
+##############################################################################
+
+ARG ROS_DISTRO=humble
+FROM ros:${ROS_DISTRO}-ros-base-jammy
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=${ROS_DISTRO}
+
+##############################################################################
+# Mirror + apt resilience
+#   - Swap archive.ubuntu.com -> azure.archive.ubuntu.com (GitHub Actions runs
+#     on Azure; this mirror is faster and far less prone to the "mirror sync
+#     in progress" hash-mismatch failures we hit on archive.ubuntu.com).
+#   - Configure apt to retry transient network / hash errors instead of
+#     bailing out of the whole build on the first bad fetch.
+##############################################################################
+
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+
+RUN printf '%s\n' \
+    'Acquire::Retries "5";' \
+    'Acquire::http::Timeout "30";' \
+    'Acquire::https::Timeout "30";' \
+    > /etc/apt/apt.conf.d/80-retries
+
+# keep downloaded .deb files so buildx cache mounts are useful
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
+##############################################################################
+# Build toolchain
+##############################################################################
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --fix-missing --no-install-recommends \
+        build-essential \
+        cmake \
+        git \
+        python3-pip \
+        python3-colcon-common-extensions \
+        python3-rosdep
+
+##############################################################################
+# Workspace build dependencies
+#   (trimmed from docker/Dockerfile: no rviz2, foxglove-bridge, rqt-*,
+#    teleop-twist-keyboard, Groot/fuse — none are needed to compile or test.)
+##############################################################################
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --fix-missing --no-install-recommends \
+        libsdl-image1.2-dev \
+        libsuitesparse-dev \
+        libfreeimage-dev \
+        libyaml-cpp-dev \
+        libjsoncpp-dev \
+        ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+        ros-${ROS_DISTRO}-navigation2 \
+        ros-${ROS_DISTRO}-ament-cmake \
+        ros-${ROS_DISTRO}-nav2-msgs \
+        ros-${ROS_DISTRO}-nav2-util \
+        ros-${ROS_DISTRO}-behaviortree-cpp \
+        ros-${ROS_DISTRO}-generate-parameter-library
+
+SHELL ["/bin/bash", "-c"]
+CMD ["/bin/bash"]
