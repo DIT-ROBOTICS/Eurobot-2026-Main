@@ -51,6 +51,33 @@
     </BehaviorTree>
     
     <!-- ============================================= -->
+    <!-- STEAL SubTree: Dock at opponent CAN_ROB pantry and take -->
+    <!-- ============================================= -->
+    <BehaviorTree ID="StealSubTree">
+        <Sequence>
+            <DynamicDock
+                targetPoseIdx="{target_idx}"
+                targetPoseSideIdx="{target_side}"
+                targetDirection="{target_dir}"
+                dock_type="dock_y_loose_linearBoost"
+                isPureDocking="false"
+                finish_pose="{dock_result}"/>
+
+            <MissionPublisher
+                ActionType="take"
+                targetPoseSideIdx="{target_side}"
+                targetPoseIdx="{target_idx}"/>
+            <FieldUpdater/>
+
+            <MissionChecker
+                ActionType="take"
+                targetPoseSideIdx="{target_side}"
+                timeout_ms="1000"/>
+            <Sleep msec="200"/>
+        </Sequence>
+    </BehaviorTree>
+
+    <!-- ============================================= -->
     <!-- PUT SubTree: Go to pantry point and put -->
     <!-- ============================================= -->
     <BehaviorTree ID="PutSubTree">
@@ -146,7 +173,7 @@
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
                     <SubTree ID="TakeSubTree" _autoremap="true" _skipIf="skip == true"/>
-                    <DecisionCore 
+                    <DecisionCore
                         ActionType="put"
                         RobotSideIdx="1"
                         nextActionType="{next_action}"
@@ -154,6 +181,14 @@
                         targetPoseSideIdx="{target_side}"
                         targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
                     <SubTree ID="PutSubTree" _autoremap="true" _skipIf="skip == true"/>
+                    <DecisionCore
+                        ActionType="steal"
+                        RobotSideIdx="2"
+                        nextActionType="{next_action}"
+                        targetPoseIdx="{target_idx}"
+                        targetPoseSideIdx="{target_side}"
+                        targetDirection="{target_dir}" skip="{skip}" timeout_ms="1000"/>
+                    <SubTree ID="StealSubTree" _autoremap="true" _skipIf="skip == true"/>
                 </Sequence>
             </Repeat>
             
