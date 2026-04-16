@@ -110,7 +110,62 @@ void CamReceiver::initializeDefaultStatus() {
 }
 
 PortsList CamReceiver::providedPorts() {
-    return {};
+    return {BT::InputPort<int>("timeout")};
+}
+
+std::vector<FieldStatus> CamReceiver::processVisionData(
+    const std::vector<int>& raw_data,
+    const std::vector<FieldStatus>& existing_status,
+    const std::vector<int>& visited_indices,
+    std::map<int, rclcpp::Time>& visited_timestamps,
+    FieldStatus force_close_status,
+    bool is_pantry) 
+{
+    auto now = node_->now();
+    int current_timeout_ms = timeout_.load();
+    std::vector<FieldStatus> updated_status;
+
+    std::lock_guard<std::mutex> lock(visited_mutex_);
+    
+    // Update timestamps: remove items no longer in visited list
+    for (auto it = visited_timestamps.begin(); it != visited_timestamps.end(); ) {
+        if (std::find(visited_indices.begin(), visited_indices.end(), it->first) == visited_indices.end()) {
+            it = visited_timestamps.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    
+    // Update timestamps: add new items from visited list
+    for (int idx : visited_indices) {
+        if (visited_timestamps.find(idx) == visited_timestamps.end()) {
+            visited_timestamps[idx] = now;
+        }
+    }
+
+    // Process each field
+    for (size_t i = 0; i < raw_data.size(); ++i) {
+        int val = raw_data[i];
+        
+        // Force close logic if field was recently visited
+        auto it = visited_timestamps.find(i);
+        if (it != visited_timestamps.end()) {
+            int64_t elapsed_ms = (now - it->second).nanoseconds() / 1000000;
+            if (elapsed_ms < current_timeout_ms) {
+                val = static_cast<int>(force_close_status);
+            }
+        }
+
+        // Translation logic
+        if (val == -1 && i < existing_status.size()) {
+            updated_status.push_back(existing_status[i]);
+        } else if (is_pantry && (val == 2 || val == 3)) {
+            updated_status.push_back(FieldStatus::OCCUPIED);
+        } else {
+            updated_status.push_back(static_cast<FieldStatus>(val));
+        }
+    }
+    return updated_status;
 }
 
 void CamReceiver::collection_info_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg) {
@@ -119,32 +174,20 @@ void CamReceiver::collection_info_callback(const std_msgs::msg::Int32MultiArray:
     
     if (!collection_info.data.empty()) {
         std::vector<FieldStatus> existing_status;
-        if (!blackboard_->get<std::vector<FieldStatus>>("collection_info", existing_status)) {
-            RCLCPP_WARN(node_->get_logger(), "CamReceiver: collection_info not found in blackboard");
-        }
+        blackboard_->get<std::vector<FieldStatus>>("collection_info", existing_status);
         
         std::vector<int> visited_collections;
-        if (!blackboard_->get<std::vector<int>>("visited_collections", visited_collections)) {
-            RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: visited_collections not found in blackboard");
-        }
+        blackboard_->get<std::vector<int>>("visited_collections", visited_collections);
 
-        // Convert Int32MultiArray to vector<FieldStatus> for blackboard
-        std::vector<FieldStatus> collection_status;
-        for (size_t i = 0; i < collection_info.data.size(); ++i) {
-            int val = collection_info.data[i];
-            
-            // Force close if this collection has already been visited
-            if (std::find(visited_collections.begin(), visited_collections.end(), i) != visited_collections.end()) {
-                val = static_cast<int>(FieldStatus::EMPTY);
-            }
+        std::vector<FieldStatus> collection_status = processVisionData(
+            collection_info.data,
+            existing_status,
+            visited_collections,
+            collection_visited_timestamps_,
+            FieldStatus::EMPTY,
+            false
+        );
 
-            if (val == -1 && i < existing_status.size()) {
-                collection_status.push_back(existing_status[i]);
-            } else {
-                collection_status.push_back(static_cast<FieldStatus>(val));
-            }
-        }
-        // RCLCPP_INFO(node_->get_logger(), "CamReceiver: writeing updated collection_info to blackboard");
         blackboard_->set<std::vector<FieldStatus>>("collection_info", collection_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("collection_info_raw", collection_info);
     }
@@ -156,35 +199,20 @@ void CamReceiver::pantry_info_callback(const std_msgs::msg::Int32MultiArray::Sha
     
     if (!pantry_info.data.empty()) {
         std::vector<FieldStatus> existing_status;
-        if (!blackboard_->get<std::vector<FieldStatus>>("pantry_info", existing_status)) {
-            RCLCPP_WARN(node_->get_logger(), "CamReceiver: pantry_info not found in blackboard");
-        }
+        blackboard_->get<std::vector<FieldStatus>>("pantry_info", existing_status);
         
         std::vector<int> visited_pantries;
-        if (!blackboard_->get<std::vector<int>>("visited_pantries", visited_pantries)) {
-            RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: visited_pantries not found in blackboard");
-        }
+        blackboard_->get<std::vector<int>>("visited_pantries", visited_pantries);
 
-        // Convert Int32MultiArray to vector<FieldStatus> for blackboard
-        std::vector<FieldStatus> pantry_status;
-        for (size_t i = 0; i < pantry_info.data.size(); ++i) {
-            int val = pantry_info.data[i];
-            
-            // Force close if this pantry has already been visited
-            if (std::find(visited_pantries.begin(), visited_pantries.end(), i) != visited_pantries.end()) {
-                val = static_cast<int>(FieldStatus::OCCUPIED);
-            }
+        std::vector<FieldStatus> pantry_status = processVisionData(
+            pantry_info.data,
+            existing_status,
+            visited_pantries,
+            pantry_visited_timestamps_,
+            FieldStatus::OCCUPIED,
+            true
+        );
 
-            if (val == -1 && i < existing_status.size()) {
-                pantry_status.push_back(existing_status[i]);
-            }
-            else if (val == 2 || val == 3) {
-                pantry_status.push_back(FieldStatus::OCCUPIED);
-            }
-            else {
-                pantry_status.push_back(static_cast<FieldStatus>(val));
-            }
-        }
         blackboard_->set<std::vector<FieldStatus>>("pantry_info", pantry_status);
         blackboard_->set<std_msgs::msg::Int32MultiArray>("pantry_info_raw", pantry_info);
     }
@@ -305,27 +333,31 @@ void CamReceiver::onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr
     }
 
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
-
 }
 
 BT::NodeStatus CamReceiver::tick() {
     RCLCPP_DEBUG(node_->get_logger(), "CamReceiver tick");
-    
+
+    int t;
+    if (getInput("timeout", t)) {
+        timeout_ = t;
+    }
+
     // Log current status for debugging
     std::vector<FieldStatus> pantry_status;
     std::vector<FieldStatus> collection_status;
-    
+
     if (blackboard_->get<std::vector<FieldStatus>>("pantry_info", pantry_status)) {
         for (size_t i = 0; i < pantry_status.size(); ++i) {
             RCLCPP_DEBUG(node_->get_logger(), "Pantry[%zu]: %d", i, static_cast<int>(pantry_status[i]));
         }
     }
-    
+
     if (blackboard_->get<std::vector<FieldStatus>>("collection_info", collection_status)) {
         for (size_t i = 0; i < collection_status.size(); ++i) {
             RCLCPP_DEBUG(node_->get_logger(), "Collection[%zu]: %d", i, static_cast<int>(collection_status[i]));
         }
     }
-    
+
     return BT::NodeStatus::SUCCESS;
 }

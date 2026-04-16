@@ -73,7 +73,8 @@ constexpr int ROBOT_SIDES = 4;
 enum class FieldStatus {
     EMPTY = 0,
     OCCUPIED = 1,
-    UNKNOWN = -1
+    UNKNOWN = -1,
+    CAN_ROB = 2
 };
 
 enum class FlipStatus {

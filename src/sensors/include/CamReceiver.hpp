@@ -45,6 +45,15 @@ private:
     void hazelnut_pickup_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     void onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
     
+    // Helper to process vision data for both collections and pantries
+    std::vector<FieldStatus> processVisionData(
+        const std::vector<int>& raw_data,
+        const std::vector<FieldStatus>& existing_status,
+        const std::vector<int>& visited_indices,
+        std::map<int, rclcpp::Time>& visited_timestamps,
+        FieldStatus force_close_status,
+        bool is_pantry);
+    
     // Background spin thread
     void spinThread();
     std::thread spin_thread_;
@@ -64,6 +73,14 @@ private:
     shared_ptr<rclcpp::Node> node_;
     BT::Blackboard::Ptr blackboard_;
     std::atomic<bool> running_;
+    
+    // Configurable timeout for visited fields (in milliseconds)
+    std::atomic<int> timeout_{5000};
+    
+    // Timestamps for visited fields
+    std::map<int, rclcpp::Time> collection_visited_timestamps_;
+    std::map<int, rclcpp::Time> pantry_visited_timestamps_;
+    std::mutex visited_mutex_;
     
     // Data storage
     std_msgs::msg::Int32MultiArray collection_info;
