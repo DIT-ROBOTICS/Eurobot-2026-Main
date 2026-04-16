@@ -43,6 +43,7 @@ add_library(navigation_nodes SHARED
     src/stop_robot_node.cpp
     # src/nav_action_node.cpp
     src/onDock.cpp
+    src/dynamicDock.cpp
 )
 
 ament_target_dependencies(navigation_nodes
