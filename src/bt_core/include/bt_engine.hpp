@@ -27,6 +27,7 @@
 #include "controller_type_publisher.hpp"
 #include "dock_action_node.hpp"
 #include "onDock.hpp"
+#include "dynamicDock.hpp"
 #include "stop_robot_node.hpp"
 #include "rotate_action_node.hpp"
 
