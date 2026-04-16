@@ -48,7 +48,13 @@ CamReceiver::CamReceiver(const std::string& name, const BT::NodeConfig& config,
         "/robot/vision/onTakeSuccess", 10,
         std::bind(&CamReceiver::onTakeFeedback, this, std::placeholders::_1),
         sub_options);
-    
+
+    // Subscribe to robbery poses (dynamic per-pantry steal poses)
+    robbery_poses_sub = node_->create_subscription<geometry_msgs::msg::PoseArray>(
+        "/robbery_poses", 10,
+        std::bind(&CamReceiver::robbery_poses_callback, this, std::placeholders::_1),
+        sub_options);
+
     // Initialize with default values (camera fallback)
     initializeDefaultStatus();
     
@@ -107,6 +113,12 @@ void CamReceiver::initializeDefaultStatus() {
     // Initialize visited lists
     blackboard_->set<std::vector<int>>("visited_collections", std::vector<int>());
     blackboard_->set<std::vector<int>>("visited_pantries", std::vector<int>());
+
+    // Initialize robbery_poses with PANTRY_LENGTH default (zero) poses so
+    // downstream lookups never fail before the first /robbery_poses message.
+    geometry_msgs::msg::PoseArray default_robbery;
+    default_robbery.poses.resize(PANTRY_LENGTH);
+    blackboard_->set<geometry_msgs::msg::PoseArray>("robbery_poses", default_robbery);
 }
 
 PortsList CamReceiver::providedPorts() {
@@ -331,6 +343,11 @@ void CamReceiver::onTakeFeedback(const std_msgs::msg::Int32MultiArray::SharedPtr
     }
 
     blackboard_->set<std::vector<FieldStatus>>("robot_side_status", robot_sides);
+}
+
+void CamReceiver::robbery_poses_callback(const geometry_msgs::msg::PoseArray::SharedPtr msg) {
+    RCLCPP_DEBUG(node_->get_logger(), "CamReceiver: Received robbery_poses update (size=%zu).", msg->poses.size());
+    blackboard_->set<geometry_msgs::msg::PoseArray>("robbery_poses", *msg);
 }
 
 BT::NodeStatus CamReceiver::tick() {
