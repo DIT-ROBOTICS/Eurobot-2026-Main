@@ -50,7 +50,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 # upgrade packages
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get upgrade -y \
+    apt-get update && apt-get upgrade -y --fix-missing \
     && echo "Keep cache"
 
 ##############################################################################
@@ -60,7 +60,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
-    apt-get install -y \
+    apt-get install -y --fix-missing \
     sudo \
     vim \
     curl \
@@ -84,7 +84,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
-    apt-get install -y \
+    apt-get install -y --fix-missing \
     libsdl-image1.2-dev \
     libsuitesparse-dev \
     libfreeimage-dev \
