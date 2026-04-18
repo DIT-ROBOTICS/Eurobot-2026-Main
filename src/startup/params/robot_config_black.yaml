@@ -37,7 +37,7 @@
     slow_cam_dock_type_y: "dock_cam_y_slow"         # Slow dock type for CAM_DOCK_Y (case 2)
     slow_cam_dock_type_x: "dock_cam_x_slow"         # Slow dock type for CAM_DOCK_X (case 3)
     
-    flip_distance_threshold: 0.1                 # Distance to target to trigger flip
+    flip_distance_threshold: 0.3                 # Distance to target to trigger flip
 
     # Dock Staging Dist of Each Side
     staging_dist_front: 0.2455
@@ -49,12 +49,12 @@
     pantry_aggressiveness: -1.0
     pantry_sensitivity: 2.0
     pantry_rival_sigma: 0.3
-    pantry_rival_distance_threshold: 0.25
+    pantry_rival_distance_threshold: 0.4
     
     collection_aggressiveness: -1.0
     collection_sensitivity: 2.0
     collection_rival_sigma: 0.3
-    collection_rival_distance_threshold: 0.25
+    collection_rival_distance_threshold: 0.4
 
     # Mission Parameters
     cursor_tolerance: 0.18 # Tolerance for cursor placement in meters

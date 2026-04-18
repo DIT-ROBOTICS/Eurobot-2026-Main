@@ -62,7 +62,7 @@ BT::NodeStatus CursorPublisher::onRunning() {
         if (arms_ == "left") {
             CP_INFO(node_, "Publishing to /robot/on_cursor_left: 0");
             left_pub_->publish(msg);
-            blackboard_->set("left_cursor_status", std::make_pair("left", false));
+            blackboard_->set("left_cursor_status", std::make_pair(std::string("left"), false));
         }
         else if (arms_ == "right") {
             CP_INFO(node_, "Publishing to /robot/on_cursor_right: 0");
@@ -87,7 +87,7 @@ BT::NodeStatus CursorPublisher::onRunning() {
         if (arms_ == "left") {
             CP_INFO(node_, "Y aligned, publishing to /robot/on_cursor_left: 1");
             left_pub_->publish(msg);
-            blackboard_->set("left_cursor_status", std::make_pair("left", true));
+            blackboard_->set("left_cursor_status", std::make_pair(std::string("left"), true));
         }
         else if (arms_ == "right") {
             CP_INFO(node_, "Y aligned, publishing to /robot/on_cursor_right: 1");
